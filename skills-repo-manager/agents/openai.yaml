@@ -1,0 +1,4 @@
+name: skills-repo-manager
+display_name: Skills Repo Manager
+short_description: SkillをGitHub正本で管理し、同期・復元・監査する
+default_prompt: 重要なSkillsをGitHub正本に同期し、復元スクリプトと監査結果を整えてください。

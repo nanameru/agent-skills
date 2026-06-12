@@ -1,0 +1,4 @@
+name: test-case-board
+display_name: Test Case Board
+short_description: YAMLでテストケース台帳を管理し、Issue連携・デグレ影響・E2Eを扱う
+default_prompt: test-board.yaml を確認し、対象Issueまたは変更ファイルに紐づくテストケースと実行すべき検証を整理してください。
