@@ -46,6 +46,37 @@ test-board issue --board test-board.yaml --issue 123
 test-board serve --board test-board.yaml --root .
 ```
 
+## Coverage Gap Filling Loop
+
+Run this whenever the board may have drifted from reality, and periodically as a loop iteration:
+
+```bash
+test-board gaps --board test-board.yaml --root .
+```
+
+It reports four kinds of gaps:
+
+1. **Open cases without a real test on disk** — `todo`/`doing` cases whose `test_file` is empty or points to a file that does not exist. These are planned-but-unwritten.
+2. **Lying board** — `done` cases whose `test_file` does not exist on disk. Worst kind: the board claims coverage that is not there. Typical cause: the test was written on a branch that never merged to the default branch. Restore the test or set the case back to `todo` with a note saying where the work actually lives.
+3. **Empty layers** — zero cases of a `type` (e.g. `integration` or `regression` missing entirely).
+4. **Cases without linked issues** — weak traceability.
+
+Fill gaps with this loop (proven in dom-to-pptx-ai#490):
+
+1. Batch the gaps into **one GitHub Issue** with acceptance criteria (`test suite green`, `todo -> done with real test_file`, `layer populated`).
+2. Work in a worktree cut from the default branch — the main checkout may be on a stale branch.
+3. Write the real tests until green, then update the board in the same commit: `status: done`, real `test_file`, `issues: [N]`, and a `notes:` line saying what is covered and how to run it.
+4. Reclassify `type` to match what the test actually is (keep the ID). A wrapper tested through its real dependency without mocks is `integration`, not `unit`.
+5. One Draft PR; never auto-merge.
+
+Classification and test-writing rules learned the hard way:
+
+- `type` is the **layer** (`unit` / `integration` / `e2e` / `security` / `edge`); use `regression` for cases born from a bug fix so a degrade-only view can be filtered.
+- Prefer **mock-free integration**: if the implementation has a real in-process fallback (in-memory rate limiter, local store), drive the public wrapper through it instead of mocking the boundary.
+- Network-dependent contract tests (e.g. a live Google Fonts fetch) belong behind an env gate — `describe.runIf(process.env.RUN_LIVE_X === '1')` — green locally once, auto-skipped in CI. Record that in `notes:`.
+- Under vitest + jsdom, cross-realm `instanceof Uint8Array` can be false — use `ArrayBuffer.isView()` in test helpers.
+- When a function only touches `request.headers.get()` and `request.body`, a small fake object beats a real `Request` (undici normalizes away the malformed inputs you are trying to test).
+
 ## YAML Shape
 
 Use stable case IDs. Never renumber existing IDs.
@@ -130,6 +161,7 @@ test-board once --board test-board.yaml
 test-board impact --board test-board.yaml --files src/a.ts src/b.ts
 test-board issue --board test-board.yaml --issue 123
 test-board coverage --board test-board.yaml
+test-board gaps --board test-board.yaml [--root .]
 test-board plan-issue --board test-board.yaml --issue 123 --source src/a.ts --feature "feature" --scenario "scenario" [--apply]
 test-board sync-github --board test-board.yaml --issue 123 [--apply]
 test-board serve --board test-board.yaml --root . --port 41800
