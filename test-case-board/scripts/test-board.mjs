@@ -13,6 +13,7 @@ function usage(code = 0) {
   test-board impact --board test-board.yaml --files src/a.ts src/b.ts
   test-board issue --board test-board.yaml --issue 123
   test-board coverage --board test-board.yaml
+  test-board gaps --board test-board.yaml [--root .]
   test-board plan-issue --board test-board.yaml --issue 123 --source src/a.ts --feature "feature" --scenario "scenario" [--apply]
   test-board sync-github --board test-board.yaml --issue 123 [--apply]
   test-board serve --board test-board.yaml [--root .] [--port 41800]
@@ -239,6 +240,77 @@ function cmdCoverage(args) {
   }
 }
 
+const LAYER_TYPES = ["unit", "integration", "e2e", "security", "regression"];
+
+function cmdGaps(args) {
+  const board = parseBoard(boardPath(args));
+  const root = path.resolve(args.root || path.dirname(board.path));
+
+  const open = board.cases.filter((c) => c.status === "todo" || c.status === "doing");
+  const openUnwritten = open.filter(
+    (c) => !c.test_file || !fs.existsSync(path.resolve(root, String(c.test_file)))
+  );
+  // "Lying board": the case claims done with a test_file that does not exist.
+  const doneMissingFile = board.cases.filter(
+    (c) =>
+      c.status === "done" &&
+      c.test_file &&
+      !fs.existsSync(path.resolve(root, String(c.test_file)))
+  );
+  const unlinked = board.cases.filter((c) => !caseIssues(c).length);
+
+  const typeCounts = {};
+  for (const c of board.cases) {
+    const t = c.type || "unknown";
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+  const thinLayers = LAYER_TYPES.filter((t) => !(typeCounts[t] > 0));
+
+  console.log(`board=${board.path}`);
+  console.log(`root=${root}`);
+  console.log(`cases=${board.cases.length}`);
+  console.log(`types=${Object.entries(typeCounts).map(([k, v]) => `${k}:${v}`).join(" ")}`);
+
+  let gapCount = 0;
+
+  if (openUnwritten.length) {
+    gapCount += openUnwritten.length;
+    console.log(`\nopen cases without a real test on disk (${openUnwritten.length}):`);
+    printCases(openUnwritten);
+  }
+  if (doneMissingFile.length) {
+    gapCount += doneMissingFile.length;
+    console.log(`\nLYING BOARD — done but test_file missing on disk (${doneMissingFile.length}):`);
+    printCases(doneMissingFile);
+  }
+  if (thinLayers.length) {
+    gapCount += thinLayers.length;
+    console.log(`\nempty layers: ${thinLayers.join(", ")}`);
+  }
+  if (unlinked.length) {
+    console.log(`\ncases without linked issues: ${unlinked.length} (${unlinked.map((c) => c.id).join(", ")})`);
+  }
+
+  console.log("");
+  if (!gapCount) {
+    console.log("no gaps: open cases all have real tests, done cases all exist on disk, every layer is populated");
+    return;
+  }
+  console.log("suggested next actions:");
+  if (openUnwritten.length) {
+    console.log("- batch the open cases into one GitHub Issue, write the real tests until green, then mark done with the real test_file");
+  }
+  if (doneMissingFile.length) {
+    console.log("- done cases with missing files are the worst kind of gap: restore the test or set the case back to todo");
+  }
+  if (thinLayers.includes("regression")) {
+    console.log("- regression=0: reclassify bug-fix-derived cases to type: regression (keep their IDs)");
+  }
+  if (thinLayers.includes("integration")) {
+    console.log("- integration=0: promote a mock-free test that crosses a real module boundary, or add one");
+  }
+}
+
 function nextCaseId(cases) {
   let max = 0;
   for (const c of cases) {
@@ -403,6 +475,7 @@ try {
   else if (cmd === "impact") cmdImpact(args);
   else if (cmd === "issue") cmdIssue(args);
   else if (cmd === "coverage") cmdCoverage(args);
+  else if (cmd === "gaps") cmdGaps(args);
   else if (cmd === "plan-issue") cmdPlanIssue(args);
   else if (cmd === "sync-github") cmdSyncGithub(args);
   else if (cmd === "serve") cmdServe(args);
