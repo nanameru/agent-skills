@@ -8,6 +8,11 @@
       "external": true
     },
     {
+      "name": "loop-engineering-core",
+      "source": "nanameru/agent-skills",
+      "path": "loop-engineering-core"
+    },
+    {
       "name": "test-case-board",
       "source": "nanameru/agent-skills",
       "path": "test-case-board"
@@ -30,12 +35,28 @@
   ],
   "postInstallLinks": [
     {
+      "link": "$HOME/.claude/skills/github-issue-driven-dev",
+      "target": "$HOME/.agents/skills/github-issue-driven-dev"
+    },
+    {
+      "link": "$HOME/.claude/skills/loop-engineering-core",
+      "target": "$HOME/.agents/skills/loop-engineering-core"
+    },
+    {
+      "link": "$HOME/.claude/skills/loop-engineering-dev",
+      "target": "$HOME/.agents/skills/loop-engineering-dev"
+    },
+    {
       "link": "$HOME/.local/bin/test-board",
       "target": "$HOME/.agents/skills/test-case-board/bin/test-board"
     },
     {
       "link": "$HOME/.claude/skills/test-case-board",
       "target": "$HOME/.agents/skills/test-case-board"
+    },
+    {
+      "link": "$HOME/.claude/skills/skills-repo-manager",
+      "target": "$HOME/.agents/skills/skills-repo-manager"
     }
   ]
 }

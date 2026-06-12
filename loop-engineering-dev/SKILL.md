@@ -7,24 +7,25 @@ metadata:
 
 # Loop Engineering Dev
 
-Use this skill to design a development loop, not a one-off prompt. The loop must find work, clarify requirements, create Issues and tests, run one bounded unit of work, verify it, preserve state, and stop at a human review point.
+Use this child skill to design a development loop, not a one-off prompt.
+
+## Parent Skill
+
+Before acting, read `~/.agents/skills/loop-engineering-core/SKILL.md` if it exists. If it is missing, continue with this Skill and report that the parent Skill was unavailable.
+
+The parent owns shared rules: requirement gate, durable state, maker/checker separation, hard stops, and scheduled prompt shape. This child owns the GitHub Issue + test-board development-loop specialization.
 
 ## Non-Negotiable Rule
 
-Do not start autonomous implementation until requirements are stable enough to write objective acceptance criteria and test cases.
+Follow the parent requirement gate. If the question set becomes large, use both the parent `references/requirements-gate.md` and this Skill's `references/requirements-question-bank.md`.
 
-If requirements are unclear, ask the user questions first. It is acceptable to ask many questions, but batch them by topic and only ask questions that affect scope, risk, cost, data, security, acceptance criteria, or verification.
-
-When the question set becomes large, use `references/requirements-question-bank.md` as a checklist and work through it in batches.
-
-## Required Building Blocks
+## Specialized Building Blocks
 
 1. **Work source**: GitHub Issues, CI failures, analytics signals, bug reports, or explicit backlog.
 2. **State file**: `test-board.yaml` and optionally `.loops/<loop-name>.md`.
 3. **Execution environment**: local worktree, Codex schedule, Claude routine, or CI runner.
-4. **Maker/checker split**: writer and verifier must be separate roles or passes.
-5. **Objective gates**: tests, lint, build, E2E, security checks, and test-board impact analysis.
-6. **Human stop point**: Draft PR. Never auto-merge or deploy production changes without explicit approval.
+4. **Objective gates**: tests, lint, build, E2E, security checks, and test-board impact analysis.
+5. **Human stop point**: Draft PR. Never auto-merge or deploy production changes without explicit approval.
 
 ## Setup Flow
 
