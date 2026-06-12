@@ -7,6 +7,12 @@ metadata:
 
 # Test Case Board
 
+## Parent Skill
+
+When this Skill is used as part of autonomous or scheduled development, first read `~/.agents/skills/loop-engineering-core/SKILL.md` if it exists. If it is missing, continue with this Skill and report that the parent Skill was unavailable.
+
+The parent owns shared loop rules. This Skill owns YAML test inventory, regression impact, E2E metadata, and the `test-board` CLI.
+
 Use this skill to keep test intent outside transient chat. The source of truth is `test-board.yaml` in the repository root. Boards, dashboards, GitHub comments, and run reports are views or mirrors; edit the YAML first.
 
 ## Core Workflow

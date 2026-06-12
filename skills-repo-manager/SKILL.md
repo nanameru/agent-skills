@@ -5,6 +5,12 @@ description: "Use when creating, updating, backing up, publishing, restoring, or
 
 # Skills Repo Manager
 
+## Parent Skill
+
+When managing Skills for loop engineering, first read `~/.agents/skills/loop-engineering-core/SKILL.md` if it exists. If it is missing, continue with this Skill and report that the parent Skill was unavailable.
+
+This Skill owns durability and repository management. The parent owns shared loop behavior that should be reused by Codex and Claude Code child Skills.
+
 Use this skill to keep Skills durable. Treat GitHub as the source of truth and local agent skill directories as installed copies.
 
 ## Mental Model

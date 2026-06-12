@@ -1,0 +1,4 @@
+name: loop-engineering-core
+display_name: Loop Engineering Core
+short_description: Codex/Claude共通の自走開発ループ親Skill
+default_prompt: 親Skillとして要件定義ゲート、Issue/test-board、maker/checker分離、停止条件を適用してください。
