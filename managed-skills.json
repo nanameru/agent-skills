@@ -36,6 +36,11 @@
       "name": "x-search",
       "source": "nanameru/agent-skills",
       "path": "x-search"
+    },
+    {
+      "name": "grok-video",
+      "source": "nanameru/agent-skills",
+      "path": "grok-video"
     }
   ],
   "postInstallLinks": [
@@ -66,6 +71,10 @@
     {
       "link": "$HOME/.claude/skills/x-search",
       "target": "$HOME/.agents/skills/x-search"
+    },
+    {
+      "link": "$HOME/.claude/skills/grok-video",
+      "target": "$HOME/.agents/skills/grok-video"
     }
   ]
 }
