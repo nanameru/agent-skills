@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "name": "github-issue-driven-dev",
+      "source": "nanameru/github-issue-driven-dev-skill",
+      "path": "github-issue-driven-dev",
+      "external": true
+    },
+    {
+      "name": "test-case-board",
+      "source": "nanameru/agent-skills",
+      "path": "test-case-board"
+    },
+    {
+      "name": "loop-engineering-dev",
+      "source": "nanameru/agent-skills",
+      "path": "loop-engineering-dev"
+    },
+    {
+      "name": "skills-repo-manager",
+      "source": "nanameru/agent-skills",
+      "path": "skills-repo-manager"
+    },
+    {
+      "name": "chaos-engineer",
+      "source": "nanameru/agent-skills",
+      "path": "chaos-engineer"
+    }
+  ],
+  "postInstallLinks": [
+    {
+      "link": "$HOME/.local/bin/test-board",
+      "target": "$HOME/.agents/skills/test-case-board/bin/test-board"
+    },
+    {
+      "link": "$HOME/.claude/skills/test-case-board",
+      "target": "$HOME/.agents/skills/test-case-board"
+    }
+  ]
+}

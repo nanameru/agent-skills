@@ -1,2 +1,3 @@
 *.skill
 skills-lock.json
+.agents/

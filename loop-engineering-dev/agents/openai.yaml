@@ -1,0 +1,4 @@
+name: loop-engineering-dev
+display_name: Loop Engineering Dev
+short_description: GitHub Issueとtest-boardを組み合わせた自走開発ループを設計する
+default_prompt: 要件定義から始めて、GitHub Issue・test-board.yaml・検証ゲート・Draft PR停止点を持つ自走開発ループを設計してください。
