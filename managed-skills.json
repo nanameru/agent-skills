@@ -36,6 +36,11 @@
       "name": "x-search",
       "source": "nanameru/agent-skills",
       "path": "x-search"
+    },
+    {
+      "name": "slide-design-guide",
+      "source": "nanameru/agent-skills",
+      "path": "slide-design-guide"
     }
   ],
   "postInstallLinks": [
@@ -66,6 +71,14 @@
     {
       "link": "$HOME/.claude/skills/x-search",
       "target": "$HOME/.agents/skills/x-search"
+    },
+    {
+      "link": "$HOME/.claude/skills/slide-design-guide",
+      "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.codex/skills/slide-design-guide",
+      "target": "$HOME/.agents/skills/slide-design-guide"
     }
   ]
 }
