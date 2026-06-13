@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Futuristic AI Tech — Sample Deck（NORDGRID AI）</title>
+    <style>
+      :root {
+        --canvas: #07080d;
+        --canvas-2: #0b0d16;
+        --ink: #eef1f8;
+        --muted: #8a90a6;
+        --surface: #12141f;
+        --surface-2: #171a28;
+        --hairline: #23263a;
+        --accent: #7c5cff;
+        --accent-2: #22d3ee;
+        --positive: #5cf2a4;
+        --sans: "Space Grotesk", "Inter", -apple-system, "Noto Sans JP", Arial, sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", ui-monospace, "Roboto Mono", monospace;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #d9d9d9; padding: 32px; font-family: var(--sans); }
+      .slides-stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+      .slide {
+        position: relative; width: 1920px; height: 1080px;
+        background: var(--canvas); color: var(--ink);
+        overflow: hidden; padding: 112px;
+        display: flex; flex-direction: column; justify-content: center;
+      }
+      /* glow layers (single divs, behind content) */
+      .glow { position: absolute; border-radius: 9999px; pointer-events: none; z-index: 0; }
+      .glow-v { background: radial-gradient(closest-side, rgba(124,92,255,0.40), rgba(124,92,255,0) 72%); }
+      .glow-c { background: radial-gradient(closest-side, rgba(34,211,238,0.34), rgba(34,211,238,0) 72%); }
+      .grad-canvas { background: linear-gradient(135deg, #0b0d16 0%, #07080d 55%, #0a0813 100%); }
+      .layer { position: relative; z-index: 1; }
+
+      .kicker { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 28px; }
+      .hero { font-size: 132px; font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; }
+      .slide-title { font-size: 64px; font-weight: 600; line-height: 1.08; letter-spacing: -0.015em; }
+      .statement { font-size: 88px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; max-width: 1500px; }
+      .lead { font-size: 32px; font-weight: 400; line-height: 1.4; color: var(--muted); }
+      .body { font-size: 22px; font-weight: 400; line-height: 1.5; color: var(--muted); }
+      .em-v { color: var(--accent); }
+      .em-c { color: var(--accent-2); }
+      .em-l { color: var(--positive); }
+
+      .tag { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 18px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-2); background: var(--surface); border: 1px solid var(--hairline); border-radius: 9999px; padding: 8px 18px; }
+      .tag.live { color: var(--positive); }
+      .tag-row { display: flex; gap: 16px; margin-top: 56px; }
+
+      /* node boxes + diagram */
+      .node { background: var(--surface); border: 1px solid var(--hairline); border-radius: 24px; padding: 24px 28px; box-shadow: 0 0 0 1px rgba(124,92,255,0.05), 0 18px 40px rgba(0,0,0,0.35); }
+      .node .nid { font-family: var(--mono); font-size: 20px; font-weight: 500; letter-spacing: 0.04em; color: var(--accent-2); margin-bottom: 10px; }
+      .node .ntitle { font-size: 28px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+      .node .ndesc { font-size: 19px; font-weight: 400; line-height: 1.4; color: var(--muted); }
+      .node.glowv { box-shadow: 0 0 38px rgba(124,92,255,0.30), 0 18px 40px rgba(0,0,0,0.35); border-color: rgba(124,92,255,0.45); }
+      .node.glowc { box-shadow: 0 0 38px rgba(34,211,238,0.28), 0 18px 40px rgba(0,0,0,0.35); border-color: rgba(34,211,238,0.42); }
+
+      /* feature cards */
+      .grid3 { display: flex; gap: 32px; margin-top: 64px; }
+      .card { flex: 1; background: var(--surface); border: 1px solid var(--hairline); border-radius: 32px; padding: 40px; box-shadow: 0 18px 44px rgba(0,0,0,0.35); }
+      .chip { width: 76px; height: 76px; border-radius: 16px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; margin-bottom: 28px; box-shadow: 0 0 26px rgba(124,92,255,0.22); }
+      .card h3 { font-size: 32px; font-weight: 600; margin-bottom: 14px; }
+      .card p { font-size: 21px; font-weight: 400; line-height: 1.5; color: var(--muted); }
+
+      /* metric */
+      .metric { display: flex; flex-direction: column; align-items: center; text-align: center; }
+      .kpi { font-size: 260px; font-weight: 600; line-height: 0.92; letter-spacing: -0.03em; color: var(--ink); text-shadow: 0 0 60px rgba(124,92,255,0.40); }
+      .kpi .unit { color: var(--accent-2); }
+      .kpi-label { font-size: 26px; font-weight: 400; color: var(--muted); margin-top: 12px; }
+      .submetrics { display: flex; gap: 80px; margin-top: 72px; }
+      .submetrics .sm { text-align: center; }
+      .submetrics .sm .v { font-size: 56px; font-weight: 600; color: var(--ink); }
+      .submetrics .sm .v.c { color: var(--accent-2); }
+      .submetrics .sm .v.l { color: var(--positive); }
+      .submetrics .sm .k { font-size: 20px; color: var(--muted); margin-top: 6px; }
+
+      /* roadmap */
+      .phases { display: flex; gap: 0; margin-top: 8px; align-items: stretch; }
+      .phase { flex: 1; padding: 0 28px; }
+      .phase:first-child { padding-left: 0; }
+      .pchip { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); background: var(--surface); border: 1px solid var(--hairline); border-radius: 9999px; padding: 10px 22px; margin-bottom: 26px; }
+      .pchip.now { color: #07080d; background: var(--positive); border-color: var(--positive); box-shadow: 0 0 30px rgba(92,242,164,0.4); }
+      .phase h4 { font-size: 30px; font-weight: 600; margin-bottom: 16px; }
+      .phase ul { list-style: none; }
+      .phase li { font-size: 21px; line-height: 1.45; color: var(--muted); margin-bottom: 10px; padding-left: 22px; position: relative; }
+      .phase li::before { content: ""; position: absolute; left: 0; top: 11px; width: 9px; height: 9px; border-radius: 9999px; background: var(--accent-2); }
+
+      .src { position: absolute; bottom: 56px; left: 112px; right: 112px; font-family: var(--mono); font-size: 16px; letter-spacing: 0.06em; color: var(--muted); }
+
+      .cta { display: inline-flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: #07080d; background: var(--accent); border-radius: 9999px; padding: 18px 40px; box-shadow: 0 0 40px rgba(124,92,255,0.45); margin-top: 56px; }
+    </style>
+  </head>
+  <body>
+    <div class="slides-stack">
+
+      <!-- 1. COVER -->
+      <section class="slide grad-canvas">
+        <div class="glow glow-v" style="width: 1200px; height: 1200px; top: -360px; right: -300px;"></div>
+        <div class="glow glow-c" style="width: 820px; height: 820px; bottom: -320px; left: -240px;"></div>
+        <div class="layer">
+          <div class="kicker">NORDGRID AI / VISION 2026</div>
+          <div class="hero">Agentic<br /><span class="em-c">Slide&nbsp;Engine.</span></div>
+          <div class="lead" style="margin-top: 40px; max-width: 1200px;">指示するだけで、設計から配置まで。エージェントが資料そのものを動かす。</div>
+          <div class="tag-row">
+            <span class="tag live"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="6" fill="#5cf2a4"/></svg>LIVE 2026</span>
+            <span class="tag">AGENTIC&nbsp;AI</span>
+            <span class="tag">HTML&nbsp;→&nbsp;PPTX</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. STATEMENT -->
+      <section class="slide grad-canvas">
+        <div class="glow glow-v" style="width: 1100px; height: 1100px; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+        <div class="layer">
+          <div class="statement">スライドは「描く」ものから、<br /><span class="em-c">エージェントが組み立てる</span>ものへ。</div>
+        </div>
+      </section>
+
+      <!-- 3. ARCHITECTURE / PIPELINE DIAGRAM -->
+      <section class="slide">
+        <div class="glow glow-v" style="width: 760px; height: 760px; top: -220px; left: -180px;"></div>
+        <div class="layer">
+          <div class="kicker">SYSTEM&nbsp;ARCHITECTURE</div>
+          <div class="slide-title" style="margin-bottom: 64px;">エージェント・パイプライン</div>
+
+          <div style="position: relative; height: 360px;">
+            <!-- SVG connectors behind nodes -->
+            <svg width="1696" height="360" viewBox="0 0 1696 360" style="position:absolute; inset:0; z-index:0;">
+              <defs>
+                <linearGradient id="wire" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#7c5cff"/>
+                  <stop offset="1" stop-color="#22d3ee"/>
+                </linearGradient>
+                <marker id="arrow" markerWidth="12" markerHeight="12" refX="8" refY="5" orient="auto">
+                  <polygon points="0,0 9,5 0,10" fill="#22d3ee"/>
+                </marker>
+              </defs>
+              <!-- horizontal flow line through 4 nodes at vertical center (~180) -->
+              <line x1="392" y1="180" x2="450" y2="180" stroke="url(#wire)" stroke-width="3" marker-end="url(#arrow)"/>
+              <line x1="826" y1="180" x2="884" y2="180" stroke="url(#wire)" stroke-width="3" marker-end="url(#arrow)"/>
+              <line x1="1260" y1="180" x2="1318" y2="180" stroke="url(#wire)" stroke-width="3" marker-end="url(#arrow)"/>
+              <!-- glow nodes on the wire -->
+              <circle cx="421" cy="180" r="6" fill="#22d3ee"/>
+              <circle cx="855" cy="180" r="6" fill="#22d3ee"/>
+              <circle cx="1289" cy="180" r="6" fill="#22d3ee"/>
+            </svg>
+            <!-- node boxes -->
+            <div style="position:absolute; inset:0; z-index:1; display:flex; gap:42px; align-items:center;">
+              <div class="node glowc" style="width: 392px;">
+                <div class="nid">01 / INTENT</div>
+                <div class="ntitle">指示の解釈</div>
+                <div class="ndesc">日本語の依頼を構造化タスクへ。意図とトーンを抽出。</div>
+              </div>
+              <div class="node glowv" style="width: 392px;">
+                <div class="nid">02 / DESIGN.md</div>
+                <div class="ntitle">流派の選択</div>
+                <div class="ndesc">色・余白・タイポをトークンで適用。デッキの統一性を確定。</div>
+              </div>
+              <div class="node glowv" style="width: 392px;">
+                <div class="nid">03 / COMPOSE</div>
+                <div class="ntitle">レイアウト生成</div>
+                <div class="ndesc">図・カード・数値を配置し、各 .slide を HTML で構築。</div>
+              </div>
+              <div class="node glowc" style="width: 392px;">
+                <div class="nid">04 / EXPORT</div>
+                <div class="ntitle">PPTX 書き出し</div>
+                <div class="ndesc">編集可能なネイティブ図形へ。そのまま提出できる成果物。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="src">FIG. 1 — NORDGRID Agentic Pipeline / 内部アーキテクチャ概要</div>
+      </section>
+
+      <!-- 4. FEATURE GRID -->
+      <section class="slide grad-canvas">
+        <div class="glow glow-c" style="width: 700px; height: 700px; bottom: -260px; right: -180px;"></div>
+        <div class="layer">
+          <div class="kicker">CAPABILITIES</div>
+          <div class="slide-title">3つのコア能力</div>
+          <div class="grid3">
+            <div class="card">
+              <div class="chip">
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#7c5cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>
+              </div>
+              <h3>秒で初稿</h3>
+              <p>指示から最初のデッキまで数十秒。考える前に、たたき台が出来ている。</p>
+            </div>
+            <div class="card">
+              <div class="chip">
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              </div>
+              <h3>統一された流派</h3>
+              <p>DESIGN.md が色・余白・タイポを固定。全スライドが自動で揃う。</p>
+            </div>
+            <div class="card">
+              <div class="chip" style="box-shadow:0 0 26px rgba(92,242,164,0.24);">
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#5cf2a4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="19" cy="17" r="2.4"/></svg>
+              </div>
+              <h3>そのまま編集可</h3>
+              <p>ネイティブ図形で書き出し。PowerPoint で文字も図形も後から触れる。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. METRIC HERO -->
+      <section class="slide">
+        <div class="glow glow-v" style="width: 1000px; height: 1000px; top: 50%; left: 50%; transform: translate(-50%, -58%);"></div>
+        <div class="layer metric" style="width:100%;">
+          <div class="kpi">12<span class="unit">×</span></div>
+          <div class="kpi-label">資料作成スピードの向上（社内ベンチ・対 手動作成）</div>
+          <div class="submetrics">
+            <div class="sm"><div class="v c">98%</div><div class="k">流派の一貫性スコア</div></div>
+            <div class="sm"><div class="v">42s</div><div class="k">平均・初稿までの時間</div></div>
+            <div class="sm"><div class="v l">+27pt</div><div class="k">編集可能率の改善</div></div>
+          </div>
+        </div>
+        <div class="src">SOURCE — NORDGRID 内部ベンチマーク 2026 Q1（n=240 デッキ）</div>
+      </section>
+
+      <!-- 6. ROADMAP -->
+      <section class="slide grad-canvas">
+        <div class="glow glow-c" style="width: 640px; height: 640px; top: -220px; right: 120px;"></div>
+        <div class="layer">
+          <div class="kicker">ROADMAP&nbsp;2026</div>
+          <div class="slide-title" style="margin-bottom: 56px;">プロダクト・ロードマップ</div>
+
+          <!-- horizontal axis -->
+          <svg width="1696" height="20" viewBox="0 0 1696 20" style="display:block; margin-bottom: 28px;">
+            <line x1="0" y1="10" x2="1696" y2="10" stroke="#23263a" stroke-width="2"/>
+            <circle cx="40" cy="10" r="7" fill="#5cf2a4"/>
+            <circle cx="605" cy="10" r="6" fill="#22d3ee"/>
+            <circle cx="1130" cy="10" r="6" fill="#7c5cff"/>
+            <circle cx="1656" cy="10" r="6" fill="#7c5cff"/>
+          </svg>
+
+          <div class="phases">
+            <div class="phase">
+              <span class="pchip now"><svg width="12" height="12" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="#07080d"/></svg>NOW · Q1</span>
+              <h4>Agentic Core</h4>
+              <ul><li>意図解釈とDESIGN.md適用</li><li>7流派のプリセット</li></ul>
+            </div>
+            <div class="phase">
+              <span class="pchip">Q2</span>
+              <h4>Diagram Studio</h4>
+              <ul><li>アーキ図の自動生成</li><li>SVGコネクタの最適化</li></ul>
+            </div>
+            <div class="phase">
+              <span class="pchip">Q3</span>
+              <h4>Team Sync</h4>
+              <ul><li>共有テンプレート</li><li>ブランドトークン連携</li></ul>
+            </div>
+            <div class="phase">
+              <span class="pchip">Q4</span>
+              <h4>Live Data</h4>
+              <ul><li>数値の自動更新</li><li>API 連携メトリクス</li></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. CLOSING -->
+      <section class="slide grad-canvas">
+        <div class="glow glow-v" style="width: 1100px; height: 1100px; bottom: -420px; left: 50%; transform: translateX(-50%);"></div>
+        <div class="glow glow-c" style="width: 560px; height: 560px; top: -200px; right: -120px;"></div>
+        <div class="layer">
+          <div class="statement">未来の資料は、<span class="em-v">あなたが組まない</span>。</div>
+          <a class="cta">Start with NORDGRID&nbsp;→</a>
+          <div style="font-family: var(--mono); font-size: 20px; letter-spacing: 0.08em; color: var(--muted); margin-top: 40px;">nordgrid.ai&nbsp;&nbsp;/&nbsp;&nbsp;@nordgrid_ai</div>
+        </div>
+      </section>
+
+    </div>
+  </body>
+</html>

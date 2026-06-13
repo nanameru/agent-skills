@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>KINOWA 木輪 — Brand Journal Sample Deck</title>
+    <style>
+      :root {
+        --canvas: #f6f3ee;
+        --ink: #2b2724;
+        --ink-deep: #1c1815;
+        --muted: #8c847a;
+        --accent: #9a6a3c;
+        --hairline: #e2dcd2;
+        --surface: #efeae1;
+        --on-accent: #f6f3ee;
+        --m: 120px;
+        --serif: "Noto Serif JP", Georgia, "Times New Roman", serif;
+        --sans: "Noto Sans JP", Inter, sans-serif;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #ccc7bd; padding: 32px; font-family: var(--sans); }
+      .slides-stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+      .slide {
+        position: relative; width: 1920px; height: 1080px;
+        background: var(--canvas); color: var(--ink); overflow: hidden;
+      }
+
+      /* shared editorial elements */
+      .kicker {
+        font-family: var(--sans); font-size: 18px; font-weight: 600;
+        letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent);
+      }
+      .hairline { height: 1px; background: var(--hairline); width: 100%; }
+      .folio {
+        position: absolute; bottom: 56px; left: var(--m); right: var(--m);
+        display: flex; justify-content: space-between; align-items: center;
+        font-family: var(--sans); font-size: 14px; font-weight: 500;
+        letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase;
+      }
+      .folio .hl { flex: 1; height: 1px; background: var(--hairline); margin: 0 28px; }
+      .pad { padding: var(--m); height: 100%; display: flex; flex-direction: column; }
+
+      /* ---------- 1. COVER ---------- */
+      .cover { height: 100%; display: flex; }
+      .cover .left {
+        flex: 0 0 58%; padding: var(--m) 72px var(--m) var(--m);
+        display: flex; flex-direction: column;
+      }
+      .cover .top { display: flex; justify-content: space-between; align-items: baseline; }
+      .cover .top .issue {
+        font-family: var(--serif); font-size: 20px; color: var(--muted); font-style: italic;
+      }
+      .cover .rule { height: 1px; background: var(--hairline); margin: 28px 0 auto; }
+      .cover .mast {
+        font-family: var(--serif); font-weight: 600; color: var(--ink-deep);
+        font-size: 132px; line-height: 1.04; letter-spacing: -0.015em;
+      }
+      .cover .mast .sub {
+        display: block; font-size: 30px; font-weight: 400; color: var(--muted);
+        letter-spacing: 0.02em; margin-top: 28px; line-height: 1.6; max-width: 720px;
+      }
+      .cover .colophon {
+        margin-top: 44px; display: flex; gap: 56px;
+        font-family: var(--sans); font-size: 15px; color: var(--muted); letter-spacing: 0.04em;
+      }
+      .cover .colophon b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 4px; }
+      .cover .right {
+        flex: 1; position: relative;
+        background: linear-gradient(155deg, #d8c8b2 0%, #c4a87f 46%, #9a6a3c 100%);
+      }
+      .cover .right .frame {
+        position: absolute; inset: 64px; border: 1px solid rgba(246,243,238,0.45);
+      }
+      .cover .right .label {
+        position: absolute; left: 64px; bottom: 40px;
+        font-family: var(--sans); font-size: 14px; letter-spacing: 0.18em;
+        text-transform: uppercase; color: rgba(246,243,238,0.85);
+      }
+
+      /* ---------- 2. CONTENTS ---------- */
+      .head-row { display: flex; align-items: baseline; justify-content: space-between; }
+      .headline {
+        font-family: var(--serif); font-size: 64px; font-weight: 600;
+        color: var(--ink); line-height: 1.18; letter-spacing: -0.01em;
+      }
+      .contents-wrap { display: flex; gap: 80px; margin-top: 56px; flex: 1; }
+      .contents-list { flex: 1; display: flex; flex-direction: column; }
+      .crow { display: flex; align-items: baseline; gap: 36px; padding: 30px 0; }
+      .crow + .crow { border-top: 1px solid var(--hairline); }
+      .crow .num {
+        font-family: Georgia, serif; font-size: 40px; font-weight: 500;
+        color: var(--accent); width: 72px; flex: 0 0 72px;
+      }
+      .crow .ct {
+        font-family: var(--serif); font-size: 30px; font-weight: 500; color: var(--ink); flex: 1;
+      }
+      .crow .cd { font-family: var(--sans); font-size: 16px; color: var(--muted); flex: 0 0 320px; line-height: 1.6; }
+      .crow .pg { font-family: Georgia, serif; font-size: 22px; color: var(--muted); width: 48px; text-align: right; }
+      .margin-note { flex: 0 0 300px; padding-top: 8px; }
+      .margin-note .mq {
+        font-family: var(--serif); font-style: italic; font-size: 24px;
+        color: var(--ink); line-height: 1.7;
+      }
+      .margin-note .ms { margin-top: 24px; font-family: var(--sans); font-size: 14px; color: var(--muted); letter-spacing: 0.04em; }
+
+      /* ---------- 3. FEATURE OPENER ---------- */
+      .feat { display: flex; gap: 72px; flex: 1; margin-top: 24px; }
+      .feat .col-text { flex: 1.15; display: flex; flex-direction: column; }
+      .feat .h2 {
+        font-family: var(--serif); font-size: 58px; font-weight: 600; color: var(--ink);
+        line-height: 1.2; letter-spacing: -0.01em; margin: 22px 0 36px;
+      }
+      .two-col {
+        columns: 2; column-gap: 40px; column-rule: 1px solid var(--hairline);
+        font-family: var(--sans); font-size: 19px; line-height: 1.95; color: var(--ink);
+      }
+      .two-col p { margin-bottom: 18px; break-inside: avoid; }
+      .two-col p:first-child { break-inside: avoid; }
+      .dropcap {
+        float: left; font-family: var(--serif); font-size: 116px; font-weight: 600;
+        line-height: 0.78; color: var(--accent); padding: 8px 14px 0 0;
+      }
+      .feat .col-fig { flex: 0.85; display: flex; flex-direction: column; }
+      .fig {
+        flex: 1; position: relative; overflow: hidden; background: var(--surface);
+        border: 1px solid var(--hairline);
+      }
+      .fig.tonal { background: linear-gradient(160deg, #e6dccb 0%, #c9b08a 55%, #a87f4f 100%); border: none; }
+      .figcap {
+        margin-top: 14px; display: flex; gap: 14px; align-items: baseline;
+      }
+      .figcap .fl { font-family: Georgia, serif; font-size: 15px; color: var(--accent); letter-spacing: 0.06em; }
+      .figcap .ftext { font-family: var(--sans); font-size: 15px; color: var(--muted); line-height: 1.55; }
+
+      /* ---------- 4. PULL QUOTE ---------- */
+      .quote-wrap {
+        height: 100%; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; padding: var(--m);
+        text-align: center;
+      }
+      .qmark { font-family: Georgia, serif; font-size: 160px; color: var(--accent); line-height: 0.5; height: 80px; }
+      .pq {
+        font-family: var(--serif); font-size: 76px; font-weight: 500; color: var(--ink-deep);
+        line-height: 1.34; letter-spacing: -0.005em; max-width: 1320px; margin: 24px 0 48px;
+      }
+      .pq em { font-style: italic; color: var(--accent); }
+      .attr { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+      .attr .arule { width: 64px; height: 1px; background: var(--hairline); margin-bottom: 20px; }
+      .attr .an { font-family: var(--sans); font-size: 19px; font-weight: 600; color: var(--ink); letter-spacing: 0.04em; }
+      .attr .ar { font-family: var(--sans); font-size: 15px; color: var(--muted); letter-spacing: 0.04em; }
+
+      /* ---------- 5. GALLERY 3-up ---------- */
+      .gallery { display: flex; gap: 40px; flex: 1; margin-top: 48px; }
+      .gcard { flex: 1; display: flex; flex-direction: column; }
+      .gcard .gfig { height: 460px; position: relative; overflow: hidden; }
+      .gcard .gh {
+        font-family: var(--serif); font-size: 28px; font-weight: 600; color: var(--ink);
+        margin: 26px 0 12px; line-height: 1.3;
+      }
+      .gcard .gnum { font-family: Georgia, serif; font-size: 15px; color: var(--accent); letter-spacing: 0.08em; }
+      .gcard .gc { font-family: var(--sans); font-size: 16px; color: var(--muted); line-height: 1.7; }
+      .gcard .gline { height: 1px; background: var(--hairline); margin: 16px 0; }
+
+      /* ---------- 6. FIGURES / DATA ---------- */
+      .figures { display: flex; gap: 0; flex: 1; margin-top: 56px; }
+      .stat { flex: 1; padding: 0 48px; display: flex; flex-direction: column; justify-content: center; }
+      .stat + .stat { border-left: 1px solid var(--hairline); }
+      .stat:first-child { padding-left: 0; }
+      .stat .sn {
+        font-family: Georgia, serif; font-size: 100px; font-weight: 500; color: var(--ink-deep);
+        line-height: 1; letter-spacing: -0.02em;
+      }
+      .stat.hot .sn { color: var(--accent); }
+      .stat .sn .u { font-family: var(--serif); font-size: 40px; color: var(--muted); margin-left: 6px; }
+      .stat .sl { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 18px; }
+      .stat .sd { font-family: var(--sans); font-size: 15px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+      .stat .chip {
+        display: inline-block; align-self: flex-start; margin-top: 18px;
+        background: var(--accent); color: var(--on-accent); font-family: var(--sans);
+        font-size: 13px; font-weight: 600; letter-spacing: 0.06em; padding: 5px 14px; border-radius: 2px;
+      }
+
+      /* ---------- 7. COLOPHON / CLOSING ---------- */
+      .close { height: 100%; padding: var(--m); display: flex; flex-direction: column; justify-content: center; }
+      .close .ck { margin-bottom: 36px; }
+      .close .cmsg {
+        font-family: var(--serif); font-size: 60px; font-weight: 500; color: var(--ink-deep);
+        line-height: 1.4; letter-spacing: -0.01em; max-width: 1300px;
+      }
+      .close .cmsg em { font-style: italic; color: var(--accent); }
+      .close .crule { height: 1px; background: var(--hairline); margin: 64px 0 44px; }
+      .close .cgrid { display: flex; gap: 88px; }
+      .close .cgrid .ci b { display: block; font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+      .close .cgrid .ci span { font-family: var(--serif); font-size: 22px; color: var(--ink); line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <div class="slides-stack">
+
+      <!-- 1. COVER -->
+      <section class="slide">
+        <div class="cover">
+          <div class="left">
+            <div class="top">
+              <div class="kicker">KINOWA Brand Journal</div>
+              <div class="issue">Issue 07 — 2026 Spring</div>
+            </div>
+            <div class="rule"></div>
+            <div class="mast">
+              木と、<br />暮らしの輪。
+              <span class="sub">手のひらに収まる道具から、ひとつの集落の手仕事まで。木輪が信じる「使い続けられるものづくり」のこと。</span>
+            </div>
+            <div class="colophon">
+              <div><b>発行</b>KINOWA 木輪</div>
+              <div><b>号</b>Issue 07</div>
+              <div><b>発行日</b>2026年6月</div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="frame"></div>
+            <div class="label">Fig. 00 — Workshop, Hida</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. CONTENTS -->
+      <section class="slide">
+        <div class="pad">
+          <div class="head-row">
+            <div>
+              <div class="kicker" style="margin-bottom:18px;">Contents</div>
+              <div class="headline">この号で<br />お話しすること。</div>
+            </div>
+            <div class="issue" style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:var(--muted);">— Issue 07</div>
+          </div>
+          <div class="contents-wrap">
+            <div class="contents-list">
+              <div class="crow">
+                <div class="num">01</div>
+                <div class="ct">わたしたちの考えるものづくり</div>
+                <div class="cd">素材と作り手のあいだにある、長い時間の話。</div>
+                <div class="pg">04</div>
+              </div>
+              <div class="crow">
+                <div class="num">02</div>
+                <div class="ct">職人の手と、ことば</div>
+                <div class="cd">三代目が語る、木輪の根にある約束ごと。</div>
+                <div class="pg">12</div>
+              </div>
+              <div class="crow">
+                <div class="num">03</div>
+                <div class="ct">手仕事の風景</div>
+                <div class="cd">器・道具・素材。工房に流れる時間を3枚で。</div>
+                <div class="pg">18</div>
+              </div>
+              <div class="crow">
+                <div class="num">04</div>
+                <div class="ct">数字でみる一年</div>
+                <div class="cd">つくった量ではなく、続いた関係を測る。</div>
+                <div class="pg">24</div>
+              </div>
+            </div>
+            <div class="margin-note">
+              <div class="mq">「速さではなく、<br />ほどよさを。」</div>
+              <div class="ms">— 編集後記より</div>
+            </div>
+          </div>
+        </div>
+        <div class="folio"><span>KINOWA Brand Journal</span><span class="hl"></span><span>02</span></div>
+      </section>
+
+      <!-- 3. FEATURE OPENER -->
+      <section class="slide">
+        <div class="pad" style="padding-bottom:120px;">
+          <div class="kicker">Feature 01 — Our Craft</div>
+          <div class="feat">
+            <div class="col-text">
+              <div class="h2">急がない、という<br />技術について。</div>
+              <div class="two-col">
+                <p><span class="dropcap">木</span>輪のものづくりは、木を切るところから始まらない。一本の木が器になるまでに、わたしたちはまず、その木が育った土地の風と水のことを知ろうとする。乾かす時間を惜しまない。木目の向きに逆らわない。</p>
+                <p>速くつくる方法はいくらでもある。けれど、速くつくられたものは、たいてい速く飽きられ、速く捨てられていく。わたしたちが残したいのは、十年使って、なお手に馴染むものだ。</p>
+                <p>そのために職人は、同じ器を何度も握り直す。削りすぎない。整えすぎない。使う人の手が最後の仕上げをするのだと信じて、あえて余白を残す。それが木輪の「ほどよさ」である。</p>
+                <p>この特集では、その余白がどこから来るのかを、工房のことばと風景から辿っていく。</p>
+              </div>
+            </div>
+            <div class="col-fig">
+              <div class="fig tonal">
+                <svg width="100%" height="100%" viewBox="0 0 480 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <g fill="none" stroke="#f6f3ee" stroke-opacity="0.5" stroke-width="2">
+                    <circle cx="240" cy="280" r="40"/>
+                    <circle cx="240" cy="280" r="80"/>
+                    <circle cx="240" cy="280" r="120"/>
+                    <circle cx="240" cy="280" r="160"/>
+                    <circle cx="240" cy="280" r="200"/>
+                    <circle cx="240" cy="280" r="240"/>
+                  </g>
+                  <circle cx="240" cy="280" r="14" fill="#f6f3ee" fill-opacity="0.85"/>
+                </svg>
+              </div>
+              <div class="figcap">
+                <span class="fl">Fig. 01</span>
+                <span class="ftext">樹齢を重ねた欅の年輪。中心の点が、最初のひと削りの場所。</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="folio"><span>01 — Our Craft</span><span class="hl"></span><span>04</span></div>
+      </section>
+
+      <!-- 4. PULL QUOTE -->
+      <section class="slide">
+        <div class="quote-wrap">
+          <div class="qmark">&ldquo;</div>
+          <div class="pq">道具は、使う人の<em>くせ</em>を覚えていく。<br />だから私たちは、最後まで<br />仕上げきらないでおくんです。</div>
+          <div class="attr">
+            <div class="arule"></div>
+            <div class="an">髙村 一輪</div>
+            <div class="ar">木輪 三代目 / 木工職人</div>
+          </div>
+        </div>
+        <div class="folio"><span>02 — Voice</span><span class="hl"></span><span>12</span></div>
+      </section>
+
+      <!-- 5. GALLERY 3-up -->
+      <section class="slide">
+        <div class="pad" style="padding-bottom:120px;">
+          <div class="kicker">Feature 03 — Scenes</div>
+          <div class="headline" style="margin-top:18px;">手仕事の、<br />三つの風景。</div>
+          <div class="gallery">
+            <div class="gcard">
+              <div class="gfig" style="background:linear-gradient(165deg,#e9e0d1 0%,#cdb48c 100%);">
+                <svg width="100%" height="100%" viewBox="0 0 400 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <path d="M120 300 Q200 200 280 300 L280 340 Q200 380 120 340 Z" fill="#9a6a3c" fill-opacity="0.55"/>
+                  <ellipse cx="200" cy="300" rx="80" ry="20" fill="#f6f3ee" fill-opacity="0.4"/>
+                </svg>
+              </div>
+              <div class="gh">削る</div>
+              <div class="gline"></div>
+              <div class="gnum">Fig. 02</div>
+              <div class="gc">鉋（かんな）で薄く木を起こす。厚みではなく、光の通り方で仕上がりを確かめる。</div>
+            </div>
+            <div class="gcard">
+              <div class="gfig" style="background:linear-gradient(165deg,#ede6da 0%,#c2a677 100%);">
+                <svg width="100%" height="100%" viewBox="0 0 400 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <g fill="none" stroke="#9a6a3c" stroke-opacity="0.5" stroke-width="3">
+                    <path d="M80 360 Q200 120 320 360"/>
+                    <path d="M120 360 Q200 180 280 360"/>
+                    <path d="M160 360 Q200 240 240 360"/>
+                  </g>
+                </svg>
+              </div>
+              <div class="gh">塗る</div>
+              <div class="gline"></div>
+              <div class="gnum">Fig. 03</div>
+              <div class="gc">拭き漆を幾度も重ねる。色をのせるのではなく、木そのものの色を深めていく作業。</div>
+            </div>
+            <div class="gcard">
+              <div class="gfig" style="background:linear-gradient(165deg,#e7ddcd 0%,#b89669 100%);">
+                <svg width="100%" height="100%" viewBox="0 0 400 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <circle cx="200" cy="230" r="120" fill="none" stroke="#f6f3ee" stroke-opacity="0.55" stroke-width="3"/>
+                  <circle cx="200" cy="230" r="78" fill="#9a6a3c" fill-opacity="0.45"/>
+                </svg>
+              </div>
+              <div class="gh">手わたす</div>
+              <div class="gline"></div>
+              <div class="gnum">Fig. 04</div>
+              <div class="gc">使い手のもとへ。完成は工房ではなく、暮らしの中で、ゆっくり訪れる。</div>
+            </div>
+          </div>
+        </div>
+        <div class="folio"><span>03 — Scenes</span><span class="hl"></span><span>18</span></div>
+      </section>
+
+      <!-- 6. FIGURES / DATA -->
+      <section class="slide">
+        <div class="pad" style="padding-bottom:120px;">
+          <div class="kicker">Feature 04 — By the Numbers</div>
+          <div class="headline" style="margin-top:18px;">数字でみる、<br />木輪の一年。</div>
+          <div class="figures">
+            <div class="stat">
+              <div class="sn">38<span class="u">年</span></div>
+              <div class="sl">最も長く使われている器</div>
+              <div class="sd">初代がつくった汁椀。三度の塗り直しを経て、今も食卓に。</div>
+            </div>
+            <div class="stat hot">
+              <div class="sn">92<span class="u">%</span></div>
+              <div class="sl">修理して使い続けた割合</div>
+              <div class="sd">昨年お預かりした道具のうち、買い替えず手入れで戻ったもの。</div>
+              <span class="chip">続く関係</span>
+            </div>
+            <div class="stat">
+              <div class="sn">6<span class="u">人</span></div>
+              <div class="sl">工房の作り手</div>
+              <div class="sd">大量にはつくらない。手の届く範囲で、見える分だけを。</div>
+            </div>
+            <div class="stat">
+              <div class="sn">1<span class="u">本</span></div>
+              <div class="sl">植える、使った木の数だけ</div>
+              <div class="sd">伐った木の分は、土地に還す。次の三代目のための約束。</div>
+            </div>
+          </div>
+        </div>
+        <div class="folio"><span>04 — By the Numbers</span><span class="hl"></span><span>24</span></div>
+      </section>
+
+      <!-- 7. COLOPHON / CLOSING -->
+      <section class="slide">
+        <div class="close">
+          <div class="kicker ck">Colophon</div>
+          <div class="cmsg">いいものを、長く。<br />それは、つくる人と使う人が<br /><em>同じ時間を生きる</em>ということ。</div>
+          <div class="crule"></div>
+          <div class="cgrid">
+            <div class="ci"><b>発行</b><span>KINOWA 木輪<br />ブランドジャーナル編集室</span></div>
+            <div class="ci"><b>号 / 発行日</b><span>Issue 07<br />2026年6月</span></div>
+            <div class="ci"><b>連絡先</b><span>journal@kinowa.example<br />飛騨・古川 工房</span></div>
+          </div>
+        </div>
+        <div class="folio"><span>KINOWA Brand Journal</span><span class="hl"></span><span>28</span></div>
+      </section>
+
+    </div>
+  </body>
+</html>

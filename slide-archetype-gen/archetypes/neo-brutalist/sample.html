@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Neo-Brutalist — Sample Deck（FORGEKIT）</title>
+    <style>
+      :root {
+        --canvas: #ffffff;
+        --signal: #ffe600;
+        --ink: #000000;
+        --blue: #2b4bff;
+        --red: #ff3b30;
+        --lime: #b8ff3a;
+        --m: 88px;
+        --bd: 4px solid #000000;
+        --drop: 10px 10px 0 #000000;
+        --drop-lg: 16px 16px 0 #000000;
+        --sans: "Inter", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+        --mono: "Space Mono", ui-monospace, "Noto Sans JP", monospace;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #d9d9d9; padding: 32px; font-family: var(--sans); }
+      .slides-stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+      .slide {
+        position: relative; width: 1920px; height: 1080px;
+        background: var(--canvas); color: var(--ink); overflow: hidden;
+      }
+
+      /* shared scaffold */
+      .pad { position: absolute; inset: 0; padding: 72px var(--m); display: flex; flex-direction: column; }
+      .topbar { display: flex; justify-content: space-between; align-items: flex-start; }
+      .logo { display: inline-flex; align-items: center; gap: 14px; }
+      .logo .mk { width: 40px; height: 40px; background: var(--blue); border: var(--bd); box-shadow: 6px 6px 0 #000; }
+      .logo .mk.on-dark { background: var(--signal); }
+      .logo .wm { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.06em; }
+      .logo .wm.light { color: #fff; }
+      .meta { font-family: var(--mono); font-size: 17px; font-weight: 700; letter-spacing: 0.1em; }
+      .meta.light { color: #fff; }
+      .foot { position: absolute; left: var(--m); right: var(--m); bottom: 44px;
+        display: flex; justify-content: space-between; font-family: var(--mono);
+        font-size: 15px; font-weight: 700; letter-spacing: 0.08em; }
+      .foot.light { color: #fff; }
+
+      /* 1. COVER */
+      .cover-yel { background: var(--signal); }
+      .title { position: absolute; left: var(--m); top: 232px; z-index: 3;
+        font-size: 188px; font-weight: 900; line-height: 0.86; letter-spacing: -0.04em; max-width: 1280px; }
+      .sub { position: absolute; left: var(--m); top: 808px; z-index: 3;
+        font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: 0.04em; max-width: 1180px; }
+      .blk { position: absolute; border: var(--bd); box-shadow: var(--drop-lg); z-index: 2; }
+      .blk.b1 { width: 300px; height: 300px; right: 96px; top: 188px; background: var(--blue); }
+      .blk.b2 { width: 230px; height: 230px; right: 300px; top: 470px; background: var(--red); }
+      .blk.b3 { width: 200px; height: 200px; right: 96px; top: 560px; background: var(--lime); }
+      .blk .ic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+      /* 2. STATEMENT */
+      .stmt { justify-content: center; }
+      .stmt h2 { font-size: 116px; font-weight: 900; line-height: 1.02; letter-spacing: -0.03em; max-width: 1620px; }
+      .mark { display: inline-block; background: var(--blue); color: #fff; border: var(--bd);
+        box-shadow: var(--drop); padding: 0 24px; line-height: 1.0; }
+      .mark.red { background: var(--red); }
+      .stmt .lede { margin-top: 56px; font-family: var(--mono); font-size: 24px; font-weight: 700;
+        letter-spacing: 0.04em; max-width: 1200px; }
+
+      /* generic heading */
+      .h { font-size: 64px; font-weight: 900; line-height: 1.0; letter-spacing: -0.02em; margin-top: 28px; }
+      .kick { font-family: var(--mono); font-size: 20px; font-weight: 700; letter-spacing: 0.12em; }
+
+      /* 3. FEATURE BLOCKS */
+      .cards { margin-top: 64px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; }
+      .card { border: var(--bd); box-shadow: var(--drop); padding: 40px; min-height: 460px;
+        display: flex; flex-direction: column; }
+      .card.white { background: #fff; }
+      .card.yel { background: var(--signal); }
+      .card.blue { background: var(--blue); color: #fff; }
+      .card .cic { width: 84px; height: 84px; border: var(--bd); box-shadow: 6px 6px 0 #000;
+        display: flex; align-items: center; justify-content: center; background: #fff; }
+      .card.blue .cic { background: var(--lime); }
+      .card .lab { margin-top: 28px; font-family: var(--mono); font-size: 17px; font-weight: 700; letter-spacing: 0.1em; }
+      .card .ct { margin-top: 14px; font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+      .card .cb { margin-top: 16px; font-size: 20px; font-weight: 500; line-height: 1.55; }
+
+      /* 4. BIG NUMBER */
+      .bn-wrap { margin-top: 24px; display: flex; gap: 56px; align-items: stretch; }
+      .numblk { background: var(--signal); border: var(--bd); box-shadow: var(--drop-lg);
+        flex: 0 0 1140px; padding: 20px 56px; display: flex; flex-direction: column; justify-content: center; }
+      .numblk .n { font-size: 380px; font-weight: 900; line-height: 0.8; letter-spacing: -0.05em; }
+      .numblk .n .u { font-size: 150px; }
+      .numblk .nl { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.06em; margin-top: 8px; }
+      .bn-side { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+      .bn-side .p { font-size: 26px; font-weight: 500; line-height: 1.5; }
+      .bn-side .badge { align-self: flex-start; background: var(--lime); border: 3px solid #000;
+        font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: 0.06em; padding: 8px 18px; }
+
+      /* 5. COMPARISON */
+      .cmp { margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+      .col { border: var(--bd); box-shadow: var(--drop); padding: 44px; min-height: 560px; }
+      .col.old { background: #fff; }
+      .col.new { background: var(--blue); color: #fff; }
+      .col .ctop { display: flex; justify-content: space-between; align-items: center; }
+      .col .clab { font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: 0.1em; }
+      .col .cbadge { font-family: var(--mono); font-size: 16px; font-weight: 700; letter-spacing: 0.06em;
+        padding: 6px 14px; border: 3px solid #000; }
+      .col .cbadge.win { background: var(--lime); color: #000; }
+      .col .cbadge.meh { background: var(--red); color: #fff; }
+      .col h3 { margin-top: 22px; font-size: 40px; font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; }
+      .col ul { margin-top: 28px; list-style: none; display: flex; flex-direction: column; gap: 18px; }
+      .col li { display: flex; gap: 16px; font-size: 21px; font-weight: 500; line-height: 1.4; }
+      .col li .mk2 { flex: 0 0 auto; margin-top: 3px; }
+
+      /* 6. PROCESS */
+      .steps { margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 36px; }
+      .step { border: var(--bd); box-shadow: var(--drop); padding: 34px; min-height: 440px;
+        display: flex; flex-direction: column; background: #fff; }
+      .step .sn { width: 88px; height: 88px; background: var(--ink); color: #fff;
+        font-size: 56px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+      .step .sn.b { background: var(--blue); }
+      .step .sn.r { background: var(--red); }
+      .step .sn.l { background: var(--lime); color: #000; }
+      .step .st { margin-top: 26px; font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+      .step .sb { margin-top: 14px; font-size: 19px; font-weight: 500; line-height: 1.5; }
+
+      /* 7. CLOSING */
+      .close { background: var(--signal); justify-content: center; align-items: flex-start; }
+      .close .ck { font-family: var(--mono); font-size: 24px; font-weight: 700; letter-spacing: 0.1em; }
+      .close h2 { margin-top: 24px; font-size: 132px; font-weight: 900; line-height: 0.92; letter-spacing: -0.03em; max-width: 1500px; }
+      .cta { margin-top: 64px; display: inline-flex; align-items: center; gap: 20px;
+        background: var(--blue); color: #fff; border: var(--bd); box-shadow: var(--drop-lg);
+        font-size: 40px; font-weight: 900; letter-spacing: -0.01em; padding: 28px 56px; }
+      .cta .arr { display: flex; }
+      .close .url { margin-top: 48px; font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.06em; }
+    </style>
+  </head>
+  <body>
+    <div class="slides-stack">
+
+      <!-- 1. COVER -->
+      <section class="slide">
+        <div class="pad cover-yel cover">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">v3.0 / DEV TOOLKIT</div>
+          </div>
+        </div>
+        <h1 class="title">SHIP UGLY. SHIP FAST.</h1>
+        <div class="sub">// 開発者のためのビルド & デプロイ基盤。摩擦ゼロ、忖度ゼロ。</div>
+
+        <div class="blk b1">
+          <div class="ic">
+            <svg width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </div>
+        </div>
+        <div class="blk b2">
+          <div class="ic">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="blk b3">
+          <div class="ic">
+            <svg width="110" height="110" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18"/>
+              <path d="M3 9 H21 M9 9 V21"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="foot">
+          <div>01 / COVER</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+      <!-- 2. STATEMENT -->
+      <section class="slide">
+        <div class="pad stmt">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">MANIFESTO</div>
+          </div>
+          <h2>整いすぎたツールは、<span class="mark">遅い。</span><br/>速さは、<span class="mark red">摩擦ゼロ</span>から生まれる。</h2>
+          <div class="lede">// 設定画面30枚より、コマンド1行。FORGEKIT は飾りを捨てて速度を選ぶ。</div>
+        </div>
+        <div class="foot">
+          <div>02 / STATEMENT</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+      <!-- 3. FEATURE BLOCKS -->
+      <section class="slide">
+        <div class="pad">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">FEATURES</div>
+          </div>
+          <div class="kick" style="margin-top:34px;">// CORE TOOLKIT</div>
+          <h2 class="h">3つの武器。それだけ。</h2>
+
+          <div class="cards">
+            <div class="card white">
+              <div class="cic">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+              </div>
+              <div class="lab">// 01 BUILD</div>
+              <div class="ct">爆速ビルド</div>
+              <div class="cb">差分だけを並列ビルド。キャッシュは積極的に効かせ、待ち時間を削る。</div>
+            </div>
+            <div class="card yel">
+              <div class="cic">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+                  <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z"/>
+                  <polyline points="9 12 11 14 15 9"/>
+                </svg>
+              </div>
+              <div class="lab">// 02 SECURE</div>
+              <div class="ct">既定で堅牢</div>
+              <div class="cb">署名・SBOM・権限分離を初期設定で内蔵。あとから足す手間をなくす。</div>
+            </div>
+            <div class="card blue">
+              <div class="cic">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </div>
+              <div class="lab">// 03 DEPLOY</div>
+              <div class="ct">即デプロイ</div>
+              <div class="cb">1コマンドで本番反映。ロールバックも1コマンド。迷う余地を残さない。</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot">
+          <div>03 / FEATURES</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+      <!-- 4. BIG NUMBER -->
+      <section class="slide">
+        <div class="pad">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">BENCHMARK</div>
+          </div>
+          <div class="kick" style="margin-top:34px;">// MEDIAN BUILD TIME</div>
+          <div class="bn-wrap">
+            <div class="numblk">
+              <div class="n">12<span class="u">s</span></div>
+              <div class="nl">// AVERAGE COLD BUILD (2.4M LOC)</div>
+            </div>
+            <div class="bn-side">
+              <div class="badge">93% FASTER</div>
+              <div class="p">従来のCIで平均 <b>3分</b> かかっていたコールドビルドが、FORGEKIT では <b>12秒</b>。待ち時間が消えると、レビューの回転数が上がる。</div>
+              <div class="p">数字は社内200リポジトリの中央値（架空のサンプル計測）。</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot">
+          <div>04 / BIG NUMBER</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+      <!-- 5. COMPARISON -->
+      <section class="slide">
+        <div class="pad">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">VS</div>
+          </div>
+          <div class="kick" style="margin-top:34px;">// THE DIFFERENCE</div>
+          <h2 class="h">旧来のCI vs FORGEKIT。</h2>
+
+          <div class="cmp">
+            <div class="col old">
+              <div class="ctop">
+                <div class="clab">// LEGACY CI</div>
+                <div class="cbadge meh">SLOW</div>
+              </div>
+              <h3>つぎはぎの<br/>パイプライン</h3>
+              <ul>
+                <li><span class="mk2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="3" stroke-linecap="square" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+                </span>YAMLが800行に膨張する</li>
+                <li><span class="mk2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="3" stroke-linecap="square" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+                </span>キャッシュが効かず毎回フルビルド</li>
+                <li><span class="mk2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="3" stroke-linecap="square" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+                </span>セキュリティは後付けで穴だらけ</li>
+              </ul>
+            </div>
+            <div class="col new">
+              <div class="ctop">
+                <div class="clab">// FORGEKIT</div>
+                <div class="cbadge win">FAST</div>
+              </div>
+              <h3>1つの<br/>ツールチェーン</h3>
+              <ul>
+                <li><span class="mk2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b8ff3a" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><polyline points="4 12 10 18 20 5"/></svg>
+                </span>設定は1ファイル・20行で完結</li>
+                <li><span class="mk2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b8ff3a" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><polyline points="4 12 10 18 20 5"/></svg>
+                </span>差分ビルド＋分散キャッシュで12秒</li>
+                <li><span class="mk2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b8ff3a" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><polyline points="4 12 10 18 20 5"/></svg>
+                </span>署名・SBOMが既定で有効</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="foot">
+          <div>05 / COMPARISON</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+      <!-- 6. PROCESS -->
+      <section class="slide">
+        <div class="pad">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">HOW IT WORKS</div>
+          </div>
+          <div class="kick" style="margin-top:34px;">// 4 STEPS TO PROD</div>
+          <h2 class="h">入れて、書いて、押すだけ。</h2>
+
+          <div class="steps">
+            <div class="step">
+              <div class="sn b">1</div>
+              <div class="st">INSTALL</div>
+              <div class="sb">1コマンドでCLIを導入。既存リポジトリに非破壊で同居する。</div>
+            </div>
+            <div class="step">
+              <div class="sn r">2</div>
+              <div class="st">CONFIG</div>
+              <div class="sb">forge.toml を20行。ビルド・テスト・デプロイを一枚で宣言。</div>
+            </div>
+            <div class="step">
+              <div class="sn l">3</div>
+              <div class="st">BUILD</div>
+              <div class="sb">差分だけを並列ビルド。キャッシュは自動で共有される。</div>
+            </div>
+            <div class="step">
+              <div class="sn">4</div>
+              <div class="st">SHIP</div>
+              <div class="sb">forge ship で本番反映。失敗時は即ロールバック。</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot">
+          <div>06 / PROCESS</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+      <!-- 7. CLOSING -->
+      <section class="slide">
+        <div class="pad close">
+          <div class="topbar">
+            <div class="logo">
+              <div class="mk"></div>
+              <div class="wm">FORGEKIT</div>
+            </div>
+            <div class="meta">GET STARTED</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+            <div class="ck">// STOP WAITING ON BUILDS</div>
+            <h2>今すぐ、<br/>鍛えはじめろ。</h2>
+            <div class="cta">
+              forgekit.dev
+              <span class="arr">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+                  <line x1="3" y1="12" x2="20" y2="12"/>
+                  <polyline points="13 5 20 12 13 19"/>
+                </svg>
+              </span>
+            </div>
+            <div class="url">// curl -fsSL forgekit.dev/install | sh</div>
+          </div>
+        </div>
+        <div class="foot">
+          <div>07 / CLOSING</div>
+          <div>FORGEKIT</div>
+        </div>
+      </section>
+
+    </div>
+  </body>
+</html>

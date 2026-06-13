@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gamma-style Card / Web-native — Sample Deck（Lumen Notes）</title>
+    <style>
+      :root {
+        --accent-a: #6a7bff;
+        --accent-b: #9b6bff;
+        --page: #eef1f6;
+        --card: #ffffff;
+        --ink: #1b2030;
+        --muted: #5b6475;
+        --tint-violet: #f1f3ff;
+        --tint-violet-deep: #e6e9ff;
+        --tint-mint: #eefcf6;
+        --mint-ink: #127a55;
+        --hairline: #e7eaf2;
+        --grad: linear-gradient(120deg, #6a7bff 0%, #9b6bff 100%);
+        --font: "Inter", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+        --serif: var(--font);
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #d9d9d9; padding: 32px; font-family: var(--font); }
+      .slides-stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+
+      .slide { position: relative; width: 1920px; height: 1080px; background: var(--page); color: var(--ink); overflow: hidden; }
+
+      /* the floating white card */
+      .card {
+        position: absolute; left: 56px; top: 56px; right: 56px; bottom: 56px;
+        background: var(--card); border-radius: 28px;
+        box-shadow: 0 30px 70px rgba(27,32,48,0.10);
+        overflow: hidden;
+      }
+      .accent-bar { position: absolute; left: 0; right: 0; top: 0; height: 8px; background: var(--grad); }
+      .pad { position: absolute; inset: 0; padding: 88px; padding-top: 96px; display: flex; flex-direction: column; }
+
+      /* shared bits */
+      .eyebrow { display: inline-flex; align-items: center; gap: 10px; background: var(--tint-violet); color: var(--accent-b); font-size: 17px; font-weight: 700; letter-spacing: 0.06em; border-radius: 999px; padding: 10px 22px; align-self: flex-start; }
+      .stitle { font-size: 46px; font-weight: 700; color: var(--ink); line-height: 1.25; letter-spacing: -0.01em; }
+      .lead { font-size: 26px; font-weight: 400; color: var(--muted); line-height: 1.65; }
+      .body { font-size: 20px; font-weight: 400; color: var(--ink); line-height: 1.7; }
+      .hl { color: var(--accent-b); font-weight: 700; }
+      .brand { display: inline-flex; align-items: center; gap: 14px; }
+      .brand .mk { width: 40px; height: 40px; border-radius: 12px; background: var(--grad); }
+      .brand .wm { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
+      .foot { position: absolute; left: 88px; right: 88px; bottom: 52px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 500; color: var(--muted); }
+
+      /* COVER */
+      .cv-eyebrow { margin-bottom: 36px; }
+      .cv h1 { font-size: 104px; font-weight: 800; color: var(--ink); line-height: 1.04; letter-spacing: -0.025em; }
+      .cv .sub { font-size: 30px; font-weight: 400; color: var(--muted); line-height: 1.55; margin-top: 34px; max-width: 1180px; }
+      .cv-bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+      .cv-bottom .dt { font-size: 18px; font-weight: 500; color: var(--muted); }
+
+      /* CONTENTS */
+      .agenda { margin-top: 52px; display: flex; flex-direction: column; gap: 18px; }
+      .ai { display: flex; align-items: center; gap: 28px; background: var(--tint-violet); border-radius: 20px; padding: 26px 34px; }
+      .ai .n { width: 52px; height: 52px; flex: none; border-radius: 14px; background: #fff; color: var(--accent-b); font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+      .ai .t { font-size: 27px; font-weight: 700; color: var(--ink); }
+      .ai .d { font-size: 19px; color: var(--muted); margin-left: auto; }
+
+      /* TWO-COLUMN */
+      .two { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; flex: 1; }
+      .two .col p { margin-top: 26px; }
+      .media { background: var(--tint-violet); border-radius: 24px; padding: 48px; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+      /* CALLOUT */
+      .callout-wrap { flex: 1; display: flex; align-items: center; margin-top: 28px; }
+      .callout { width: 100%; background: var(--tint-mint); border-radius: 24px; padding: 64px 72px; display: flex; gap: 40px; align-items: flex-start; }
+      .callout .qchip { width: 64px; height: 64px; flex: none; border-radius: 18px; background: #fff; display: flex; align-items: center; justify-content: center; }
+      .callout .ctxt { font-size: 32px; font-weight: 500; color: var(--ink); line-height: 1.5; }
+      .callout .ctxt .src { display: block; margin-top: 24px; font-size: 19px; font-weight: 700; color: var(--mint-ink); }
+
+      /* STAT */
+      .kpis { margin-top: 48px; display: flex; gap: 32px; flex: 1; align-items: stretch; }
+      .kpi { flex: 1; border-radius: 24px; padding: 48px 44px; display: flex; flex-direction: column; justify-content: center; }
+      .kpi.v { background: var(--tint-violet); }
+      .kpi.m { background: var(--tint-mint); }
+      .kpi .num { font-size: 76px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+      .kpi.v .num { color: var(--ink); }
+      .kpi.m .num { color: var(--mint-ink); }
+      .kpi .num .u { font-size: 34px; font-weight: 700; }
+      .kpi .lab { font-size: 19px; font-weight: 500; color: var(--muted); margin-top: 18px; line-height: 1.45; }
+      .kpi.m .lab { color: #2f6b54; }
+
+      /* FEATURE */
+      .feats { margin-top: 44px; display: flex; flex-direction: column; gap: 22px; flex: 1; }
+      .frow { display: flex; align-items: flex-start; gap: 28px; background: var(--tint-violet); border-radius: 20px; padding: 30px 36px; }
+      .frow .chip { width: 60px; height: 60px; flex: none; border-radius: 16px; background: #fff; display: flex; align-items: center; justify-content: center; }
+      .frow .ft { font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1.35; }
+      .frow .fd { font-size: 19px; font-weight: 400; color: var(--muted); line-height: 1.6; margin-top: 8px; }
+
+      /* CLOSING */
+      .closing { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .closing .eyebrow { margin-bottom: 30px; }
+      .closing h2 { font-size: 72px; font-weight: 800; color: var(--ink); line-height: 1.15; letter-spacing: -0.02em; max-width: 1300px; }
+      .closing .cs { font-size: 26px; color: var(--muted); line-height: 1.6; margin-top: 28px; max-width: 1000px; }
+      .cta { margin-top: 52px; display: inline-flex; align-items: center; gap: 14px; background: var(--grad); color: #fff; font-size: 24px; font-weight: 800; border-radius: 999px; padding: 22px 48px; }
+      .closing .url { margin-top: 34px; font-size: 19px; font-weight: 500; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="slides-stack">
+
+      <!-- 1. COVER -->
+      <section class="slide">
+        <div class="card">
+          <div class="accent-bar"></div>
+          <div class="pad cv">
+            <span class="eyebrow cv-eyebrow">KNOWLEDGE WORKSPACE</span>
+            <h1>Lumen Notes</h1>
+            <p class="sub">散らばった会議メモ・リサーチ・アイデアを、<span class="hl">ひとつの生きたドキュメント</span>に。考えるそばから整う、Webネイティブなナレッジツール。</p>
+            <div class="cv-bottom">
+              <span class="brand"><span class="mk"></span><span class="wm">Lumen</span></span>
+              <span class="dt">Product Overview ・ 2026</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. CONTENTS -->
+      <section class="slide">
+        <div class="card">
+          <div class="pad">
+            <span class="eyebrow">CONTENTS</span>
+            <h2 class="stitle" style="margin-top:26px;">本日お話しすること。</h2>
+            <div class="agenda">
+              <div class="ai"><span class="n">01</span><span class="t">なぜ「整理」に時間が溶けるのか</span><span class="d">課題</span></div>
+              <div class="ai"><span class="n">02</span><span class="t">Lumen Notes の考え方</span><span class="d">コンセプト</span></div>
+              <div class="ai"><span class="n">03</span><span class="t">主要な機能</span><span class="d">プロダクト</span></div>
+              <div class="ai"><span class="n">04</span><span class="t">導入チームで起きた変化</span><span class="d">成果</span></div>
+            </div>
+          </div>
+          <div class="foot"><span class="brand"><span class="mk" style="width:28px;height:28px;border-radius:9px;"></span><span class="wm" style="font-size:18px;">Lumen Notes</span></span><span>02 ／ 07</span></div>
+        </div>
+      </section>
+
+      <!-- 3. TWO-COLUMN (text + media block) -->
+      <section class="slide">
+        <div class="card">
+          <div class="pad">
+            <span class="eyebrow">CONCEPT</span>
+            <div class="two">
+              <div class="col">
+                <h2 class="stitle">メモは、書いた瞬間から<br />つながりはじめる。</h2>
+                <p class="body">Lumen Notes は、入力したテキストを<span class="hl">意味のかたまり（ブロック）</span>として扱います。関連するメモ同士を自動でリンクし、あなたが「あとで整理する」必要をなくします。検索ではなく、<span class="hl">想起</span>のためのノート。</p>
+              </div>
+              <div class="media">
+                <svg width="520" height="380" viewBox="0 0 520 380" fill="none" aria-hidden="true">
+                  <rect x="40" y="40" width="200" height="120" rx="18" fill="#ffffff"/>
+                  <rect x="64" y="68" width="120" height="12" rx="6" fill="#9b6bff"/>
+                  <rect x="64" y="92" width="152" height="9" rx="4.5" fill="#c9cfe8"/>
+                  <rect x="64" y="110" width="132" height="9" rx="4.5" fill="#c9cfe8"/>
+                  <rect x="300" y="80" width="180" height="110" rx="18" fill="#ffffff"/>
+                  <rect x="322" y="106" width="100" height="12" rx="6" fill="#6a7bff"/>
+                  <rect x="322" y="130" width="136" height="9" rx="4.5" fill="#c9cfe8"/>
+                  <rect x="120" y="220" width="220" height="120" rx="18" fill="#ffffff"/>
+                  <rect x="144" y="248" width="140" height="12" rx="6" fill="#9b6bff"/>
+                  <rect x="144" y="272" width="172" height="9" rx="4.5" fill="#c9cfe8"/>
+                  <rect x="144" y="290" width="150" height="9" rx="4.5" fill="#c9cfe8"/>
+                  <path d="M240 110 L300 130" stroke="#6a7bff" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M150 160 L210 220" stroke="#9b6bff" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M360 190 L300 230" stroke="#6a7bff" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="240" cy="110" r="6" fill="#6a7bff"/>
+                  <circle cx="300" cy="130" r="6" fill="#6a7bff"/>
+                  <circle cx="150" cy="160" r="6" fill="#9b6bff"/>
+                  <circle cx="210" cy="220" r="6" fill="#9b6bff"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="foot"><span class="brand"><span class="mk" style="width:28px;height:28px;border-radius:9px;"></span><span class="wm" style="font-size:18px;">Lumen Notes</span></span><span>03 ／ 07</span></div>
+        </div>
+      </section>
+
+      <!-- 4. CALLOUT (tinted insight box) -->
+      <section class="slide">
+        <div class="card">
+          <div class="pad">
+            <span class="eyebrow">KEY INSIGHT</span>
+            <h2 class="stitle" style="margin-top:26px;">整理のコストを、ゼロに近づける。</h2>
+            <div class="callout-wrap">
+              <div class="callout">
+                <span class="qchip">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M9 7H5.5A2.5 2.5 0 0 0 3 9.5V13a2 2 0 0 0 2 2h2v3a1 1 0 0 1-1 1H5M21 7h-3.5A2.5 2.5 0 0 0 15 9.5V13a2 2 0 0 0 2 2h2v3a1 1 0 0 1-1 1h-1" stroke="#127a55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <div class="ctxt">ナレッジワーカーは、情報を<span class="hl" style="color:#127a55;">「探す・並べ替える」</span>ことに週あたり数時間を費やしている。Lumen Notes はその時間を、考えることそのものに取り戻します。
+                  <span class="src">— Lumen 社内・初期導入チームでのヒアリングより（架空のサンプルデータ）</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="foot"><span class="brand"><span class="mk" style="width:28px;height:28px;border-radius:9px;"></span><span class="wm" style="font-size:18px;">Lumen Notes</span></span><span>04 ／ 07</span></div>
+        </div>
+      </section>
+
+      <!-- 5. STAT (soft KPI tiles) -->
+      <section class="slide">
+        <div class="card">
+          <div class="pad">
+            <span class="eyebrow">RESULTS</span>
+            <h2 class="stitle" style="margin-top:26px;">導入チームで起きた変化。</h2>
+            <div class="kpis">
+              <div class="kpi v">
+                <div class="num">−42<span class="u">%</span></div>
+                <div class="lab">「整理・検索」に使う<br />時間の削減</div>
+              </div>
+              <div class="kpi m">
+                <div class="num">3.4<span class="u">×</span></div>
+                <div class="lab">メモ間リンクが<br />生まれる頻度の増加</div>
+              </div>
+              <div class="kpi v">
+                <div class="num">96<span class="u">%</span></div>
+                <div class="lab">「また使いたい」と<br />答えたメンバー</div>
+              </div>
+            </div>
+          </div>
+          <div class="foot"><span class="brand"><span class="mk" style="width:28px;height:28px;border-radius:9px;"></span><span class="wm" style="font-size:18px;">Lumen Notes</span></span><span>05 ／ 07 ・ 架空のサンプルデータ</span></div>
+        </div>
+      </section>
+
+      <!-- 6. FEATURE (icon-row items) -->
+      <section class="slide">
+        <div class="card">
+          <div class="pad">
+            <span class="eyebrow">FEATURES</span>
+            <h2 class="stitle" style="margin-top:26px;">主要な機能。</h2>
+            <div class="feats">
+              <div class="frow">
+                <span class="chip">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="6" cy="6" r="2.4" stroke="#6a7bff" stroke-width="2"/>
+                    <circle cx="18" cy="6" r="2.4" stroke="#6a7bff" stroke-width="2"/>
+                    <circle cx="12" cy="18" r="2.4" stroke="#6a7bff" stroke-width="2"/>
+                    <path d="M7.7 7.6 10.6 16M16.3 7.6 13.4 16M8 6h8" stroke="#6a7bff" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <div>
+                  <div class="ft">オートリンク</div>
+                  <div class="fd">関連するメモを意味で結び、ナレッジグラフを自動で育てます。</div>
+                </div>
+              </div>
+              <div class="frow">
+                <span class="chip">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="#6a7bff" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="12" r="3.2" stroke="#6a7bff" stroke-width="2"/>
+                  </svg>
+                </span>
+                <div>
+                  <div class="ft">スマート要約</div>
+                  <div class="fd">長い議事録やリサーチを、要点ブロックへ素早く畳み込みます。</div>
+                </div>
+              </div>
+              <div class="frow">
+                <span class="chip">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M16 11a4 4 0 1 0-8 0M4 19a6 6 0 0 1 16 0" stroke="#6a7bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="7" r="3.2" stroke="#6a7bff" stroke-width="2"/>
+                  </svg>
+                </span>
+                <div>
+                  <div class="ft">チーム共有</div>
+                  <div class="fd">ワークスペースを共有し、コメントとブロック単位で共同編集できます。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="foot"><span class="brand"><span class="mk" style="width:28px;height:28px;border-radius:9px;"></span><span class="wm" style="font-size:18px;">Lumen Notes</span></span><span>06 ／ 07</span></div>
+        </div>
+      </section>
+
+      <!-- 7. CLOSING (CTA pill) -->
+      <section class="slide">
+        <div class="card">
+          <div class="accent-bar"></div>
+          <div class="pad">
+            <div class="closing">
+              <span class="eyebrow">GET STARTED</span>
+              <h2>考える時間を、<br />ちゃんと考えることに。</h2>
+              <p class="cs">Lumen Notes は、いま無料ベータを公開しています。あなたのチームの最初のワークスペースを、今日からはじめましょう。</p>
+              <span class="cta">無料ではじめる
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 12h13M13 6l6 6-6 6" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <p class="url">lumen-notes.example ・ hello@lumen-notes.example</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </body>
+</html>

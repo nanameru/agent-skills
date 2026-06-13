@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Brightpath — Marketplace Generalist Sample Deck</title>
+    <style>
+      :root {
+        --primary: #3d5af1;
+        --primary-deep: #2f49d6;
+        --secondary: #f4a623;
+        --secondary-deep: #a86a08;
+        --tertiary: #1bb8a0;
+        --tertiary-deep: #0e8071;
+        --canvas: #ffffff;
+        --ink: #232a36;
+        --muted: #5c6473;
+        --surface: #f3f5fa;
+        --surface-2: #eef1fb;
+        --amber-soft: #fdeccb;
+        --teal-soft: #e3f6f2;
+        --hairline: #e2e6f0;
+        --m: 96px;
+        --head: "Poppins", "Inter", "Noto Sans JP", sans-serif;
+        --body: "Noto Sans JP", "Inter", sans-serif;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #d9d9d9; padding: 32px; font-family: var(--body); }
+      .stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+      .slide { position: relative; width: 1920px; height: 1080px; background: var(--canvas); color: var(--ink); overflow: hidden; }
+
+      .kicker { font-family: var(--head); font-size: 18px; font-weight: 700; letter-spacing: 0.12em; color: var(--primary); text-transform: uppercase; }
+      .title { font-family: var(--head); font-size: 44px; font-weight: 800; color: var(--ink); line-height: 1.2; letter-spacing: -0.01em; }
+      .pad { padding: 72px var(--m) 96px; height: 100%; display: flex; flex-direction: column; }
+      .foot { position: absolute; left: var(--m); right: var(--m); bottom: 40px; display: flex; justify-content: space-between; font-size: 14px; font-weight: 500; color: var(--muted); }
+      .foot .sec { display: flex; gap: 12px; }
+
+      /* COVER + CLOSING band */
+      .band-slide { display: flex; }
+      .band { width: 760px; background: linear-gradient(160deg, #3d5af1 0%, #2f49d6 100%); position: relative; overflow: hidden; flex: 0 0 760px; }
+      .band .geo { position: absolute; inset: 0; }
+      .cv-right { flex: 1; padding: var(--m); display: flex; flex-direction: column; justify-content: center; }
+      .cv-right .ttl { font-family: var(--head); font-size: 96px; font-weight: 800; line-height: 1.04; letter-spacing: -0.02em; color: var(--ink); }
+      .cv-right .sub { font-size: 24px; line-height: 1.6; color: var(--muted); margin-top: 28px; max-width: 760px; }
+      .cv-right .meta { margin-top: 44px; font-size: 18px; font-weight: 700; color: var(--ink); }
+      .cv-right .meta span { color: var(--muted); font-weight: 500; }
+      .brandmark { display: flex; align-items: center; gap: 14px; }
+      .brandmark .bt { font-family: var(--head); font-size: 26px; font-weight: 800; color: var(--ink); }
+
+      /* AGENDA */
+      .agenda { display: flex; flex-direction: column; gap: 18px; margin-top: 44px; }
+      .ai { display: flex; align-items: center; gap: 28px; background: var(--surface); border-radius: 16px; padding: 26px 32px; box-shadow: 0 10px 24px rgba(35,42,54,.05); }
+      .ai.cur { background: var(--surface-2); }
+      .ai .chip { width: 60px; height: 60px; border-radius: 9999px; background: #ffffff; display: flex; align-items: center; justify-content: center; flex: 0 0 60px; box-shadow: 0 4px 10px rgba(61,90,241,.14); }
+      .ai .n { font-family: var(--head); font-size: 22px; font-weight: 800; color: var(--primary); width: 44px; }
+      .ai .t { font-family: var(--head); font-size: 28px; font-weight: 700; color: var(--ink); }
+      .ai .d { font-size: 18px; color: var(--muted); margin-left: auto; }
+
+      /* TEAM */
+      .members { display: flex; gap: 28px; margin-top: 48px; }
+      .member { flex: 1; background: var(--surface); border-radius: 24px; padding: 40px 32px; text-align: center; box-shadow: 0 12px 30px rgba(35,42,54,.07); }
+      .avatar { width: 132px; height: 132px; border-radius: 9999px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-family: var(--head); font-size: 48px; font-weight: 800; color: #fff; }
+      .avatar.a1 { background: var(--primary); }
+      .avatar.a2 { background: var(--tertiary-deep); }
+      .avatar.a3 { background: var(--secondary); color: var(--ink); }
+      .avatar.a4 { background: var(--primary-deep); }
+      .member .nm { font-family: var(--head); font-size: 26px; font-weight: 800; color: var(--ink); }
+      .member .ro { font-size: 17px; font-weight: 700; color: var(--primary); margin-top: 6px; }
+      .member .bio { font-size: 16px; line-height: 1.6; color: var(--muted); margin-top: 16px; }
+
+      /* TIMELINE */
+      .tl-wrap { margin-top: 56px; flex: 1; display: flex; align-items: center; }
+      .tl-cap { display: flex; justify-content: space-between; margin-top: 8px; }
+      .tl-node { width: 25%; padding: 0 18px; }
+      .tl-node .yr { font-family: var(--head); font-size: 28px; font-weight: 800; }
+      .tl-node .lb { font-family: var(--head); font-size: 21px; font-weight: 700; color: var(--ink); margin-top: 10px; }
+      .tl-node .tx { font-size: 16px; line-height: 1.55; color: var(--muted); margin-top: 8px; }
+
+      /* COMPARISON */
+      .cols { display: flex; gap: 28px; margin-top: 48px; flex: 1; }
+      .col { flex: 1; background: var(--surface); border-radius: 24px; padding: 0 0 32px; overflow: hidden; box-shadow: 0 12px 30px rgba(35,42,54,.06); display: flex; flex-direction: column; }
+      .col.feat { background: var(--surface-2); }
+      .col .ch { padding: 30px 32px 26px; text-align: center; }
+      .col .ph { font-family: var(--head); font-size: 26px; font-weight: 800; color: var(--ink); }
+      .col .pp { font-family: var(--head); font-size: 40px; font-weight: 800; color: var(--primary); margin-top: 8px; }
+      .col .pp span { font-size: 18px; color: var(--muted); font-weight: 600; }
+      .pill { display: inline-block; background: var(--primary); color: #fff; border-radius: 9999px; padding: 7px 20px; font-family: var(--head); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+      .crow { display: flex; align-items: center; gap: 14px; padding: 14px 32px; font-size: 18px; color: var(--ink); border-top: 1px solid var(--hairline); }
+      .crow .ic { flex: 0 0 24px; display: flex; }
+      .crow.off { color: var(--muted); }
+
+      /* INFOGRAPHIC */
+      .info { display: flex; gap: 40px; margin-top: 48px; flex: 1; }
+      .info .donut-card { width: 560px; background: var(--surface); border-radius: 24px; padding: 40px; display: flex; align-items: center; gap: 36px; box-shadow: 0 12px 30px rgba(35,42,54,.06); }
+      .legend { display: flex; flex-direction: column; gap: 16px; }
+      .leg { display: flex; align-items: center; gap: 12px; font-size: 18px; color: var(--ink); font-weight: 600; }
+      .leg .sw { width: 18px; height: 18px; border-radius: 6px; }
+      .leg .pc { color: var(--muted); font-weight: 500; margin-left: 6px; }
+      .info .right { flex: 1; display: flex; flex-direction: column; gap: 28px; }
+      .bars { background: var(--surface); border-radius: 24px; padding: 32px 40px; box-shadow: 0 12px 30px rgba(35,42,54,.06); }
+      .bars .bt { font-family: var(--head); font-size: 20px; font-weight: 800; color: var(--ink); margin-bottom: 18px; }
+      .stats { display: flex; gap: 24px; }
+      .stat { flex: 1; background: var(--surface); border-radius: 24px; padding: 28px 32px; display: flex; align-items: center; gap: 20px; box-shadow: 0 12px 30px rgba(35,42,54,.06); }
+      .stat .sic { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex: 0 0 64px; }
+      .stat .num { font-family: var(--head); font-size: 44px; font-weight: 800; color: var(--primary); line-height: 1; }
+      .stat .num .u { font-size: 22px; }
+      .stat .lab { font-size: 15px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+
+      /* CLOSING contacts */
+      .cl-contacts { margin-top: 40px; display: flex; flex-direction: column; gap: 18px; }
+      .cl-row { display: flex; align-items: center; gap: 16px; font-size: 20px; color: var(--ink); font-weight: 600; }
+      .cl-row .cic { width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; flex: 0 0 44px; }
+    </style>
+  </head>
+  <body>
+    <div class="stack">
+
+      <!-- 1. COVER -->
+      <section class="slide band-slide">
+        <div class="band">
+          <svg class="geo" viewBox="0 0 760 1080" preserveAspectRatio="none" aria-hidden="true">
+            <circle cx="170" cy="250" r="180" fill="none" stroke="#5d77f5" stroke-width="2" opacity="0.6"/>
+            <circle cx="600" cy="860" r="240" fill="none" stroke="#5d77f5" stroke-width="2" opacity="0.5"/>
+            <rect x="470" y="120" width="220" height="220" rx="40" fill="none" stroke="#5d77f5" stroke-width="2" opacity="0.5"/>
+            <circle cx="640" cy="230" r="70" fill="#f4a623" opacity="0.9"/>
+            <rect x="120" y="700" width="150" height="150" rx="36" fill="#1bb8a0" opacity="0.85"/>
+            <circle cx="380" cy="560" r="26" fill="#ffffff" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="cv-right">
+          <div class="brandmark">
+            <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="11" fill="none" stroke="#3d5af1" stroke-width="3"/><path d="M13 21 L18 26 L28 14" fill="none" stroke="#3d5af1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="bt">Brightpath</div>
+          </div>
+          <div class="kicker" style="margin-top:40px">Company Profile 2026</div>
+          <div class="ttl">明快な道筋を、<br />すべてのチームへ。</div>
+          <div class="sub">Brightpath は、業種を問わず使える業務改善プラットフォーム。散らばった情報とタスクを一つの流れにまとめ、誰もが迷わず動けるワークスペースを提供します。</div>
+          <div class="meta">Brightpath 株式会社 &nbsp;<span>｜ 2026年6月 ・ コーポレート本部</span></div>
+        </div>
+        <div class="foot"><div class="sec"><span>01</span><span>｜</span><span>Cover</span></div><div>Brightpath Inc.</div></div>
+      </section>
+
+      <!-- 2. AGENDA -->
+      <section class="slide">
+        <div class="pad">
+          <div class="kicker">Agenda</div>
+          <div class="title" style="margin-top:14px">本日お話しすること</div>
+          <div class="agenda">
+            <div class="ai cur">
+              <div class="chip"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+              <div class="n">01</div><div class="t">私たちについて</div><div class="d">ミッションとチーム</div>
+            </div>
+            <div class="ai">
+              <div class="chip"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M3 6h18"/><path d="M3 18h18"/></svg></div>
+              <div class="n">02</div><div class="t">これまでの歩み</div><div class="d">創業からの4年</div>
+            </div>
+            <div class="ai">
+              <div class="chip"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="16" rx="2"/></svg></div>
+              <div class="n">03</div><div class="t">プランの比較</div><div class="d">最適な選び方</div>
+            </div>
+            <div class="ai">
+              <div class="chip"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+              <div class="n">04</div><div class="t">導入の成果</div><div class="d">数字で見る効果</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><div class="sec"><span>02</span><span>｜</span><span>Agenda</span></div><div>Brightpath Inc.</div></div>
+      </section>
+
+      <!-- 3. TEAM -->
+      <section class="slide">
+        <div class="pad">
+          <div class="kicker">About / Team</div>
+          <div class="title" style="margin-top:14px">少人数で、迷わず速く動くチーム</div>
+          <div class="members">
+            <div class="member">
+              <div class="avatar a1">AS</div>
+              <div class="nm">青木 さくら</div>
+              <div class="ro">CEO / 共同創業</div>
+              <div class="bio">プロダクト戦略と組織づくりを担当。「迷わない道筋」をプロダクトの軸に据える。</div>
+            </div>
+            <div class="member">
+              <div class="avatar a2">RK</div>
+              <div class="nm">川村 涼</div>
+              <div class="ro">CTO / 共同創業</div>
+              <div class="bio">基盤とデータ設計をリード。誰もが使える堅牢さと拡張性を両立させる。</div>
+            </div>
+            <div class="member">
+              <div class="avatar a3">MH</div>
+              <div class="nm">林 美月</div>
+              <div class="ro">Head of Design</div>
+              <div class="bio">体験とビジュアルの一貫性を統括。テーマ全体のトーンを設計する。</div>
+            </div>
+            <div class="member">
+              <div class="avatar a4">TN</div>
+              <div class="nm">中島 拓海</div>
+              <div class="ro">Head of Success</div>
+              <div class="bio">導入と定着を支援。現場の声をプロダクトへ素早く還流させる。</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><div class="sec"><span>03</span><span>｜</span><span>Team</span></div><div>Brightpath Inc.</div></div>
+      </section>
+
+      <!-- 4. TIMELINE -->
+      <section class="slide">
+        <div class="pad">
+          <div class="kicker">Milestones</div>
+          <div class="title" style="margin-top:14px">創業からの4年の歩み</div>
+          <div class="tl-wrap">
+            <div style="width:100%">
+              <svg width="100%" height="120" viewBox="0 0 1728 120" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="40" y1="60" x2="1688" y2="60" stroke="#e2e6f0" stroke-width="6" stroke-linecap="round"/>
+                <line x1="40" y1="60" x2="1260" y2="60" stroke="#3d5af1" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="40" cy="60" r="20" fill="#3d5af1"/>
+                <circle cx="446" cy="60" r="20" fill="#1bb8a0"/>
+                <circle cx="852" cy="60" r="20" fill="#f4a623"/>
+                <circle cx="1260" cy="60" r="20" fill="#fff" stroke="#3d5af1" stroke-width="6"/>
+              </svg>
+              <div class="tl-cap">
+                <div class="tl-node"><div class="yr" style="color:#3d5af1">2022</div><div class="lb">創業</div><div class="tx">3人でプロトタイプを公開。最初の10社が試験導入。</div></div>
+                <div class="tl-node"><div class="yr" style="color:#0e8071">2023</div><div class="lb">正式リリース</div><div class="tx">テンプレート機能を実装し、有料プランを提供開始。</div></div>
+                <div class="tl-node"><div class="yr" style="color:#a86a08">2024</div><div class="lb">事業拡大</div><div class="tx">導入500社を突破。チームは12名体制に。</div></div>
+                <div class="tl-node"><div class="yr" style="color:#3d5af1">2025</div><div class="lb">次の挑戦</div><div class="tx">海外展開と自動化機能の開発に着手。</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><div class="sec"><span>04</span><span>｜</span><span>Milestones</span></div><div>Brightpath Inc.</div></div>
+      </section>
+
+      <!-- 5. COMPARISON -->
+      <section class="slide">
+        <div class="pad">
+          <div class="kicker">Pricing</div>
+          <div class="title" style="margin-top:14px">チームに合わせて選べる3プラン</div>
+          <div class="cols">
+            <div class="col">
+              <div class="ch"><div class="ph">Starter</div><div class="pp">¥0<span> / 月</span></div></div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1bb8a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>5名まで</div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1bb8a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>基本テンプレート</div>
+              <div class="crow off"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="2.5" stroke-linecap="round"><path d="M6 12h12"/></svg></span>連携機能</div>
+              <div class="crow off"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="2.5" stroke-linecap="round"><path d="M6 12h12"/></svg></span>優先サポート</div>
+            </div>
+            <div class="col feat">
+              <div class="ch"><div class="pill">おすすめ</div><div class="ph" style="margin-top:14px">Team</div><div class="pp">¥1,200<span> / 人・月</span></div></div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>人数無制限</div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>全テンプレート</div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>連携機能</div>
+              <div class="crow off"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="2.5" stroke-linecap="round"><path d="M6 12h12"/></svg></span>専任サポート</div>
+            </div>
+            <div class="col">
+              <div class="ch"><div class="ph">Business</div><div class="pp">お問合せ<span></span></div></div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1bb8a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>人数無制限</div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1bb8a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>全テンプレート</div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1bb8a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>連携＋SSO</div>
+              <div class="crow"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1bb8a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>専任サポート</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><div class="sec"><span>05</span><span>｜</span><span>Pricing</span></div><div>Brightpath Inc.</div></div>
+      </section>
+
+      <!-- 6. INFOGRAPHIC -->
+      <section class="slide">
+        <div class="pad">
+          <div class="kicker">Impact</div>
+          <div class="title" style="margin-top:14px">導入で生まれた成果</div>
+          <div class="info">
+            <div class="donut-card">
+              <svg width="240" height="240" viewBox="0 0 240 240" aria-hidden="true">
+                <circle cx="120" cy="120" r="86" fill="none" stroke="#eef1fb" stroke-width="34"/>
+                <circle cx="120" cy="120" r="86" fill="none" stroke="#3d5af1" stroke-width="34" stroke-dasharray="324 540" stroke-dashoffset="0" transform="rotate(-90 120 120)" stroke-linecap="butt"/>
+                <circle cx="120" cy="120" r="86" fill="none" stroke="#1bb8a0" stroke-width="34" stroke-dasharray="135 540" stroke-dashoffset="-324" transform="rotate(-90 120 120)" stroke-linecap="butt"/>
+                <circle cx="120" cy="120" r="86" fill="none" stroke="#f4a623" stroke-width="34" stroke-dasharray="81 540" stroke-dashoffset="-459" transform="rotate(-90 120 120)" stroke-linecap="butt"/>
+                <text x="120" y="114" text-anchor="middle" font-family="Poppins, Inter, sans-serif" font-size="40" font-weight="800" fill="#232a36">60%</text>
+                <text x="120" y="142" text-anchor="middle" font-family="'Noto Sans JP', sans-serif" font-size="15" fill="#5c6473">時間削減</text>
+              </svg>
+              <div class="legend">
+                <div class="leg"><span class="sw" style="background:#3d5af1"></span>資料作成<span class="pc">60%</span></div>
+                <div class="leg"><span class="sw" style="background:#1bb8a0"></span>情報共有<span class="pc">25%</span></div>
+                <div class="leg"><span class="sw" style="background:#f4a623"></span>その他<span class="pc">15%</span></div>
+              </div>
+            </div>
+            <div class="right">
+              <div class="bars">
+                <div class="bt">満足度の推移（導入前 → 導入後）</div>
+                <svg width="100%" height="150" viewBox="0 0 720 150" preserveAspectRatio="none" aria-hidden="true">
+                  <text x="0" y="48" font-family="'Noto Sans JP',sans-serif" font-size="16" fill="#5c6473">導入前</text>
+                  <rect x="120" y="32" width="216" height="28" rx="8" fill="#cfd6e6"/>
+                  <text x="350" y="52" font-family="Poppins,sans-serif" font-size="18" font-weight="800" fill="#5c6473">42%</text>
+                  <text x="0" y="118" font-family="'Noto Sans JP',sans-serif" font-size="16" fill="#5c6473">導入後</text>
+                  <rect x="120" y="102" width="468" height="28" rx="8" fill="#3d5af1"/>
+                  <text x="602" y="122" font-family="Poppins,sans-serif" font-size="18" font-weight="800" fill="#3d5af1">91%</text>
+                </svg>
+              </div>
+              <div class="stats">
+                <div class="stat">
+                  <div class="sic" style="background:var(--teal-soft)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0e8071" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+                  <div><div class="num">520<span class="u">社</span></div><div class="lab">導入企業数</div></div>
+                </div>
+                <div class="stat">
+                  <div class="sic" style="background:var(--amber-soft)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#a86a08" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><circle cx="12" cy="12" r="6"/></svg></div>
+                  <div><div class="num">4.8<span class="u">/5</span></div><div class="lab">平均評価</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><div class="sec"><span>06</span><span>｜</span><span>Impact</span></div><div>出典: 利用企業アンケート（n=180, 2026年）</div></div>
+      </section>
+
+      <!-- 7. CLOSING -->
+      <section class="slide band-slide">
+        <div class="band">
+          <svg class="geo" viewBox="0 0 760 1080" preserveAspectRatio="none" aria-hidden="true">
+            <circle cx="560" cy="220" r="200" fill="none" stroke="#5d77f5" stroke-width="2" opacity="0.55"/>
+            <rect x="80" y="640" width="240" height="240" rx="48" fill="none" stroke="#5d77f5" stroke-width="2" opacity="0.5"/>
+            <circle cx="180" cy="280" r="64" fill="#1bb8a0" opacity="0.85"/>
+            <rect x="560" y="760" width="140" height="140" rx="34" fill="#f4a623" opacity="0.9"/>
+            <circle cx="420" cy="520" r="22" fill="#ffffff" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="cv-right">
+          <div class="kicker">Thank You</div>
+          <div class="ttl">いっしょに、<br />明快な道筋を。</div>
+          <div class="sub">ご清聴ありがとうございました。トライアルやデモのご相談は、いつでもお気軽にお問い合わせください。</div>
+          <div class="cl-contacts">
+            <div class="cl-row"><span class="cic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>hello@brightpath.example</div>
+            <div class="cl-row"><span class="cic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></span>www.brightpath.example</div>
+            <div class="cl-row"><span class="cic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3d5af1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 11-9 11s-9-5-9-11a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>東京都渋谷区 ・ Brightpath 株式会社</div>
+          </div>
+        </div>
+        <div class="foot"><div class="sec"><span>07</span><span>｜</span><span>Closing</span></div><div>Brightpath Inc.</div></div>
+      </section>
+
+    </div>
+  </body>
+</html>

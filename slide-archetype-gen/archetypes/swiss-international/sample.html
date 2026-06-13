@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>sample</title>
+<style>
+      :root {
+        --ink: #111111;
+        --canvas: #ffffff;
+        --muted: #6b6b6b;
+        --surface: #f2f2f2;
+        --accent: #e2231a;
+        --margin: 120px;
+        --font: "Helvetica Neue", Arial, "Noto Sans JP", "Yu Gothic", sans-serif;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #d9d9d9; padding: 32px; font-family: var(--font); }
+      .slides-stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+      .slide {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: var(--canvas);
+        color: var(--ink);
+        overflow: hidden;
+      }
+      .kicker {
+        font-size: 18px; font-weight: 700; letter-spacing: 0.16em;
+        text-transform: uppercase; color: var(--accent);
+      }
+      .rule-red { width: 80px; height: 4px; background: var(--accent); }
+      .hairline { height: 1px; background: var(--ink); width: 100%; }
+      .pageno { position: absolute; right: var(--margin); bottom: 64px; font-size: 14px; font-weight: 500; color: var(--muted); }
+      .source { font-size: 14px; color: var(--muted); }
+
+      /* COVER */
+      .cover { padding: var(--margin); height: 100%; display: flex; flex-direction: column; }
+      .cover .top { display: flex; justify-content: space-between; align-items: flex-start; }
+      .cover .brand { font-size: 18px; font-weight: 700; letter-spacing: 0.08em; }
+      .cover .title-block { margin-top: auto; }
+      .cover h1 { font-size: 110px; font-weight: 700; line-height: 1.0; letter-spacing: -0.02em; }
+      .cover .lead { font-size: 26px; font-weight: 400; line-height: 1.45; color: var(--muted); margin-top: 32px; max-width: 1100px; }
+      .cover .footrow { margin-top: 64px; display: flex; gap: 48px; }
+      .cover .footrow .source { font-weight: 500; color: var(--ink); }
+
+      /* AGENDA */
+      .pad { padding: var(--margin); height: 100%; display: flex; flex-direction: column; }
+      .head h2 { font-size: 72px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.02; }
+      .agenda-list { margin-top: 72px; }
+      .agenda-item { display: flex; align-items: baseline; gap: 48px; padding: 28px 0; border-top: 1px solid var(--ink); }
+      .agenda-item:last-child { border-bottom: 1px solid var(--ink); }
+      .agenda-item .n { font-size: 22px; font-weight: 700; color: var(--muted); width: 80px; }
+      .agenda-item .t { font-size: 34px; font-weight: 400; }
+
+      /* SECTION */
+      .section { padding: var(--margin); height: 100%; display: flex; align-items: center; gap: 64px; }
+      .section .num { font-size: 360px; font-weight: 700; line-height: 0.8; letter-spacing: -0.04em; color: var(--ink); }
+      .section .meta { display: flex; flex-direction: column; gap: 24px; }
+      .section .meta .kicker { color: var(--accent); }
+      .section .meta h2 { font-size: 88px; font-weight: 700; line-height: 1.0; letter-spacing: -0.02em; }
+
+      /* CONTENT */
+      .content { padding: var(--margin); height: 100%; display: flex; flex-direction: column; }
+      .content h2 { font-size: 64px; font-weight: 700; line-height: 1.05; letter-spacing: -0.015em; margin-top: 16px; }
+      .content .rule-red { margin-top: 28px; }
+      .content .cols { margin-top: 56px; display: flex; gap: 96px; flex: 1; }
+      .content .col { flex: 1; }
+      .content .col p { font-size: 24px; line-height: 1.6; color: var(--ink); }
+      .content ul { list-style: none; }
+      .content li { font-size: 24px; line-height: 1.5; padding: 18px 0; border-bottom: 1px solid var(--ink); display: flex; gap: 20px; }
+      .content li .b { color: var(--accent); font-weight: 700; }
+
+      /* KPI */
+      .kpi-grid { margin-top: auto; display: flex; }
+      .kpi-cell { flex: 1; padding: 0 56px; }
+      .kpi-cell:first-child { padding-left: 0; }
+      .kpi-cell + .kpi-cell { border-left: 1px solid var(--ink); }
+      .kpi-num { font-size: 120px; font-weight: 700; line-height: 0.95; letter-spacing: -0.03em; }
+      .kpi-num .unit { font-size: 48px; }
+      .kpi-lab { font-size: 18px; font-weight: 500; color: var(--muted); margin-top: 12px; }
+
+      /* COMPARISON */
+      .cmp { margin-top: 56px; }
+      .cmp-row { display: flex; }
+      .cmp-row > div { flex: 1; padding: 24px 32px; }
+      .cmp-row.h > div { font-weight: 700; font-size: 24px; border-bottom: 2px solid var(--ink); }
+      .cmp-row + .cmp-row.b > div { border-bottom: 1px solid var(--ink); font-size: 22px; }
+      .cmp-row > div + div { border-left: 1px solid var(--ink); }
+      .cmp-row .lab { color: var(--muted); }
+
+      /* CLOSING */
+      .closing { padding: var(--margin); height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+      .closing h2 { font-size: 80px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; max-width: 1400px; }
+      .closing .rule-red { margin: 40px 0; }
+      .closing .contact { font-size: 22px; color: var(--muted); display: flex; gap: 48px; }
+    </style>
+</head>
+<body>
+<section class="slide">
+        <div class="cover">
+          <div class="top">
+            <div class="brand">NORDGRID&nbsp;/&nbsp;2026</div>
+            <div class="kicker">Company Profile</div>
+          </div>
+          <div class="title-block">
+            <div class="rule-red" style="margin-bottom:40px"></div>
+            <h1>Structure<br>is the message.</h1>
+            <p class="lead">グリッドと余白だけで語る。装飾を引き算し、内容そのものを構造化するスイス・スタイルの会社紹介。</p>
+            <div class="footrow">
+              <div class="source">NORDGRID Inc.</div>
+              <div class="source">2026年6月</div>
+            </div>
+          </div>
+        </div>
+        <div class="pageno">01</div>
+      </section>
+
+<section class="slide">
+        <div class="pad">
+          <div class="head"><div class="kicker" style="margin-bottom:24px">Agenda</div><h2>本日の内容</h2></div>
+          <div class="agenda-list">
+            <div class="agenda-item"><div class="n">01</div><div class="t">私たちが解く課題</div></div>
+            <div class="agenda-item"><div class="n">02</div><div class="t">提供価値と仕組み</div></div>
+            <div class="agenda-item"><div class="n">03</div><div class="t">実績とインパクト</div></div>
+            <div class="agenda-item"><div class="n">04</div><div class="t">これからの計画</div></div>
+          </div>
+        </div>
+        <div class="pageno">02</div>
+      </section>
+
+<section class="slide">
+        <div class="section">
+          <div class="num">01</div>
+          <div class="meta">
+            <div class="kicker">Chapter 01</div>
+            <h2>私たちが<br>解く課題</h2>
+          </div>
+        </div>
+        <div class="pageno">03</div>
+      </section>
+
+<section class="slide">
+        <div class="content">
+          <div class="kicker">The Problem</div>
+          <h2>資料作成に、組織は週12時間を失っている。</h2>
+          <div class="rule-red"></div>
+          <div class="cols">
+            <div class="col">
+              <p>多くのチームが、伝えるべき中身ではなく「体裁を整える」ことに時間を奪われている。テンプレートは増えても、一貫した設計言語がなければ品質はばらつく。</p>
+            </div>
+            <div class="col">
+              <ul>
+                <li><span class="b">—</span><span>体裁調整に週12時間／チーム</span></li>
+                <li><span class="b">—</span><span>デザインの一貫性が属人化</span></li>
+                <li><span class="b">—</span><span>レビューの手戻りが平均3回</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="pageno">04</div>
+      </section>
+
+<section class="slide">
+        <div class="pad">
+          <div class="head"><div class="kicker" style="margin-bottom:24px">Impact</div><h2>3年で積み上げた実績</h2></div>
+          <div class="kpi-grid">
+            <div class="kpi-cell"><div class="kpi-num">128<span class="unit">社</span></div><div class="kpi-lab">導入企業数</div></div>
+            <div class="kpi-cell"><div class="kpi-num">62<span class="unit">%</span></div><div class="kpi-lab">作成時間の削減率</div></div>
+            <div class="kpi-cell"><div class="kpi-num">4.8<span class="unit">/5</span></div><div class="kpi-lab">顧客満足度</div></div>
+          </div>
+          <div class="source" style="margin-top:40px">出典: 自社調査（n=128, 2026年4月）</div>
+        </div>
+        <div class="pageno">05</div>
+      </section>
+
+<section class="slide">
+        <div class="pad">
+          <div class="head"><div class="kicker" style="margin-bottom:24px">Before / After</div><h2>導入前後の比較</h2></div>
+          <div class="cmp">
+            <div class="cmp-row h"><div class="lab">　</div><div>導入前</div><div>導入後</div></div>
+            <div class="cmp-row b"><div class="lab">作成時間</div><div>週 12 時間</div><div>週 4.5 時間</div></div>
+            <div class="cmp-row b"><div class="lab">一貫性</div><div>担当者依存</div><div>設計言語で統一</div></div>
+            <div class="cmp-row b"><div class="lab">手戻り</div><div>平均 3 回</div><div>平均 1 回</div></div>
+          </div>
+        </div>
+        <div class="pageno">06</div>
+      </section>
+
+<section class="slide">
+        <div class="closing">
+          <div class="kicker" style="margin-bottom:32px">Thank you</div>
+          <h2>構造が、メッセージになる。</h2>
+          <div class="rule-red"></div>
+          <div class="contact">
+            <span>hello@nordgrid.example</span>
+            <span>nordgrid.example</span>
+          </div>
+        </div>
+        <div class="pageno">07</div>
+      </section>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Apple Keynote Minimal — Sample Deck</title>
+    <style>
+      :root {
+        --canvas: #000000;
+        --ink: #f5f5f7;
+        --muted: #86868b;
+        --surface: #1d1d1f;
+        --accent: #2997ff;
+        --font: "SF Pro Display", -apple-system, "Helvetica Neue", "Hiragino Sans", "Noto Sans JP", Arial, sans-serif;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #d9d9d9; padding: 32px; font-family: var(--font); }
+      .slides-stack { display: flex; flex-direction: column; gap: 32px; align-items: center; }
+      .slide {
+        position: relative; width: 1920px; height: 1080px;
+        background: var(--canvas); color: var(--ink);
+        overflow: hidden;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 160px;
+      }
+      .slide.light { background: #ffffff; color: #1d1d1f; }
+      .kicker { font-size: 24px; font-weight: 500; color: var(--accent); letter-spacing: 0.01em; margin-bottom: 40px; }
+      .hero { font-size: 200px; font-weight: 700; line-height: 1.0; letter-spacing: -0.03em; }
+      .lead { font-size: 40px; font-weight: 400; color: var(--muted); line-height: 1.3; margin-top: 40px; }
+      .stmt { font-size: 96px; font-weight: 600; line-height: 1.08; letter-spacing: -0.02em; max-width: 1500px; }
+      .stmt .em { color: var(--accent); }
+      .num {
+        font-size: 320px; font-weight: 700; line-height: 0.9; letter-spacing: -0.04em;
+        color: #2997ff; text-shadow: 0 0 60px rgba(41, 151, 255, 0.35);
+      }
+      .num-plain { font-size: 320px; font-weight: 700; line-height: 0.9; letter-spacing: -0.04em; color: var(--ink); }
+      .num-lab { font-size: 28px; color: var(--muted); margin-top: 24px; }
+      .pill { display: inline-block; background: var(--surface); color: var(--ink); border-radius: 999px; padding: 12px 28px; font-size: 24px; font-weight: 500; margin-bottom: 40px; }
+      .product {
+        width: 1100px; height: 560px; border-radius: 32px;
+        background: radial-gradient(120% 120% at 50% 0%, #3a3a3d 0%, #161617 60%, #0a0a0b 100%);
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid #2a2a2c;
+      }
+      .product .glyph { font-size: 120px; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; }
+      .cap { font-size: 20px; color: var(--muted); margin-top: 48px; }
+      .three { display: flex; gap: 120px; }
+      .three .pt { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+      .three .pt .ic { width: 96px; height: 96px; border-radius: 24px; background: var(--surface); display: flex; align-items: center; justify-content: center; }
+      .three .pt .w { font-size: 44px; font-weight: 600; }
+      .three .pt .d { font-size: 24px; color: var(--muted); }
+      .src { position: absolute; bottom: 56px; left: 0; right: 0; font-size: 16px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="slides-stack">
+
+      <!-- 1. COVER -->
+      <section class="slide">
+        <div class="kicker">NORDGRID 2026</div>
+        <div class="hero">Effortless.</div>
+        <div class="lead">スライドづくりから、迷いを消す。</div>
+      </section>
+
+      <!-- 2. STATEMENT -->
+      <section class="slide">
+        <div class="stmt">いちばん速い資料は、<br /><span class="em">考えなくていい</span>資料だ。</div>
+      </section>
+
+      <!-- 3. HERO NUMBER -->
+      <section class="slide">
+        <div class="num">10×</div>
+        <div class="num-lab">作成スピード</div>
+      </section>
+
+      <!-- 4. PRODUCT -->
+      <section class="slide">
+        <div class="pill">New</div>
+        <div class="product"><div class="glyph">DESIGN.md</div></div>
+        <div class="cap">ひとつのファイルが、デッキ全体のデザインを決める。</div>
+      </section>
+
+      <!-- 5. STATEMENT (light inverted) -->
+      <section class="slide light">
+        <div class="stmt">余白は、<span class="em" style="color:#0071e3">足りないもの</span>ではない。</div>
+      </section>
+
+      <!-- 6. THREE POINT -->
+      <section class="slide">
+        <div class="stmt" style="font-size:64px; margin-bottom:96px">3つだけ。</div>
+        <div class="three">
+          <div class="pt"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2997ff" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="w">速い</div><div class="d">秒で形に</div></div>
+          <div class="pt"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2997ff" stroke-width="1.6"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="w">揃う</div><div class="d">迷わない</div></div>
+          <div class="pt"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2997ff" stroke-width="1.6"><path d="M12 3l2.4 6.3H21l-5.2 3.9 2 6.3-5.8-4.3-5.8 4.3 2-6.3L3 9.3h6.6z"/></svg></div><div class="w">美しい</div><div class="d">そのまま提出</div></div>
+        </div>
+      </section>
+
+      <!-- 7. CLOSING -->
+      <section class="slide">
+        <div class="hero" style="font-size:140px">Less, but better.</div>
+        <div class="cap" style="margin-top:64px">nordgrid.example</div>
+      </section>
+
+    </div>
+  </body>
+</html>
