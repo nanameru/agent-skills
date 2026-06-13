@@ -41,6 +41,12 @@
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
+    },
+    {
+      "name": "slide-archetype-gen",
+      "source": "nanameru/slide-archetype-gen-skill",
+      "path": "slide-archetype-gen",
+      "external": true
     }
   ],
   "postInstallLinks": [
@@ -79,6 +85,14 @@
     {
       "link": "$HOME/.codex/skills/slide-design-guide",
       "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.claude/skills/slide-archetype-gen",
+      "target": "$HOME/.agents/skills/slide-archetype-gen"
+    },
+    {
+      "link": "$HOME/.codex/skills/slide-archetype-gen",
+      "target": "$HOME/.agents/skills/slide-archetype-gen"
     }
   ]
 }
