@@ -75,6 +75,10 @@
     {
       "link": "$HOME/.claude/skills/slide-design-guide",
       "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.codex/skills/slide-design-guide",
+      "target": "$HOME/.agents/skills/slide-design-guide"
     }
   ]
 }

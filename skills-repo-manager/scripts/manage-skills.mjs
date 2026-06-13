@@ -166,7 +166,14 @@ function restoreScript(manifest) {
   }
 
   lines.push("");
-  lines.push("mkdir -p \"$HOME/.local/bin\" \"$HOME/.claude/skills\"");
+  // mkdir -p every parent directory a link will live in (so ~/.codex/skills etc. exist on a fresh machine)
+  const linkDirs = new Set(["$HOME/.local/bin", "$HOME/.claude/skills"]);
+  for (const link of manifest.postInstallLinks || []) {
+    const dir = link.link.slice(0, link.link.lastIndexOf("/"));
+    if (dir) linkDirs.add(dir);
+  }
+  const mkdirArgs = [...linkDirs].map((d) => `"${d.replace("$HOME", "$HOME")}"`).join(" ");
+  lines.push(`mkdir -p ${mkdirArgs}`);
 
   for (const link of manifest.postInstallLinks || []) {
     const target = link.target.replace("$HOME", "\"$HOME\"");
