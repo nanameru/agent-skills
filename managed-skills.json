@@ -44,8 +44,9 @@
     },
     {
       "name": "slide-archetype-gen",
-      "source": "nanameru/agent-skills",
-      "path": "slide-archetype-gen"
+      "source": "nanameru/slide-archetype-gen-skill",
+      "path": "slide-archetype-gen",
+      "external": true
     }
   ],
   "postInstallLinks": [
