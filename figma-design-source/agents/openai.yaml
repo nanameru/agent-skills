@@ -1,0 +1,4 @@
+interface:
+  display_name: "Figma Design Source"
+  short_description: "Figma正本のtokens・componentsをコードと同期します"
+  default_prompt: "FigmaをUIデザインの正本として確認し、既存tokensとcomponentsに沿って実装・検証してください。"
