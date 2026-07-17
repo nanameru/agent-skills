@@ -1,0 +1,4 @@
+interface:
+  display_name: "Figma Design Source"
+  short_description: "Figma正本のtokens・componentsをコードと同期します"
+  default_prompt: "既存アプリか新規アプリかを判定してください。既存ならUI資産を棚卸しし、新規なら私へ1問ずつヒアリングして全体・ページ別の参考画像を集めてから、Figmaを正本に実装・検証してください。"
