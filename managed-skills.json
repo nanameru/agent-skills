@@ -28,6 +28,11 @@
       "path": "skills-repo-manager"
     },
     {
+      "name": "ptcg-postgame-audit",
+      "source": "nanameru/agent-skills",
+      "path": "ptcg-postgame-audit"
+    },
+    {
       "name": "chaos-engineer",
       "source": "nanameru/agent-skills",
       "path": "chaos-engineer"
@@ -67,6 +72,14 @@
     {
       "link": "$HOME/.claude/skills/skills-repo-manager",
       "target": "$HOME/.agents/skills/skills-repo-manager"
+    },
+    {
+      "link": "$HOME/.claude/skills/ptcg-postgame-audit",
+      "target": "$HOME/.agents/skills/ptcg-postgame-audit"
+    },
+    {
+      "link": "$HOME/.codex/skills/ptcg-postgame-audit",
+      "target": "$HOME/.agents/skills/ptcg-postgame-audit"
     },
     {
       "link": "$HOME/.claude/skills/x-search",
