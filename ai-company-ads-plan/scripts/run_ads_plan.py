@@ -188,6 +188,11 @@ def main() -> int:
         if not fixture_path.is_file():
             receipt("blocked", reason=f"fixture is missing: {FIXTURE}")
             return 2
+        print(
+            "notice: PostHog and finance inputs are synthetic fixture values; "
+            "Git and repository metadata come from the resolved local repository.",
+            file=sys.stderr,
+        )
         command.extend(("--fixture", str(fixture_path)))
     command.extend(("--taiyo-repo", str(taiyo_repo)))
 

@@ -19,4 +19,4 @@ cases:
     source: [ai-company-ads-plan/SKILL.md, ai-company-ads-plan/scripts/run_ads_plan.py]
     test_file: "ai-company-ads-plan/tests/test_run_ads_plan.py"
     issues: [19]
-    notes: "repo resolverのunit test、Skill validator、実fixture dry runで検証する。"
+    notes: "repo resolverのunit test、Skill validator、実fixture dry runで検証する。fixtureの合成指標と実Git metadataを明示的に区別する。"

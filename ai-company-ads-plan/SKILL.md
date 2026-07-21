@@ -38,7 +38,7 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/ai-company-ads-plan/scripts/run_ads_
   --taiyo-repo /absolute/path/to/taiyo-gyomu
 ```
 
-fixtureは合成値であり、実績として報告しない。
+fixtureで置き換わるPostHog集計・財務入力は合成値であり、実績として報告しない。Git commit、changed files、repository metadataは解決したローカルrepositoryの実情報だと区別する。
 
 ## Live read-only dry run
 
