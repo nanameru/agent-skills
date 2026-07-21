@@ -13,10 +13,10 @@ cases:
     title: "任意ディレクトリからAI Company広告計画を安全にdry runできる"
     feature: "AI Company広告計画Skillのグローバル呼び出し"
     scenario: "repositoryを安全に解決しfixture dry runを実行する"
-    status: doing
+    status: done
     priority: high
     type: integration
     source: [ai-company-ads-plan/SKILL.md, ai-company-ads-plan/scripts/run_ads_plan.py]
     test_file: "ai-company-ads-plan/tests/test_run_ads_plan.py"
     issues: [19]
-    notes: "repo resolverのunit test、Skill validator、実fixture dry runで検証する。fixtureの合成指標と実Git metadataを明示的に区別する。"
+    notes: "repo resolver 5件、Skill validator、任意ディレクトリからの実fixture dry run、独立forward testで検証済み。fixtureの合成指標と実Git metadataを明示的に区別する。"
