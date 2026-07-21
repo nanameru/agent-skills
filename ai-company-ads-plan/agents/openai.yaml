@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Company広告計画"
+  short_description: "任意のタスクから安全な広告計画dry runを実行"
+  default_prompt: "Use $ai-company-ads-plan to resolve the app repositories and run a safe fixture dry run without advertising write actions."

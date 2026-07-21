@@ -1,3 +1,5 @@
 *.skill
 skills-lock.json
 .agents/
+__pycache__/
+*.py[cod]
