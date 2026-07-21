@@ -28,6 +28,11 @@
       "path": "skills-repo-manager"
     },
     {
+      "name": "ai-company-ads-plan",
+      "source": "nanameru/agent-skills",
+      "path": "ai-company-ads-plan"
+    },
+    {
       "name": "chaos-engineer",
       "source": "nanameru/agent-skills",
       "path": "chaos-engineer"
@@ -67,6 +72,14 @@
     {
       "link": "$HOME/.claude/skills/skills-repo-manager",
       "target": "$HOME/.agents/skills/skills-repo-manager"
+    },
+    {
+      "link": "$HOME/.claude/skills/ai-company-ads-plan",
+      "target": "$HOME/.agents/skills/ai-company-ads-plan"
+    },
+    {
+      "link": "$HOME/.codex/skills/ai-company-ads-plan",
+      "target": "$HOME/.agents/skills/ai-company-ads-plan"
     },
     {
       "link": "$HOME/.claude/skills/x-search",

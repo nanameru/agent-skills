@@ -1,0 +1,41 @@
+name: AI Company広告計画Skill検証
+
+on:
+  pull_request:
+    paths:
+      - "ai-company-ads-plan/**"
+      - "managed-skills.json"
+      - "restore-skills.sh"
+      - "test-board.yaml"
+      - ".github/workflows/validate-ai-company-ads-plan.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ai-company-ads-plan/**"
+      - "managed-skills.json"
+      - "restore-skills.sh"
+      - "test-board.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Python構文とresolverテスト
+        run: |
+          python3 -m py_compile ai-company-ads-plan/scripts/run_ads_plan.py
+          python3 -m unittest discover -s ai-company-ads-plan/tests -p 'test_*.py'
+      - name: Skill検出確認
+        run: npx --yes skills add . --list
+      - name: 不正pathのblocked確認
+        run: |
+          if python3 ai-company-ads-plan/scripts/run_ads_plan.py --resolve-only --dom-repo "$RUNNER_TEMP/missing"; then
+            echo "invalid path unexpectedly succeeded"
+            exit 1
+          fi
