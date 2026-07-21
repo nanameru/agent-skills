@@ -1,0 +1,22 @@
+version: 1
+project:
+  name: "agent-skills"
+  test_command: "python3 -m unittest discover -s ai-company-ads-plan/tests -p 'test_*.py'"
+  repo: "nanameru/agent-skills"
+
+source_roots:
+  - ai-company-ads-plan
+  - skills-repo-manager
+
+cases:
+  - id: TC-001
+    title: "任意ディレクトリからAI Company広告計画を安全にdry runできる"
+    feature: "AI Company広告計画Skillのグローバル呼び出し"
+    scenario: "repositoryを安全に解決しfixture dry runを実行する"
+    status: doing
+    priority: high
+    type: integration
+    source: [ai-company-ads-plan/SKILL.md, ai-company-ads-plan/scripts/run_ads_plan.py]
+    test_file: "ai-company-ads-plan/tests/test_run_ads_plan.py"
+    issues: [19]
+    notes: "repo resolverのunit test、Skill validator、実fixture dry runで検証する。"
