@@ -56,17 +56,32 @@ Follow the parent requirement gate. If the question set becomes large, use both 
 
 See `references/loop-architecture.md` for loop patterns and guardrails.
 
+## Per-Issue Goal Loop
+
+Use the parent Issue Goal Loop for implementation work. One Issue is the durable container for the goal, acceptance criteria, iteration history, and final outcome; do not create a new Issue for every iteration.
+
+At the start of each iteration:
+
+1. Re-read the Issue and linked `test-board.yaml` cases.
+2. Identify the smallest unmet acceptance criterion or failing gate.
+3. Choose the workflow needed for that condition: discovery, design, implementation, CI repair, regression, E2E, security, or checker review.
+4. Execute and verify that bounded unit.
+5. Update the same Issue and test cases, then re-evaluate all completion conditions.
+
+If the Issue is complete, create or update its single Draft PR and stop for human review. If a parent hard stop is reached, leave the Issue open and produce a blocked report with an exact resume point. Split a new Issue only when the discovered work changes scope or delivers independent value.
+
 ## Combined GitHub + Test Workflow
 
 Use `github-issue-driven-dev` for Issues/branches/PRs and `test-case-board` for test inventory.
 
 Minimum per Issue:
 
-- Purpose and scope.
-- Acceptance criteria.
+- Loop goal, purpose, scope, and non-goals.
+- Acceptance criteria and observable completion evidence.
 - Linked test-board cases.
-- Test/CI plan.
-- Knowledge log.
+- Verification and test/CI plan.
+- Exit conditions and hard stops.
+- Iteration knowledge log containing the current unmet condition and next action.
 
 Minimum per test-board case:
 

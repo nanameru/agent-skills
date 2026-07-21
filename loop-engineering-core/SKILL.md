@@ -52,6 +52,26 @@ If any of these affect implementation or safety and are unknown, ask the user. I
 9. **Record**: update the Issue knowledge log, `test-board.yaml`, run manifests, and PR body.
 10. **Stop**: open a Draft PR or produce a blocked report. Do not auto-merge.
 
+## Issue Goal Loop
+
+Treat one ready Issue as one bounded outer goal loop. The workflow above is the set of available stages; the loop decides which stage to run next from the Issue's current unmet acceptance criteria.
+
+For each iteration:
+
+1. Read the Issue goal, acceptance criteria, linked tests, prior attempts, and hard stops.
+2. Select the smallest unmet condition that can make meaningful progress.
+3. Run the necessary workflow stage: investigate, design, prove, build, gate, or check.
+4. Have the Checker evaluate the result without weakening the acceptance criteria or tests.
+5. Record evidence, decisions, failures, and the next unmet condition in durable state.
+6. Re-evaluate the whole Issue, not only the step just completed.
+
+Continue until exactly one exit condition is reached:
+
+- **Complete**: every acceptance criterion and required gate passes, evidence is recorded, and at most one Draft PR exists.
+- **Blocked**: a hard stop is reached; record the cause, attempts, current state, required human decision, and exact resume point.
+
+Never stop with a vague partial-completion report. Keep work within the Issue's original goal. Create a follow-up Issue when new scope is independently valuable or changes the approved goal.
+
 ## Roles
 
 Keep roles separate, even if the same AI instance performs them in sequential passes:

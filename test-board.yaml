@@ -1,0 +1,20 @@
+version: 1
+project:
+  name: "agent-skills"
+  test_command: "python3 tests/test_issue_goal_loop.py"
+  repo: "nanameru/agent-skills"
+
+source_roots: [loop-engineering-core, loop-engineering-dev, tests]
+
+cases:
+  - id: TC-001
+    title: "1 Issueを外側のゴールループとして完成またはblockedまで追跡する"
+    feature: "Issue単位ゴールループ"
+    scenario: "未達成条件を選びworkflowとcheckerを反復して終了条件を判定する"
+    status: done
+    priority: high
+    type: regression
+    source: [loop-engineering-core/SKILL.md, loop-engineering-dev/SKILL.md, loop-engineering-core/references/development-flow.md]
+    test_file: "tests/test_issue_goal_loop.py"
+    issues: [21]
+    notes: "共通契約、開発特化、利用者向けフローの3箇所が同じIssue goal loopを表現することを検証する。"
