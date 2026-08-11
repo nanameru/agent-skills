@@ -38,6 +38,11 @@
       "path": "x-search"
     },
     {
+      "name": "official-case-study-research",
+      "source": "nanameru/agent-skills",
+      "path": "official-case-study-research"
+    },
+    {
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
@@ -71,6 +76,14 @@
     {
       "link": "$HOME/.claude/skills/x-search",
       "target": "$HOME/.agents/skills/x-search"
+    },
+    {
+      "link": "$HOME/.claude/skills/official-case-study-research",
+      "target": "$HOME/.agents/skills/official-case-study-research"
+    },
+    {
+      "link": "$HOME/.codex/skills/official-case-study-research",
+      "target": "$HOME/.agents/skills/official-case-study-research"
     },
     {
       "link": "$HOME/.claude/skills/slide-design-guide",
