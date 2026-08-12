@@ -84,4 +84,3 @@ Omit files that are not needed. If a ZIP is requested, add a short plain-text in
 - [ ] The latest draft identifier is recorded.
 - [ ] The draft is confirmed unpublished.
 - [ ] No credential or private source material is stored in the package.
-

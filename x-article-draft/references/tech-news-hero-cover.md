@@ -73,4 +73,3 @@ Do not add fake logos, generic AI cubes, random circuit boards, floating cards, 
 - Kicker claim is sourced.
 - No fake or malformed marks.
 - Japanese and product spelling are exact.
-

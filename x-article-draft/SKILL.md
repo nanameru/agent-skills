@@ -131,4 +131,3 @@ Return:
 - what was researched, written, or changed;
 - whether the result is local-only, draft-only, or published;
 - unresolved author claims, CTA approval, security follow-up, or human review points.
-

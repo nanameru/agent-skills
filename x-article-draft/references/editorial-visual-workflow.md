@@ -75,4 +75,3 @@ Generate one representative style-anchor image first. Obtain human approval when
 - Confirm that official assets are not altered into misleading marks.
 - Regenerate or repair misspelled and malformed images before packaging.
 - Record the asset source and article insertion point.
-
