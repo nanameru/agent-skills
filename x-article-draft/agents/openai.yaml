@@ -1,0 +1,4 @@
+interface:
+  display_name: "X Article Draft"
+  short_description: "X記事の調査・下書き・表紙・図解・転記を安全に一括制作"
+  default_prompt: "Use $x-article-draft to create an evidence-based Japanese X Article package for the confirmed author, including a 5:2 cover, explanatory visuals, source mapping, and a draft-only handoff."

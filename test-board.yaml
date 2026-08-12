@@ -1,0 +1,21 @@
+version: 1
+project:
+  name: "agent-skills"
+  test_command: "python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py x-article-draft"
+  repo: "nanameru/agent-skills"
+
+source_roots:
+  - x-article-draft
+
+cases: []
+  - id: TC-001
+    title: "汎用X記事制作Skill: 顧客固有情報を含まずVercel Skills CLIで導入できる"
+    feature: "汎用X記事制作Skill"
+    scenario: "顧客固有情報を含まずVercel Skills CLIで導入できる"
+    status: done
+    priority: medium
+    type: regression
+    source: [x-article-draft/SKILL.md]
+    test_file: "tests/x-article-draft-generalization.sh"
+    issues: [25]
+    notes: "Skill validation、顧客固有語の非混入、投稿者・CTA分離、5:2表紙、未公開停止を検証する。"
