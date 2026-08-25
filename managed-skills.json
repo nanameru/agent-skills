@@ -41,6 +41,11 @@
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
+    },
+    {
+      "name": "note-light-publish",
+      "source": "nanameru/agent-skills",
+      "path": "note-light-publish"
     }
   ],
   "postInstallLinks": [
@@ -79,6 +84,14 @@
     {
       "link": "$HOME/.codex/skills/slide-design-guide",
       "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.claude/skills/note-light-publish",
+      "target": "$HOME/.agents/skills/note-light-publish"
+    },
+    {
+      "link": "$HOME/.codex/skills/note-light-publish",
+      "target": "$HOME/.agents/skills/note-light-publish"
     }
   ]
 }
