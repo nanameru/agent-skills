@@ -25,7 +25,7 @@ def args_for(root: Path, **overrides):
         "title": "テスト記事",
         "preview_url": PREVIEW_URL,
         "public_url": PUBLIC_URL,
-        "access_label": module.DEFAULT_ACCESS_LABEL,
+        "access_model": "light",
         "eyecatch_url": None,
         "env_file": root / ".env.local",
         "state_file": root / "state.json",
@@ -61,7 +61,7 @@ class DeliveryTest(unittest.TestCase):
             "テスト記事",
             PREVIEW_URL,
             PUBLIC_URL,
-            module.DEFAULT_ACCESS_LABEL,
+            module.ACCESS_LABELS["light"],
             "https://assets.example.com/eyecatch.png",
             True,
         )
@@ -76,6 +76,16 @@ class DeliveryTest(unittest.TestCase):
                 "https://note.com/preview/nsame?prev_access_key=secret",
                 "https://note.com/meru2002/n/nsame",
             )
+
+    def test_all_access_models_have_fixed_labels(self):
+        self.assertEqual(
+            module.ACCESS_LABELS,
+            {
+                "free": "無料公開 / 公開済み",
+                "light": "ライトプラン限定 / 単発500円 / 公開済み",
+                "pro": "Proプラン限定 / 単発2000円 / 公開済み",
+            },
+        )
 
     def test_success_writes_only_redacted_identifiers_and_blocks_duplicate(self):
         with tempfile.TemporaryDirectory() as directory:

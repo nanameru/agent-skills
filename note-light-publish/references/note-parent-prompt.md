@@ -881,7 +881,7 @@ WebhookがDiscordのフォーラムまたはメディアチャンネル用であ
 
 すべてのDiscord payloadには `allowed_mentions: {"parse": []}` を入れます。HTTP 204 は成功として扱います。
 
-ライトプラン記事は、場当たり的にWebhookへ送らず、子Skillの `scripts/deliver_note_preview.py` を使います。最初は `--send` なしのdry-runで検証し、現在のユーザーターンで公開・配信が明示承認されている場合だけ `--approved --send` を付けます。このCLIは、公開記事とは別の複製下書きか、主リンクがプレビューURLか、mentionが無効かを検証し、同じ複製の二重送信を防止します。フォーラム・メディアチャンネルでは既定の `thread_name` を使い、通常テキストチャンネルの場合だけ `--no-thread-name` を指定します。
+無料・ライト・Proの3つの記事は、場当たり的にWebhookへ送らず、共通の `/Users/kimurataiyou/.agents/skills/note-light-publish/scripts/deliver_note_preview.py` を使います。子Skillに合わせて `--access-model free`、`light`、`pro` のいずれかを必ず指定します。最初は `--send` なしのdry-runで検証し、現在のユーザーターンで公開・配信が明示承認されている場合だけ `--approved --send` を付けます。このCLIは、公開記事とは別の複製下書きか、主リンクがプレビューURLか、mentionが無効かを検証し、同じ複製の二重送信を防止します。フォーラム・メディアチャンネルでは既定の `thread_name` を使い、通常テキストチャンネルの場合だけ `--no-thread-name` を指定します。
 
 予定実行ではこのCLIのdry-runまでに留め、`--approved --send` を付けてはいけません。公開・複製作成・Discord実送信は、人間の新しい明示承認を受けた継続ターンで一続きに実行します。
 

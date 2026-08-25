@@ -46,6 +46,16 @@
       "name": "note-light-publish",
       "source": "nanameru/agent-skills",
       "path": "note-light-publish"
+    },
+    {
+      "name": "note-free-publish",
+      "source": "nanameru/agent-skills",
+      "path": "note-free-publish"
+    },
+    {
+      "name": "note-pro-publish",
+      "source": "nanameru/agent-skills",
+      "path": "note-pro-publish"
     }
   ],
   "postInstallLinks": [
@@ -92,6 +102,22 @@
     {
       "link": "$HOME/.codex/skills/note-light-publish",
       "target": "$HOME/.agents/skills/note-light-publish"
+    },
+    {
+      "link": "$HOME/.claude/skills/note-free-publish",
+      "target": "$HOME/.agents/skills/note-free-publish"
+    },
+    {
+      "link": "$HOME/.codex/skills/note-free-publish",
+      "target": "$HOME/.agents/skills/note-free-publish"
+    },
+    {
+      "link": "$HOME/.claude/skills/note-pro-publish",
+      "target": "$HOME/.agents/skills/note-pro-publish"
+    },
+    {
+      "link": "$HOME/.codex/skills/note-pro-publish",
+      "target": "$HOME/.agents/skills/note-pro-publish"
     }
   ]
 }

@@ -20,7 +20,11 @@ from urllib.parse import urlparse
 
 PREVIEW_RE = re.compile(r"^/preview/(?P<key>n[a-zA-Z0-9]+)$")
 PUBLIC_RE = re.compile(r"^/(?P<user>[^/]+)/n/(?P<key>n[a-zA-Z0-9]+)$")
-DEFAULT_ACCESS_LABEL = "ライトプラン限定 / 単発500円 / 公開済み"
+ACCESS_LABELS = {
+    "free": "無料公開 / 公開済み",
+    "light": "ライトプラン限定 / 単発500円 / 公開済み",
+    "pro": "Proプラン限定 / 単発2000円 / 公開済み",
+}
 
 
 class DeliveryError(RuntimeError):
@@ -163,7 +167,7 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--title", required=True)
     parser.add_argument("--preview-url", required=True)
     parser.add_argument("--public-url", required=True)
-    parser.add_argument("--access-label", default=DEFAULT_ACCESS_LABEL)
+    parser.add_argument("--access-model", required=True, choices=sorted(ACCESS_LABELS))
     parser.add_argument("--eyecatch-url")
     parser.add_argument("--env-file", type=Path, default=Path.cwd() / ".env.local")
     parser.add_argument(
@@ -184,7 +188,7 @@ def run(args: argparse.Namespace) -> int:
         args.title,
         args.preview_url,
         args.public_url,
-        args.access_label,
+        ACCESS_LABELS[args.access_model],
         args.eyecatch_url,
         not args.no_thread_name,
     )

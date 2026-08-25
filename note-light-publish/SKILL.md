@@ -51,19 +51,21 @@ Do not silently publish as free, Pro, or no-price light plan. If the user asks f
 8. Stop before publishing unless the user has explicitly asked to publish/post the article.
 9. When publishing is approved, publish the original article with light-plan + 500 yen settings, create an unpublished duplicate draft, get the duplicate preview URL, and deliver that duplicate preview to Discord using the shared publishing workflow.
 
-For Discord delivery, use `scripts/deliver_note_preview.py`. It is dry-run by default and requires both `--approved` and `--send` for an external write. Run dry-run first, then run the approved command only when the current user turn explicitly authorizes publishing/delivery. Never place the preview URL in a report, Issue, commit, or final response; pass it only to the approved continuation command.
+For Discord delivery, use the shared `/Users/kimurataiyou/.agents/skills/note-light-publish/scripts/deliver_note_preview.py` with `--access-model light`. It is dry-run by default and requires both `--approved` and `--send` for an external write. Run dry-run first, then run the approved command only when the current user turn explicitly authorizes publishing/delivery. Never place the preview URL in a report, Issue, commit, or final response; pass it only to the approved continuation command.
 
 ```bash
-python3 scripts/deliver_note_preview.py \
-  --title "<title>" \
-  --preview-url "<unpublished duplicate preview URL>" \
-  --public-url "<published article URL>"
-
-# Only after fresh approval:
-python3 scripts/deliver_note_preview.py \
+python3 /Users/kimurataiyou/.agents/skills/note-light-publish/scripts/deliver_note_preview.py \
   --title "<title>" \
   --preview-url "<unpublished duplicate preview URL>" \
   --public-url "<published article URL>" \
+  --access-model light
+
+# Only after fresh approval:
+python3 /Users/kimurataiyou/.agents/skills/note-light-publish/scripts/deliver_note_preview.py \
+  --title "<title>" \
+  --preview-url "<unpublished duplicate preview URL>" \
+  --public-url "<published article URL>" \
+  --access-model light \
   --approved --send
 ```
 

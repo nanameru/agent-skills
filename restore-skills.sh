@@ -11,6 +11,8 @@ npx skills add nanameru/agent-skills --skill chaos-engineer -g -y --copy
 npx skills add nanameru/agent-skills --skill x-search -g -y --copy
 npx skills add nanameru/agent-skills --skill slide-design-guide -g -y --copy
 npx skills add nanameru/agent-skills --skill note-light-publish -g -y --copy
+npx skills add nanameru/agent-skills --skill note-free-publish -g -y --copy
+npx skills add nanameru/agent-skills --skill note-pro-publish -g -y --copy
 
 mkdir -p "$HOME/.local/bin" "$HOME/.claude/skills" "$HOME/.codex/skills"
 ln -sfn "$HOME"/.agents/skills/github-issue-driven-dev "$HOME"/.claude/skills/github-issue-driven-dev
@@ -24,5 +26,9 @@ ln -sfn "$HOME"/.agents/skills/slide-design-guide "$HOME"/.claude/skills/slide-d
 ln -sfn "$HOME"/.agents/skills/slide-design-guide "$HOME"/.codex/skills/slide-design-guide
 ln -sfn "$HOME"/.agents/skills/note-light-publish "$HOME"/.claude/skills/note-light-publish
 ln -sfn "$HOME"/.agents/skills/note-light-publish "$HOME"/.codex/skills/note-light-publish
+ln -sfn "$HOME"/.agents/skills/note-free-publish "$HOME"/.claude/skills/note-free-publish
+ln -sfn "$HOME"/.agents/skills/note-free-publish "$HOME"/.codex/skills/note-free-publish
+ln -sfn "$HOME"/.agents/skills/note-pro-publish "$HOME"/.claude/skills/note-pro-publish
+ln -sfn "$HOME"/.agents/skills/note-pro-publish "$HOME"/.codex/skills/note-pro-publish
 
 echo "Done."

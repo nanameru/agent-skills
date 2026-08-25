@@ -103,7 +103,7 @@ If the webhook belongs to a forum/media channel, include `thread_name`. Use the 
 
 Use `allowed_mentions: {"parse": []}` for all payloads and treat HTTP 204 as success.
 
-For light-plan delivery, use `scripts/deliver_note_preview.py` instead of an ad-hoc webhook request. The command validates that the preview belongs to a different unpublished draft, defaults to dry-run, requires `--approved --send`, suppresses mentions, redacts private values from output/state, and prevents a second send of the same preview. Use `--no-thread-name` only when the configured webhook targets a normal text channel rather than a forum/media channel.
+For free, light-plan, and Pro delivery, use the shared `/Users/kimurataiyou/.agents/skills/note-light-publish/scripts/deliver_note_preview.py` instead of an ad-hoc webhook request. Always pass the matching `--access-model free|light|pro`. The command validates that the preview belongs to a different unpublished draft, defaults to dry-run, requires `--approved --send`, suppresses mentions, redacts private values from output/state, and prevents a second send of the same preview. Use `--no-thread-name` only when the configured webhook targets a normal text channel rather than a forum/media channel.
 
 Suggested payload:
 

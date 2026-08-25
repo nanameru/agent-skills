@@ -1,0 +1,14 @@
+interface:
+  display_name: "Note Free Publish"
+  short_description: "無料公開のnote記事を作成・公開"
+  default_prompt: "Use $note-free-publish to create a polished Japanese note article with the shared article workflow, generate a 1280:670 eyecatch and supporting media, publish it as a free public article with no plan, no paid separator, and no price when explicitly approved, then create an unpublished duplicate preview and deliver that duplicate preview to Discord."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "note-mcp"
+      description: "note.com MCP server for drafts, eyecatch upload, membership plans, previews, paid settings, publishing, and duplicate draft creation"
+      transport: "stdio"
+
+policy:
+  allow_implicit_invocation: true
