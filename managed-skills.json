@@ -41,6 +41,11 @@
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
+    },
+    {
+      "name": "promo-video-remotion",
+      "source": "nanameru/agent-skills",
+      "path": "promo-video-remotion"
     }
   ],
   "postInstallLinks": [
