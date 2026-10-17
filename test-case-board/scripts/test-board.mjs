@@ -4,6 +4,7 @@ import http from "node:http";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { parseDocument } from "yaml";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,7 +14,7 @@ function usage(code = 0) {
   test-board impact --board test-board.yaml --files src/a.ts src/b.ts
   test-board issue --board test-board.yaml --issue 123
   test-board coverage --board test-board.yaml
-  test-board gaps --board test-board.yaml [--root .]
+  test-board gaps --board test-board.yaml [--root .] [--strict]
   test-board plan-issue --board test-board.yaml --issue 123 --source src/a.ts --feature "feature" --scenario "scenario" [--apply]
   test-board sync-github --board test-board.yaml --issue 123 [--apply]
   test-board serve --board test-board.yaml [--root .] [--port 41800]
@@ -36,7 +37,7 @@ function parseArgs(argv) {
       continue;
     }
     const key = arg.slice(2);
-    if (key === "apply" || key === "open") {
+    if (key === "apply" || key === "open" || key === "strict") {
       out[key] = true;
       continue;
     }
@@ -49,98 +50,34 @@ function parseArgs(argv) {
   return out;
 }
 
-function stripComment(value) {
-  let quote = null;
-  for (let i = 0; i < value.length; i++) {
-    const c = value[i];
-    if ((c === '"' || c === "'") && value[i - 1] !== "\\") quote = quote === c ? null : quote || c;
-    if (c === "#" && !quote && (i === 0 || /\s/.test(value[i - 1]))) return value.slice(0, i).trimEnd();
-  }
-  return value.trimEnd();
-}
-
-function unquote(value) {
-  const v = String(value ?? "").trim();
-  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) return v.slice(1, -1);
-  return v;
-}
-
-function parseInlineList(value) {
-  const inner = value.trim().replace(/^\[/, "").replace(/\]$/, "");
-  if (!inner.trim()) return [];
-  return inner.split(",").map((item) => unquote(item.trim())).filter(Boolean);
-}
-
-function parseValue(raw) {
-  const v = stripComment(String(raw ?? "")).trim();
-  if (v === "") return "";
-  if (v.startsWith("[") && v.endsWith("]")) return parseInlineList(v);
-  if (v === "true") return true;
-  if (v === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
-  return unquote(v);
-}
-
 function parseBoard(boardPath) {
   const abs = path.resolve(boardPath);
   const text = fs.readFileSync(abs, "utf8");
-  const lines = text.split(/\r?\n/);
-  const board = { path: abs, text, project: {}, source_roots: [], dimensions: {}, cases: [] };
-  let section = null;
-  let current = null;
-  let currentNested = null;
-
-  for (const line of lines) {
-    if (/^\s*$/.test(line) || /^\s*#/.test(line)) continue;
-
-    const top = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (top) {
-      section = top[1];
-      current = null;
-      currentNested = null;
-      if (section === "source_roots") board.source_roots = parseValue(top[2]);
-      continue;
+  const document = parseDocument(text);
+  if (document.errors.length) throw new Error(`invalid YAML: ${document.errors[0].message}`);
+  const data = document.toJS({ maxAliasCount: 100 });
+  if (!data || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.cases)) {
+    throw new Error("board must be a mapping with a cases array");
+  }
+  const ids = new Set();
+  for (const c of data.cases) {
+    if (!c || typeof c !== "object" || typeof c.id !== "string" || !c.id.trim()) {
+      throw new Error("every case must have a nonempty string id");
     }
-
-    if (section === "project") {
-      const m = line.match(/^  ([A-Za-z0-9_-]+):\s*(.*)$/);
-      if (m) board.project[m[1]] = parseValue(m[2]);
-      continue;
-    }
-
-    if (section === "dimensions") {
-      const m = line.match(/^  ([A-Za-z0-9_-]+):\s*(.*)$/);
-      if (m) board.dimensions[m[1]] = parseValue(m[2]);
-      continue;
-    }
-
-    if (section === "cases") {
-      const start = line.match(/^  - id:\s*(.*)$/);
-      if (start) {
-        current = { id: parseValue(start[1]) };
-        board.cases.push(current);
-        currentNested = null;
-        continue;
+    if (ids.has(c.id)) throw new Error(`duplicate case id: ${c.id}`);
+    ids.add(c.id);
+    for (const field of ["source", "test_file"]) {
+      if (asArray(c[field]).some((value) => typeof value !== "string" || !value.trim())) {
+        throw new Error(`${c.id}: ${field} must contain nonempty paths`);
       }
-      if (!current) continue;
-      const kv = line.match(/^    ([A-Za-z0-9_-]+):\s*(.*)$/);
-      if (kv) {
-        const key = kv[1];
-        const raw = kv[2];
-        if (raw.trim() === "") {
-          current[key] = {};
-          currentNested = key;
-        } else {
-          current[key] = parseValue(raw);
-          currentNested = null;
-        }
-        continue;
+    }
+    for (const field of ["issue", "issues"]) {
+      if (asArray(c[field]).some((value) => !/^#?\d+$/.test(String(value).trim()))) {
+        throw new Error(`${c.id}: ${field} must contain issue numbers`);
       }
-      const nested = line.match(/^      ([A-Za-z0-9_-]+):\s*(.*)$/);
-      if (nested && currentNested) current[currentNested][nested[1]] = parseValue(nested[2]);
     }
   }
-  return board;
+  return { ...data, path: abs, text, document, project: data.project || {}, cases: data.cases };
 }
 
 function boardPath(args) {
@@ -160,7 +97,20 @@ function asArray(value) {
 }
 
 function caseIssues(c) {
-  return asArray(c.issues).map(String);
+  return [...new Set([...asArray(c.issues), ...asArray(c.issue)]
+    .map((value) => String(value).trim().replace(/^#/, "")))];
+}
+
+function testPaths(c) {
+  return asArray(c.test_file);
+}
+
+function isTestFile(root, file) {
+  try {
+    return fs.statSync(path.resolve(root, file)).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function sourceMatches(c, file) {
@@ -168,7 +118,7 @@ function sourceMatches(c, file) {
   return asArray(c.source).some((src) => {
     const s = String(src).replace(/^\.\//, "");
     return normalized === s || normalized.startsWith(`${s}/`) || s.startsWith(`${normalized}/`);
-  }) || String(c.test_file || "").replace(/^\.\//, "") === normalized;
+  }) || testPaths(c).some((test) => test.replace(/^\.\//, "") === normalized);
 }
 
 function printCases(cases) {
@@ -176,7 +126,7 @@ function printCases(cases) {
     const issues = caseIssues(c);
     const suffix = issues.length ? ` issues=#${issues.join(",#")}` : "";
     console.log(`- ${c.id} [${c.status || "unknown"}] ${c.title || ""} (${c.type || "?"}/${c.priority || "?"})${suffix}`);
-    if (c.test_file) console.log(`  test: ${c.test_file}`);
+    if (testPaths(c).length) console.log(`  test: ${testPaths(c).join(", ")}`);
     if (asArray(c.source).length) console.log(`  source: ${asArray(c.source).join(", ")}`);
   }
 }
@@ -203,7 +153,7 @@ function cmdImpact(args) {
   console.log(`changed=${files.join(", ")}`);
   console.log(`matched_cases=${matches.length}`);
   printCases(matches);
-  const tests = [...new Set(matches.map((c) => c.test_file).filter(Boolean))];
+  const tests = [...new Set(matches.flatMap(testPaths))];
   if (tests.length) console.log(`\ntests_to_run:\n${tests.map((t) => `- ${t}`).join("\n")}`);
   const issues = [...new Set(matches.flatMap(caseIssues))];
   if (issues.length) console.log(`\nregression_risk_issues=${issues.map((n) => `#${n}`).join(", ")}`);
@@ -217,14 +167,14 @@ function cmdIssue(args) {
   console.log(`issue=#${issue}`);
   console.log(`matched_cases=${matches.length}`);
   printCases(matches);
-  const tests = [...new Set(matches.map((c) => c.test_file).filter(Boolean))];
+  const tests = [...new Set(matches.flatMap(testPaths))];
   if (tests.length) console.log(`\ntests_to_run:\n${tests.map((t) => `- ${t}`).join("\n")}`);
 }
 
 function cmdCoverage(args) {
   const board = parseBoard(boardPath(args));
   const missingSource = board.cases.filter((c) => !asArray(c.source).length);
-  const doneWithoutTest = board.cases.filter((c) => c.status === "done" && !c.test_file);
+  const doneWithoutTest = board.cases.filter((c) => c.status === "done" && !testPaths(c).length);
   const e2e = board.cases.filter((c) => c.type === "e2e");
   console.log(`cases=${board.cases.length}`);
   console.log(`missing_source=${missingSource.length}`);
@@ -240,22 +190,22 @@ function cmdCoverage(args) {
   }
 }
 
-const LAYER_TYPES = ["unit", "integration", "e2e", "security", "regression"];
+const LAYER_TYPES = ["unit", "integration", "system", "e2e", "security", "regression"];
 
 function cmdGaps(args) {
   const board = parseBoard(boardPath(args));
   const root = path.resolve(args.root || path.dirname(board.path));
 
-  const open = board.cases.filter((c) => c.status === "todo" || c.status === "doing");
+  const open = board.cases.filter((c) => !["done", "skip"].includes(c.status));
   const openUnwritten = open.filter(
-    (c) => !c.test_file || !fs.existsSync(path.resolve(root, String(c.test_file)))
+    (c) => !testPaths(c).length || testPaths(c).some((file) => !isTestFile(root, file))
   );
+  const doneWithoutTest = board.cases.filter((c) => c.status === "done" && !testPaths(c).length);
   // "Lying board": the case claims done with a test_file that does not exist.
   const doneMissingFile = board.cases.filter(
     (c) =>
       c.status === "done" &&
-      c.test_file &&
-      !fs.existsSync(path.resolve(root, String(c.test_file)))
+      testPaths(c).some((file) => !isTestFile(root, file))
   );
   const unlinked = board.cases.filter((c) => !caseIssues(c).length);
 
@@ -273,6 +223,11 @@ function cmdGaps(args) {
 
   let gapCount = 0;
 
+  if (doneWithoutTest.length) {
+    gapCount += doneWithoutTest.length;
+    console.log(`\ndone cases without a test_file (${doneWithoutTest.length}):`);
+    printCases(doneWithoutTest);
+  }
   if (openUnwritten.length) {
     gapCount += openUnwritten.length;
     console.log(`\nopen cases without a real test on disk (${openUnwritten.length}):`);
@@ -288,17 +243,20 @@ function cmdGaps(args) {
     console.log(`\nempty layers: ${thinLayers.join(", ")}`);
   }
   if (unlinked.length) {
+    gapCount += unlinked.length;
     console.log(`\ncases without linked issues: ${unlinked.length} (${unlinked.map((c) => c.id).join(", ")})`);
   }
 
   console.log("");
+  console.log(`gap_findings=${gapCount} (inventory only; not runtime acceptance)`);
+  if (args.strict && gapCount) process.exitCode = 1;
   if (!gapCount) {
-    console.log("no gaps: open cases all have real tests, done cases all exist on disk, every layer is populated");
+    console.log("no inventory gaps found; test execution and acceptance evidence still require verification");
     return;
   }
   console.log("suggested next actions:");
   if (openUnwritten.length) {
-    console.log("- batch the open cases into one GitHub Issue, write the real tests until green, then mark done with the real test_file");
+    console.log("- select one coherent gap outcome, verify its Issue, then write and run the real tests");
   }
   if (doneMissingFile.length) {
     console.log("- done cases with missing files are the worst kind of gap: restore the test or set the case back to todo");
@@ -321,9 +279,7 @@ function nextCaseId(cases) {
 }
 
 function yamlString(value) {
-  const s = String(value ?? "");
-  if (/^[A-Za-z0-9_./:@# -]+$/.test(s) && s.trim() === s && s !== "") return s;
-  return JSON.stringify(s);
+  return JSON.stringify(String(value ?? ""));
 }
 
 function yamlList(values) {
@@ -372,8 +328,8 @@ function cmdPlanIssue(args) {
   const c = proposal(args, board);
   console.log(caseYaml(c));
   if (args.apply) {
-    const insertion = `${board.text.endsWith("\n") ? "" : "\n"}${caseYaml(c)}\n`;
-    fs.appendFileSync(board.path, insertion);
+    board.document.get("cases").add(board.document.createNode(c));
+    fs.writeFileSync(board.path, String(board.document));
     console.log(`\nappended=${c.id} board=${board.path}`);
   } else {
     console.log("\npreview only; rerun with --apply to append");
@@ -385,7 +341,7 @@ function issueMarkdown(issue, cases) {
   if (!cases.length) lines.push("該当ケースはありません。");
   for (const c of cases) {
     lines.push(`- ${c.id} [${c.status || "unknown"}] ${c.title || ""}`);
-    if (c.test_file) lines.push(`  - test: \`${c.test_file}\``);
+    if (testPaths(c).length) lines.push(`  - test: ${testPaths(c).map((file) => `\`${file}\``).join(", ")}`);
     if (asArray(c.source).length) lines.push(`  - source: ${asArray(c.source).map((s) => `\`${s}\``).join(", ")}`);
   }
   return lines.join("\n");
@@ -422,8 +378,8 @@ function renderHtml(board) {
     <td>${htmlEscape(c.type)}</td>
     <td>${htmlEscape(c.feature)}</td>
     <td>${htmlEscape(c.title)}</td>
-    <td>${htmlEscape(asArray(c.issues).join(", "))}</td>
-    <td>${htmlEscape(c.test_file)}</td>
+    <td>${htmlEscape(caseIssues(c).join(", "))}</td>
+    <td>${htmlEscape(testPaths(c).join(", "))}</td>
   </tr>`).join("\n");
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>test-board</title>
