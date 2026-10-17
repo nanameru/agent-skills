@@ -154,14 +154,23 @@ Use a fresh tag per run unless the test deliberately needs a fixed identity:
 
 ## CLI
 
-This restored skill includes a lightweight CLI:
+Install the pinned YAML parser once per skill installation, then use the inventory CLI:
+
+```bash
+npm --prefix /absolute/path/to/test-case-board install --ignore-scripts
+npm --prefix /absolute/path/to/test-case-board test
+```
+
+The path is the installed Skill directory, not the application repository. The CLI accepts standard YAML block/flow arrays, singular `issue` and plural `issues`, and string or array `test_file` paths. Invalid YAML or invalid case shapes fail rather than yielding an empty report.
+
+`gaps` treats every status except `done`/`skip` as unfinished, includes done cases with empty test references and unlinked cases in its findings, and checks `system` declarations as well. Use `--strict` for a nonzero exit on inventory findings; default output remains informational. An empty `test_file` on an inline E2E case means the runner/scenario reference still needs manual reconciliation, not proof that no test exists. Layer counts and files on disk never prove actual test execution or runtime acceptance.
 
 ```bash
 test-board once --board test-board.yaml
 test-board impact --board test-board.yaml --files src/a.ts src/b.ts
 test-board issue --board test-board.yaml --issue 123
 test-board coverage --board test-board.yaml
-test-board gaps --board test-board.yaml [--root .]
+test-board gaps --board test-board.yaml [--root .] [--strict]
 test-board plan-issue --board test-board.yaml --issue 123 --source src/a.ts --feature "feature" --scenario "scenario" [--apply]
 test-board sync-github --board test-board.yaml --issue 123 [--apply]
 test-board serve --board test-board.yaml --root . --port 41800

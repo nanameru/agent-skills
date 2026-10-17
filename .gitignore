@@ -1,3 +1,4 @@
 *.skill
 skills-lock.json
 .agents/
+node_modules/

@@ -1,0 +1,12 @@
+{
+  "name": "test-case-board",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test scripts/test-board.test.mjs",
+    "check": "node --check scripts/test-board.mjs && node --check scripts/test-board.test.mjs"
+  },
+  "dependencies": {
+    "yaml": "2.8.1"
+  }
+}
