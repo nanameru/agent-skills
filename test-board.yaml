@@ -1,0 +1,17 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+source_roots: [implementation-showcase]
+cases:
+  - id: TC-SHOWCASE-001
+    title: スクショと操作記録と説明をローカルで確認できる
+    feature: 実装確認ページ
+    scenario: スキル検証とローカルHTTPとブラウザ操作
+    status: done
+    priority: high
+    type: manual
+    source: [implementation-showcase/SKILL.md, implementation-showcase/assets/index.html]
+    test_file: ''
+    issues: [33]
+    notes: quick_validate成功、HTTP 200、ブラウザで実画像表示・details開閉・12秒MP4再生を確認。動画 readyState=4、paused=false、currentTime=0.23134。手動検証のため自動テストファイルなし
