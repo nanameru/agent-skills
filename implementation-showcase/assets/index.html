@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>実装レビュー — 完了時の見せ方</title>
+<style>
+:root{color-scheme:light;--ink:#17334a;--muted:#5b7182;--line:#d8e3eb;--blue:#1265b6;--paper:#f1f6fa;--green:#21705a}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.8 -apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif}a{color:var(--blue)}header{background:white;border-bottom:1px solid var(--line)}nav{max-width:1180px;margin:auto;padding:20px 32px;display:flex;justify-content:space-between;align-items:center}.brand{font-size:13px;letter-spacing:.16em;font-weight:750}.tag{font-size:12px;padding:4px 12px;border-radius:20px;background:#e5f1ec;color:var(--green)}main{max-width:1180px;margin:auto;padding:54px 32px}h1{font-size:clamp(30px,5vw,52px);letter-spacing:-.05em;line-height:1.35;margin:12px 0 20px}h2{font-size:20px;line-height:1.5;margin:0 0 18px}h3{font-size:16px;margin:8px 0}.eyebrow{font:12px/1.5 ui-monospace,monospace;letter-spacing:.12em;color:var(--blue)}.lead{max-width:760px;color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:24px;margin-top:34px}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;margin-bottom:24px}.preview{border:1px solid var(--line);background:#eaf1f6;border-radius:10px;overflow:hidden;min-height:150px}.preview img,.preview video{display:block;width:100%;height:auto}.caption{font-size:13px;color:var(--muted);margin:12px 0 0}.item{border-top:1px solid var(--line);padding:16px 0}.item:last-child{padding-bottom:0}p{margin:8px 0}ul{padding-left:20px}.status{font-size:12px;color:var(--green);font-weight:650}details{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}summary{cursor:pointer;color:var(--blue);font-weight:600;padding:3px 0}summary:focus-visible,a:focus-visible,button:focus-visible{outline:3px solid #ffb739;outline-offset:4px}.notice{padding:18px;background:#edf4fb;border-left:3px solid var(--blue);font-size:14px}.missing{padding:24px;color:var(--muted);font-size:14px}footer{border-top:1px solid var(--line);margin-top:20px;padding:22px 0;font-size:12px;color:var(--muted)}code{overflow-wrap:anywhere;font-size:12px}.actions{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin-top:22px}@media(max-width:760px){main{padding:30px 20px}.layout{grid-template-columns:1fr}nav{padding:16px 20px}.panel{padding:22px}}
+</style>
+<header><nav><span class="brand">IMPLEMENTATION / REVIEW</span><span class="tag">ローカル確認用</span></nav></header>
+<main>
+<div class="eyebrow">実装完了時の確認ページ · スキル動作デモ</div>
+<h1>できたものを、<br>見て、動かして、確かめる。</h1>
+<p class="lead">実装の説明と、実際の画面・操作記録を一か所にまとめました。今回は「実装完了時に見せるスキル」自体のデモです。</p>
+<div class="actions"><a href="#screenshots">スクショを見る ↓</a><a href="#recording">操作記録を見る ↓</a><a href="https://github.com/nanameru/agent-skills/issues/33">作業Issue #33 ↗</a></div>
+<div class="layout"><div>
+<section class="panel" id="screenshots"><h2>実際の表示画面</h2><div class="preview"><img src="screen.jpg" alt="今回ブラウザで確認したローカル確認ページ" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="missing" hidden>スクリーンショットはまだありません。撮影した実画面を screen.jpg として追加してください。</div></div><p class="caption">この確認ページの初期表示を実際に撮影。対象アプリが未提供のため、今回のデモ対象は確認ページ自身です。</p></section>
+<section class="panel" id="recording"><h2>操作前から、結果まで</h2><div class="preview"><video controls playsinline preload="metadata" aria-label="確認ページの操作記録" onerror="this.hidden=true;this.nextElementSibling.hidden=false" src="walkthrough.mp4"></video><div class="missing" hidden>操作記録はまだありません。実画面の録画を walkthrough.mp4 として追加してください。</div></div><p class="caption">画面キャプチャ記録（低フレームレート）。ページ表示 → 検証手順を開く → スクショへ移動、を実際に操作した記録です。通常の連続録画ではありません。</p></section>
+</div><aside>
+<section class="panel"><h2>今回できたこと</h2><div class="item"><span class="status">スキル</span><h3>実装後の見せ方を定型化</h3><p>UI実装を終えたら、画面・操作記録・説明をまとめてローカルで見せます。</p></div><div class="item"><span class="status">再利用テンプレート</span><h3>次の実装でも同じ形に</h3><p>変更内容に合わせて画像・動画・説明を差し替えられます。</p></div></section>
+<section class="panel"><h2>確認できること</h2><p>画面表示、リンク移動、検証手順の開閉、画像表示、操作記録の再生。</p><details><summary>検証手順を見る</summary><ol><li>スクショのリンクで実画面へ移動する</li><li>操作記録を再生する</li><li>説明と実際の表示を見比べる</li></ol></details></section>
+<div class="notice"><strong>今回の確認範囲</strong><p>スキルと確認ページの動作デモです。別アプリの実装完了やテスト合格を示すものではありません。</p><p>参考投稿の本文は確認済み。添付動画は再生できず、映像の完全再現はしていません。</p></div>
+</aside></div>
+<footer>このページはローカルだけで配信しています。サーバーを停止すると閲覧できなくなります。起動したターミナルで Ctrl+C、または記録されたプロセスIDを指定して停止できます。</footer>
+</main></html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "実装完了ショーケース"
+  short_description: "実装結果のスクショ・操作記録・説明をローカルページで見せる"
+  default_prompt: "$implementation-showcase を使って、今回の実装結果をスクショ・操作録画・説明付きのローカル確認ページで見せてください。"

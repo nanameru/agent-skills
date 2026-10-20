@@ -41,6 +41,11 @@
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
+    },
+    {
+      "name": "implementation-showcase",
+      "source": "nanameru/agent-skills",
+      "path": "implementation-showcase"
     }
   ],
   "postInstallLinks": [
@@ -79,6 +84,14 @@
     {
       "link": "$HOME/.codex/skills/slide-design-guide",
       "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.codex/skills/implementation-showcase",
+      "target": "$HOME/.agents/skills/implementation-showcase"
+    },
+    {
+      "link": "$HOME/.claude/skills/implementation-showcase",
+      "target": "$HOME/.agents/skills/implementation-showcase"
     }
   ]
 }
