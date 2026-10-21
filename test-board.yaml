@@ -1,0 +1,29 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+source_roots: [codex-chat-wrapup]
+cases:
+  - id: TC-001
+    title: "Codex終了時整理: 現在チャットを改名して完了セクションへ移動する"
+    feature: "Codex終了時整理"
+    scenario: "現在チャットを改名して完了セクションへ移動する"
+    status: blocked
+    priority: medium
+    type: manual
+    source: [codex-chat-wrapup/SKILL.md]
+    test_file: "docs/codex-chat-wrapup-verification.md"
+    notes: "改名は確認済み。移動は成功応答後もTasksに残り、未反映として記録。"
+    issues: [35]
+
+  - id: TC-002
+    title: "共通指示とスキルのインストールを確認する"
+    feature: "Codex終了時整理"
+    scenario: "既存共通指示を保持してスキルを検出できる"
+    status: done
+    priority: medium
+    type: manual
+    source: [codex-chat-wrapup/SKILL.md, codex-chat-wrapup/references/global-instructions.md]
+    test_file: "docs/codex-chat-wrapup-verification.md"
+    issues: [35]
+    notes: "quick_validate成功、正本とのハッシュ一致、skills list検出、共通指示の既存内容保持を確認。"

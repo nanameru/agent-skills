@@ -41,6 +41,11 @@
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
+    },
+    {
+      "name": "codex-chat-wrapup",
+      "source": "nanameru/agent-skills",
+      "path": "codex-chat-wrapup"
     }
   ],
   "postInstallLinks": [
@@ -79,6 +84,10 @@
     {
       "link": "$HOME/.codex/skills/slide-design-guide",
       "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.codex/skills/codex-chat-wrapup",
+      "target": "$HOME/.agents/skills/codex-chat-wrapup"
     }
   ]
 }
