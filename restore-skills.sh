@@ -2,6 +2,7 @@
 set -euo pipefail
 
 echo "Restoring managed Skills..."
+npx skills add nanameru/agent-skills --skill codex-chat-wrapup -g -y --copy
 npx skills add nanameru/github-issue-driven-dev-skill --skill github-issue-driven-dev -g -y --copy
 npx skills add nanameru/agent-skills --skill loop-engineering-core -g -y --copy
 npx skills add nanameru/agent-skills --skill test-case-board -g -y --copy
