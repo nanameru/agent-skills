@@ -2,6 +2,11 @@
   "version": 1,
   "skills": [
     {
+      "name": "codex-chat-wrapup",
+      "source": "nanameru/agent-skills",
+      "path": "codex-chat-wrapup"
+    },
+    {
       "name": "github-issue-driven-dev",
       "source": "nanameru/github-issue-driven-dev-skill",
       "path": "github-issue-driven-dev",

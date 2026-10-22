@@ -1,0 +1,17 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+source_roots: [codex-chat-wrapup]
+cases:
+  - id: TC-001
+    title: "短い会話の整理省略: 挨拶ではツール0回、実作業と状態変化では整理を維持する"
+    feature: "短い会話の整理省略"
+    scenario: "挨拶ではツール0回、実作業と状態変化では整理を維持する"
+    status: done
+    priority: medium
+    type: regression
+    source: [codex-chat-wrapup/SKILL.md]
+    test_file: "codex-chat-wrapup/references/validation-cases.md"
+    issues: [37]
+    notes: "手動検証。隔離した実Codex + DeepSeek lowで挨拶を1回確認し、ツール0件・返信1件・完了1件・エラー0件。45.87秒。作業継続・他チャット保護は指示照合のみで、実UIの自動整理や重複表示の解消は未検証。Issue #37に実行条件を記録。"
