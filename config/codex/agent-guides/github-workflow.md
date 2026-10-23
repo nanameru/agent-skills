@@ -98,4 +98,3 @@ codex-gh-workflow start --issue 123 --slug short-title
 codex-gh-workflow install-hooks
 codex-gh-workflow install-repo-templates
 ```
-

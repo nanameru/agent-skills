@@ -16,4 +16,3 @@ test-board serve     --board test-board.yaml                    # 管理画面 h
 ```
 
 `test-board.yaml` が無いリポジトリでは、Issue起票時に `plan-issue` で雛形から作り始める。`--apply` や `sync-github --apply` は共有状態（YAML/GitHub）を書き換えるので、実行前にユーザーへ一言添える。詳細は `~/.claude/skills/test-case-board/SKILL.md`。
-
