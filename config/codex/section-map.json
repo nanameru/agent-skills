@@ -1,0 +1,29 @@
+{
+  "github-workflow.md": [
+    "基本ルール",
+    "作業開始",
+    "ブランチ、コミット、PR",
+    "ナレッジ蓄積",
+    "横断Projectボード",
+    "セキュリティとCI",
+    "ローカル補助コマンド"
+  ],
+  "progress.md": [
+    "Codexライブ進捗"
+  ],
+  "test-board.md": [
+    "テストケース管理 (test-board)"
+  ],
+  "ios.md": [
+    "iOS / Xcode の検証は Devin の macOS セッションで行う（最優先）"
+  ],
+  "chat-wrapup.md": [
+    "Codexチャットの終了時整理"
+  ],
+  "cache-cleanup.md": [
+    "再取得可能キャッシュの自動整理（本人の継続許可・2026-10-21）"
+  ],
+  "chrome.md": [
+    "ChromeのWeb操作はPlaywright Extensionのタブグループを使う"
+  ]
+}
