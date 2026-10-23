@@ -1,0 +1,16 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+cases: []
+  - id: TC-001
+    title: "Codex常時入力の整理: 全指示の対応と条件付き参照とリンク保全"
+    feature: "Codex常時入力の整理"
+    scenario: "全指示の対応と条件付き参照とリンク保全"
+    status: done
+    priority: medium
+    type: manual
+    source: [config/codex/AGENTS.md]
+    test_file: ""
+    issues: [39]
+    notes: "Issue #39。元の13節を7ファイルへ全文保持。常時指示14088→3734 bytes。28重複登録の除去後も原本/Claudeリンク有効。Canvaのみ無効化、他の全設定は構造一致。モデルとmedium維持。config/codex/README.md参照。"

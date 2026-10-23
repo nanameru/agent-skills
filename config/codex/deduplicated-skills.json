@@ -1,0 +1,40 @@
+{
+  "removed_registration_root": "~/.codex/skills",
+  "kept_root": "~/.agents/skills",
+  "names": [
+    "ai-company-ads-plan",
+    "faceless-explainer",
+    "figma-design-source",
+    "general-video",
+    "hyperframes",
+    "hyperframes-animation",
+    "hyperframes-audio",
+    "hyperframes-cli",
+    "hyperframes-core",
+    "hyperframes-creative",
+    "hyperframes-keyframes",
+    "hyperframes-registry",
+    "hyperframes-studio",
+    "implementation-showcase",
+    "media-use",
+    "motion-graphics",
+    "note-article",
+    "note-free-publish",
+    "note-light-publish",
+    "note-pro-publish",
+    "official-case-study-research",
+    "product-launch-video",
+    "promo-video-remotion",
+    "slide-archetype-gen",
+    "slide-design-guide",
+    "slideshow",
+    "treg",
+    "x-article-draft"
+  ],
+  "legacy_reference_preserved": [
+    "codex-chat-wrapup"
+  ],
+  "different_content_preserved": [
+    "terminal-browser"
+  ]
+}
