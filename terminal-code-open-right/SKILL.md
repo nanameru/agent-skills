@@ -9,12 +9,15 @@ description: Open Terminal Code (tode) beside the current Herdr chat when asked 
 「VS Codeを開いて」「コードを右に表示して」「フォルダを開いて」は次を使う。
 
 ```sh
+terminal-browser code
+# 対象を明示された場合
 terminal-browser code /absolute/path
 ```
 
 terminal-browserスキルの会話解決ラッパーを通し、会話中のチャットの右に表示する。
 同会話のウィンドウだけを再利用する。生のtodeに古いHerdr環境変数を渡さない。
-Issue worktreeがあればそのフォルダを開く。
+対象の指定がなければ `terminal-browser code` を実行し、このCodexチャットに設定されたリポジトリ（cwd）を開く。
+ツールの実行場所・直前のフォルダ・実装用worktreeを既定の表示先にしない。ユーザーが明示したパスは優先する。
 URLやHTMLのプレビューは `terminal-browser open <URL> --split right` を使う。
 ブラウザ版の公式VS Code serve-webを明示された場合は `terminal-browser vscode /absolute/path`。
 

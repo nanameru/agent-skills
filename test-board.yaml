@@ -55,3 +55,13 @@ cases:
     source: [terminal-browser/scripts/tode_zoom.cjs, terminal-browser/scripts/chat_browser.py]
     test_file: terminal-browser/tests/test_tode_zoom.cjs
     issues: [41]
+  - id: TC-041-DEFAULT-REPO
+    title: パス省略時に現在チャットのリポジトリを開く
+    feature: Terminal Code既定フォルダ
+    scenario: 会話cwdを使い明示パスを優先する
+    status: done
+    priority: high
+    type: regression
+    source: [terminal-browser/scripts/chat_browser.py, terminal-browser/scripts/open-vscode-right.sh]
+    test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]

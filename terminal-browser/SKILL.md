@@ -36,6 +36,8 @@ URL指定なしは `terminal-browser open --split right`。
 「VS Codeを開いて」「コード・ファイル・フォルダを表示して」は次を使う。
 
 ```sh
+terminal-browser code
+# 対象を明示された場合
 terminal-browser code /absolute/path
 # 互換エントリーもTerminal Codeを開く
 bash ~/.codex/skills/terminal-browser/scripts/open-vscode-right.sh /absolute/path
@@ -44,7 +46,8 @@ bash ~/.codex/skills/terminal-browser/scripts/open-vscode-right.sh /absolute/pat
 会話別のブラウザとIPCを記録し、その会話のウィンドウだけを再利用する。
 実行元ペインを特定できない場合やIPCの所有が不明な場合は停止する。
 Terminal Code内部の設定・拡張はtodeの共通profileを使う。会話ごとのウィンドウとフォルダを分離する。
-Issue worktreeがあればそのフォルダを開く。
+対象の指定がなければ `terminal-browser code` を実行し、このCodexチャットに設定されたリポジトリ（cwd）を開く。
+ツールの実行場所・直前のフォルダ・実装用worktreeを既定の表示先にしない。ユーザーが明示したパスは優先する。
 Terminal Codeの倍率はnative main-scriptで継続補正し、起動・リサイズ後もターミナル画素とCSS画素を1:1に保つ。
 文字自体の大きさを変える場合はエディターのfontSizeを調整する。ブラウザの倍率だけを一度リセットする方法へ戻さない。
 

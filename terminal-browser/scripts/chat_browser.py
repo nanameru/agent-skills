@@ -302,8 +302,15 @@ def terminal_code(target, env, directory):
     call_env.pop('TODE_IPC', None)
     call_env['TODE_TERMINAL_BROWSER_BIN'] = str(Path(__file__).resolve().with_name('tode-browser'))
     if owned:
-        if not on_right(owned, env) or record.get('ipc') not in sockets():
+        if not on_right(owned, env):
             raise RuntimeError('この会話のTerminal Codeを安全に再利用できません。別会話には開きません。')
+        if record.get('ipc') not in sockets():
+            # Opening another folder restarts the extension host and its socket.
+            # Rebind only if the entire tode instance has one unambiguous window.
+            available = sockets()
+            if len(current) != 1 or len(available) != 1:
+                raise RuntimeError('Terminal Codeの再接続先が一意ではありません。別会話には開きません。')
+            record['ipc'] = next(iter(available))
         call_env['TODE_IPC'] = record['ipc']
         run([HOME / '.local/bin/tode', '--reuse-window', target], call_env)
         save(record_path, record)
@@ -345,13 +352,17 @@ def cli(argv):
         print(json.dumps({k: env[k] for k in ('HERDR_PANE_ID', 'HERDR_TAB_ID', 'HERDR_WORKSPACE_ID')}))
         return 0
     if argv[0] in ('code', 'terminal-code', 'vscode'):
-        if len(argv) != 2:
-            raise RuntimeError('usage: terminal-browser vscode /absolute/path')
+        if len(argv) > 2:
+            raise RuntimeError('usage: terminal-browser ' + argv[0] + ' [/absolute/path]')
+        # A tool may run inside an implementation worktree. The default editor
+        # belongs to the Codex conversation's configured cwd, not that tool cwd.
+        target = argv[1] if len(argv) == 2 else (
+            thread_info(env['CODEX_THREAD_ID'])[1] if env.get('CODEX_THREAD_ID') else os.getcwd())
         with locked(scope) as directory:
             if argv[0] == 'vscode':
-                vscode(argv[1], env, scope, directory)
+                vscode(target, env, scope, directory)
             else:
-                terminal_code(argv[1], env, directory)
+                terminal_code(target, env, directory)
         return 0
     known = ('ls', 'action', 'new-tab', 'shutdown')
     if argv[0] not in known:

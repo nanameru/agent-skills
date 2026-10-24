@@ -117,6 +117,23 @@ class BrowserTests(unittest.TestCase):
             self.assertEqual(cb.normalized_url(str(p)), p.resolve().as_uri())
 
 
+class DefaultRepositoryTests(unittest.TestCase):
+    def test_omitted_path_uses_conversation_cwd_not_tool_worktree(self):
+        import contextlib
+        for command in ['code','terminal-code','vscode']:
+            with self.subTest(command=command), patch.dict(os.environ,{'HERDR_ENV':'1'}), patch.object(cb,'resolve',return_value=({'CODEX_THREAD_ID':'current'},'scope')), patch.object(cb,'thread_info',return_value=('会話','/conversation/repo')), patch.object(cb,'locked',return_value=contextlib.nullcontext(Path('/state'))), patch.object(cb,'terminal_code') as tode, patch.object(cb,'vscode') as vscode:
+                cb.cli([command])
+                chosen = vscode if command == 'vscode' else tode
+                self.assertEqual(chosen.call_args[0][0],'/conversation/repo')
+
+    def test_explicit_path_wins_over_conversation_default(self):
+        import contextlib
+        with patch.dict(os.environ,{'HERDR_ENV':'1'}), patch.object(cb,'resolve',return_value=({'CODEX_THREAD_ID':'current'},'scope')), patch.object(cb,'thread_info') as info, patch.object(cb,'locked',return_value=contextlib.nullcontext(Path('/state'))), patch.object(cb,'terminal_code') as tode:
+            cb.cli(['code','/explicit/repo'])
+            self.assertEqual(tode.call_args[0][0],'/explicit/repo')
+            info.assert_not_called()
+
+
 class TerminalCodeTests(unittest.TestCase):
     def test_reuse_uses_only_recorded_window_ipc(self):
         import socket
