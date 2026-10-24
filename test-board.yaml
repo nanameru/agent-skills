@@ -1,0 +1,67 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+  test_command: /usr/bin/python3 -m unittest discover -s terminal-browser/tests -v && node --test terminal-browser/tests/test_tode_zoom.cjs
+source_roots: [terminal-browser/scripts]
+cases:
+  - id: TC-041-ROUTE
+    title: 古いHerdr環境変数を補正し曖昧な表示先を拒否する
+    feature: Herdr会話分離
+    scenario: ID照合・会話名cwd照合・重複拒否
+    status: done
+    priority: high
+    type: regression
+    source: [terminal-browser/scripts/chat_browser.py]
+    test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]
+  - id: TC-041-REUSE
+    title: 同会話の右側ブラウザを再利用し移動済みなら停止する
+    feature: ブラウザ再利用
+    scenario: 再起動時にsplitを増やさない
+    status: done
+    priority: high
+    type: regression
+    source: [terminal-browser/scripts/chat_browser.py]
+    test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]
+  - id: TC-041-VSCODE
+    title: VS Codeサーバーを会話ごとに並存させる
+    feature: VS Code会話分離
+    scenario: 2サーバーの同時応答と同会話の再利用
+    status: done
+    priority: high
+    type: integration
+    source: [terminal-browser/scripts/chat_browser.py]
+    test_file: terminal-browser/tests/test_vscode_live.py
+    issues: [41]
+  - id: TC-041-TODE
+    title: Terminal Codeを標準にして会話内のウィンドウだけを再利用する
+    feature: Terminal Code標準化
+    scenario: 正しいIPCとペインへ表示し倍率を確認
+    status: done
+    priority: high
+    type: manual
+    source: [terminal-browser/scripts/chat_browser.py, terminal-code-open-right/SKILL.md]
+    test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]
+  - id: TC-041-ZOOM
+    title: Terminal Codeの拡大がリサイズや自動倍率変更後に再発しない
+    feature: Terminal Codeの倍率補正
+    scenario: Retina密度・自動拡大・新規ページ・Webプレビュー除外
+    status: done
+    priority: high
+    type: regression
+    source: [terminal-browser/scripts/tode_zoom.cjs, terminal-browser/scripts/chat_browser.py]
+    test_file: terminal-browser/tests/test_tode_zoom.cjs
+    issues: [41]
+  - id: TC-041-DEFAULT-REPO
+    title: パス省略時に現在チャットのリポジトリを開く
+    feature: Terminal Code既定フォルダ
+    scenario: 会話cwdを使い明示パスを優先する
+    status: done
+    priority: high
+    type: regression
+    source: [terminal-browser/scripts/chat_browser.py, terminal-browser/scripts/open-vscode-right.sh]
+    test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]

@@ -10,6 +10,8 @@ npx skills add nanameru/agent-skills --skill skills-repo-manager -g -y --copy
 npx skills add nanameru/agent-skills --skill chaos-engineer -g -y --copy
 npx skills add nanameru/agent-skills --skill x-search -g -y --copy
 npx skills add nanameru/agent-skills --skill slide-design-guide -g -y --copy
+npx skills add nanameru/agent-skills --skill terminal-browser -g -y --copy
+npx skills add nanameru/agent-skills --skill terminal-code-open-right -g -y --copy
 
 mkdir -p "$HOME/.local/bin" "$HOME/.claude/skills" "$HOME/.codex/skills"
 ln -sfn "$HOME"/.agents/skills/github-issue-driven-dev "$HOME"/.claude/skills/github-issue-driven-dev
@@ -21,5 +23,6 @@ ln -sfn "$HOME"/.agents/skills/skills-repo-manager "$HOME"/.claude/skills/skills
 ln -sfn "$HOME"/.agents/skills/x-search "$HOME"/.claude/skills/x-search
 ln -sfn "$HOME"/.agents/skills/slide-design-guide "$HOME"/.claude/skills/slide-design-guide
 ln -sfn "$HOME"/.agents/skills/slide-design-guide "$HOME"/.codex/skills/slide-design-guide
+ln -sfn "$HOME"/.agents/skills/terminal-browser/bin/terminal-browser "$HOME"/.local/bin/terminal-browser
 
 echo "Done."
