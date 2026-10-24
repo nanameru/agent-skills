@@ -134,7 +134,7 @@ class TerminalCodeTests(unittest.TestCase):
                 def run(args, env):
                     calls.append((args, env))
                     return json.dumps({'browsers':[browser]}) if '--all' in args else ''
-                with patch.object(cb,'HOME',root), patch.object(cb,'run',side_effect=run), patch.object(cb,'on_right',return_value=True):
+                with patch.object(cb,'HOME',root), patch.object(cb,'run',side_effect=run), patch.object(cb,'on_right',return_value=True), patch.object(cb,'ensure_tode_zoom'):
                     cb.terminal_code(root, {'TODE_IPC':'foreign.sock'}, root)
                 self.assertEqual(calls[-1][1]['TODE_IPC'],str(path))
                 self.assertIn('--reuse-window',calls[-1][0])

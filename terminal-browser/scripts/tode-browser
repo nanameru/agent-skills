@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/python3 "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/chat_browser.py" native-tode "$@"

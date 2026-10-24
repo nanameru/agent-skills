@@ -217,6 +217,68 @@ def vscode(target, env, scope, directory):
     return open_browser(url, env, directory, 'vscode', ['--size', '0.55'])
 
 
+def zoom_bootstrap(origin, original=None):
+    policy = Path(__file__).resolve().with_name('tode_zoom.cjs')
+    version = hashlib.sha256(policy.read_bytes()).hexdigest()[:16]
+    token = hashlib.sha256((origin + version + (original or '')).encode()).hexdigest()[:24]
+    directory = STATE / 'native-zoom'
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    script, marker = directory / (token + '.cjs'), directory / (version + '.json')
+    options = {'origin': origin, 'version': version, 'targetDpr': 1}
+    source = (('require(' + json.dumps(original) + ');\n') if original else '')
+    source += 'delete require.cache[require.resolve(' + json.dumps(str(policy)) + ')];\n'
+    source += 'require(' + json.dumps(str(policy)) + ').install(' + json.dumps(options) + ');\n'
+    source += 'require("node:fs").writeFileSync(' + json.dumps(str(marker)) + ',JSON.stringify({pid:process.pid,origin:' + json.dumps(origin) + '}));\n'
+    save_script = not script.exists() or script.read_text() != source
+    if save_script:
+        pending = script.with_suffix('.%s.tmp' % os.getpid())
+        pending.write_text(source)
+        pending.replace(script)
+    return script, marker
+
+
+def native_tode(argv):
+    """Preserve tode's preload/theme bridge and add a native zoom policy."""
+    server = load(HOME / '.local/state/tode/server.json')
+    origin = 'http://127.0.0.1:%s' % int(server['injectorPort'])
+    original, args = None, []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg.startswith('--main-script='):
+            original = arg.split('=', 1)[1]
+        elif arg == '--main-script' and i + 1 < len(argv):
+            i += 1
+            original = argv[i]
+        else:
+            args.append(arg)
+        i += 1
+    if original:
+        script, _ = zoom_bootstrap(origin, os.path.abspath(original))
+        args.append('--main-script=' + str(script))
+    raw = HOME / '.local/lib/tode/vendor/terminal-browser/bin/terminal-browser'
+    return subprocess.call([str(raw), *args])
+
+
+def ensure_tode_zoom(env, browser):
+    origin = 'http://127.0.0.1:%s' % int(load(HOME / '.local/state/tode/server.json')['injectorPort'])
+    script, marker = zoom_bootstrap(origin)
+    if load(marker) == {'pid': browser['pid'], 'origin': origin}:
+        return
+    raw = HOME / '.local/lib/tode/vendor/terminal-browser/bin/terminal-browser'
+    # The supported main-script hook executes in the already running Electron daemon.
+    # A temporary blank pane installs the persistent policy for the existing window.
+    opened = json.loads(run([raw, 'open', 'about:blank', '--split', 'right',
+                             '--main-script=' + str(script)], env))
+    current = json.loads(run([raw, 'ls', '--all', '--json'], env))['browsers']
+    temp = next(b for b in current if b['key'] == opened['key'])
+    if not on_right(temp, env) or not all(t['url'] == 'about:blank' for t in temp['tabs']):
+        raise RuntimeError('倍率補正用の一時ペインを安全に特定できませんでした。')
+    herdr(['pane', 'close', temp['pane']['pane']], env)
+    if load(marker) != {'pid': browser['pid'], 'origin': origin}:
+        raise RuntimeError('Terminal Codeの継続的な倍率補正を導入できませんでした。')
+
+
 def terminal_code(target, env, directory):
     """Use tode while preserving the conversation's window ownership."""
     target = Path(target).resolve(strict=True)
@@ -238,12 +300,14 @@ def terminal_code(target, env, directory):
             record = {'key': owned['key'], 'ipc': next(iter(sockets()))}
     call_env = dict(env)
     call_env.pop('TODE_IPC', None)
+    call_env['TODE_TERMINAL_BROWSER_BIN'] = str(Path(__file__).resolve().with_name('tode-browser'))
     if owned:
         if not on_right(owned, env) or record.get('ipc') not in sockets():
             raise RuntimeError('この会話のTerminal Codeを安全に再利用できません。別会話には開きません。')
         call_env['TODE_IPC'] = record['ipc']
         run([HOME / '.local/bin/tode', '--reuse-window', target], call_env)
         save(record_path, record)
+        ensure_tode_zoom(env, owned)
         print(json.dumps({'browser': owned['key'], 'pane': owned['pane'], 'reused': True}))
         return owned
     checked, _ = resolve(env)
@@ -261,11 +325,14 @@ def terminal_code(target, env, directory):
         raise RuntimeError('Terminal Codeの会話別ウィンドウを一意に登録できませんでした。')
     owned = fresh[0]
     save(record_path, {'key': owned['key'], 'ipc': next(iter(new_ipc))})
+    ensure_tode_zoom(env, owned)
     print(json.dumps({'browser': owned['key'], 'pane': owned['pane'], 'reused': False}))
     return owned
 
 
 def cli(argv):
+    if argv and argv[0] == 'native-tode':
+        return native_tode(argv[1:])
     # Help/version/setup are non-routing commands, and work even outside Herdr.
     if not argv or argv[0] in ('help', '--help', '-h', '--version', 'setup', 'upgrade') or '--help' in argv:
         return subprocess.call([str(UPSTREAM), *argv])

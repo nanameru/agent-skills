@@ -2,7 +2,7 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-  test_command: /usr/bin/python3 -m unittest discover -s terminal-browser/tests -v
+  test_command: /usr/bin/python3 -m unittest discover -s terminal-browser/tests -v && node --test terminal-browser/tests/test_tode_zoom.cjs
 source_roots: [terminal-browser/scripts]
 cases:
   - id: TC-041-ROUTE
@@ -44,4 +44,14 @@ cases:
     type: manual
     source: [terminal-browser/scripts/chat_browser.py, terminal-code-open-right/SKILL.md]
     test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]
+  - id: TC-041-ZOOM
+    title: Terminal Codeの拡大がリサイズや自動倍率変更後に再発しない
+    feature: Terminal Codeの倍率補正
+    scenario: Retina密度・自動拡大・新規ページ・Webプレビュー除外
+    status: done
+    priority: high
+    type: regression
+    source: [terminal-browser/scripts/tode_zoom.cjs, terminal-browser/scripts/chat_browser.py]
+    test_file: terminal-browser/tests/test_tode_zoom.cjs
     issues: [41]

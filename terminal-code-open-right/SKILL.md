@@ -18,5 +18,6 @@ Issue worktreeがあればそのフォルダを開く。
 URLやHTMLのプレビューは `terminal-browser open <URL> --split right` を使う。
 ブラウザ版の公式VS Code serve-webを明示された場合は `terminal-browser vscode /absolute/path`。
 
-表示倍率がおかしい場合は、まずtodeの `window.zoomLevel` とブラウザ側の倍率を区別して調べる。
-todeはターミナルのフォント変更に追従してページ倍率が変わる場合がある。確認せずCSS拡大縮小を重ねない。
+表示倍率は起動・リサイズ後もnative main-scriptで継続補正する。
+ブラウザの倍率を一度リセットするだけでは再発するため、補正の導入を維持する。
+通常のWebプレビューや別originには適用しない。文字の大きさはエディターのfontSizeで調整する。

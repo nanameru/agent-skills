@@ -45,6 +45,8 @@ bash ~/.codex/skills/terminal-browser/scripts/open-vscode-right.sh /absolute/pat
 実行元ペインを特定できない場合やIPCの所有が不明な場合は停止する。
 Terminal Code内部の設定・拡張はtodeの共通profileを使う。会話ごとのウィンドウとフォルダを分離する。
 Issue worktreeがあればそのフォルダを開く。
+Terminal Codeの倍率はnative main-scriptで継続補正し、起動・リサイズ後もターミナル画素とCSS画素を1:1に保つ。
+文字自体の大きさを変える場合はエディターのfontSizeを調整する。ブラウザの倍率だけを一度リセットする方法へ戻さない。
 
 ブラウザ版の公式VS Code serve-webを明示された場合だけ、次を使う。
 
@@ -59,6 +61,7 @@ terminal-browser vscode /absolute/path
 ```sh
 bash terminal-browser/scripts/install.sh
 /usr/bin/python3 -m unittest discover -s terminal-browser/tests -v
+node --test terminal-browser/tests/test_tode_zoom.cjs
 ```
 
 導入時は既存のCLIとスキルのsymlink/ディレクトリをバックアップしてから置換する。
