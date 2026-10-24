@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/python3 "$HOME/.agents/skills/terminal-browser/scripts/chat_browser.py" "$@"

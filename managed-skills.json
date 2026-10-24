@@ -41,6 +41,11 @@
       "name": "slide-design-guide",
       "source": "nanameru/agent-skills",
       "path": "slide-design-guide"
+    },
+    {
+      "name": "terminal-browser",
+      "source": "nanameru/agent-skills",
+      "path": "terminal-browser"
     }
   ],
   "postInstallLinks": [
@@ -79,6 +84,10 @@
     {
       "link": "$HOME/.codex/skills/slide-design-guide",
       "target": "$HOME/.agents/skills/slide-design-guide"
+    },
+    {
+      "link": "$HOME/.local/bin/terminal-browser",
+      "target": "$HOME/.agents/skills/terminal-browser/bin/terminal-browser"
     }
   ]
 }
