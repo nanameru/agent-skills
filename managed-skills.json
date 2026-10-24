@@ -46,6 +46,11 @@
       "name": "terminal-browser",
       "source": "nanameru/agent-skills",
       "path": "terminal-browser"
+    },
+    {
+      "name": "terminal-code-open-right",
+      "source": "nanameru/agent-skills",
+      "path": "terminal-code-open-right"
     }
   ],
   "postInstallLinks": [

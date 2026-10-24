@@ -35,3 +35,13 @@ cases:
     source: [terminal-browser/scripts/chat_browser.py]
     test_file: terminal-browser/tests/test_vscode_live.py
     issues: [41]
+  - id: TC-041-TODE
+    title: Terminal Codeを標準にして会話内のウィンドウだけを再利用する
+    feature: Terminal Code標準化
+    scenario: 正しいIPCとペインへ表示し倍率を確認
+    status: done
+    priority: high
+    type: manual
+    source: [terminal-browser/scripts/chat_browser.py, terminal-code-open-right/SKILL.md]
+    test_file: terminal-browser/tests/test_chat_browser.py
+    issues: [41]

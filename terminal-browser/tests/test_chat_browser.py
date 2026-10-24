@@ -117,5 +117,40 @@ class BrowserTests(unittest.TestCase):
             self.assertEqual(cb.normalized_url(str(p)), p.resolve().as_uri())
 
 
+class TerminalCodeTests(unittest.TestCase):
+    def test_reuse_uses_only_recorded_window_ipc(self):
+        import socket
+        with tempfile.TemporaryDirectory(dir='/tmp') as temp:
+            root = Path(temp)
+            ipc = root / '.local/state/tode/ipc'
+            ipc.mkdir(parents=True)
+            sock = socket.socket(socket.AF_UNIX)
+            path = ipc / 'owned.sock'
+            sock.bind(str(path))
+            try:
+                cb.save(root / 'terminal-code.json', {'key':'owned', 'ipc':str(path)})
+                browser = {'key':'owned', 'pane':{'pane':'right'}}
+                calls = []
+                def run(args, env):
+                    calls.append((args, env))
+                    return json.dumps({'browsers':[browser]}) if '--all' in args else ''
+                with patch.object(cb,'HOME',root), patch.object(cb,'run',side_effect=run), patch.object(cb,'on_right',return_value=True):
+                    cb.terminal_code(root, {'TODE_IPC':'foreign.sock'}, root)
+                self.assertEqual(calls[-1][1]['TODE_IPC'],str(path))
+                self.assertIn('--reuse-window',calls[-1][0])
+                self.assertNotIn('--new-window',calls[-1][0])
+            finally:
+                sock.close()
+
+    def test_moved_registered_window_is_not_reused(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            cb.save(root / 'terminal-code.json', {'key':'owned','ipc':'unknown'})
+            with patch.object(cb,'run',return_value=json.dumps({'browsers':[{'key':'owned'}]})) as run, patch.object(cb,'on_right',return_value=False):
+                with self.assertRaises(RuntimeError):
+                    cb.terminal_code(root, {}, root)
+            self.assertEqual(run.call_count,1)
+
+
 if __name__ == '__main__':
     unittest.main()

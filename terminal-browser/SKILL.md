@@ -1,6 +1,6 @@
 ---
 name: terminal-browser
-description: Open websites and official VS Code beside the current Herdr conversation, with conversation-scoped servers and browser reuse.
+description: Open websites beside the current Herdr chat; use Terminal Code (tode) by default for code and folders, or official VS Code serve-web when explicitly requested.
 ---
 
 # Terminal Browser
@@ -30,21 +30,29 @@ URL指定なしは `terminal-browser open --split right`。
 3. 重複、別会話ID、未登録、表示先移動などの不整合があれば、別ペインへ推測で開かず停止する。
 4. UIのfocused paneやdaemonから継承した古いペインIDへフォールバックしない。
 
-## 公式VS Code
+## エディターの標準
 
-フォルダ・ファイルを開く依頼は次を使う。
+ユーザーの標準エディターはTerminal Code（tode）。以前の禁止設定は解除済み。
+「VS Codeを開いて」「コード・ファイル・フォルダを表示して」は次を使う。
 
 ```sh
+terminal-browser code /absolute/path
+# 互換エントリーもTerminal Codeを開く
 bash ~/.codex/skills/terminal-browser/scripts/open-vscode-right.sh /absolute/path
-# 同じ処理
+```
+
+会話別のブラウザとIPCを記録し、その会話のウィンドウだけを再利用する。
+実行元ペインを特定できない場合やIPCの所有が不明な場合は停止する。
+Terminal Code内部の設定・拡張はtodeの共通profileを使う。会話ごとのウィンドウとフォルダを分離する。
+Issue worktreeがあればそのフォルダを開く。
+
+ブラウザ版の公式VS Code serve-webを明示された場合だけ、次を使う。
+
+```sh
 terminal-browser vscode /absolute/path
 ```
 
-公式Visual Studio Codeの `serve-web` をlocalhostで起動する。
-会話ごとにlaunchctl label・port・server-data・logを分離し、再実行時はその会話のサーバーとペインを再利用する。
-対象フォルダはURLのfolderパラメーターで明示する。他会話や旧共通サーバーを停止しない。
-Terminal Code、tode、デスクトップVS Codeは使わない。
-Issue worktreeがある場合はそのフォルダを開く。
+公式VS Codeは会話ごとにサーバー・port・状態を分離する。
 
 ## 導入・検証
 

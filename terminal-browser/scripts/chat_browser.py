@@ -217,23 +217,74 @@ def vscode(target, env, scope, directory):
     return open_browser(url, env, directory, 'vscode', ['--size', '0.55'])
 
 
+def terminal_code(target, env, directory):
+    """Use tode while preserving the conversation's window ownership."""
+    target = Path(target).resolve(strict=True)
+    binary = HOME / '.local/lib/tode/vendor/terminal-browser/bin/terminal-browser'
+    ipc_dir = HOME / '.local/state/tode/ipc'
+    def windows():
+        return json.loads(run([binary, 'ls', '--all', '--json'], env))['browsers']
+    def sockets():
+        return {str(p) for p in ipc_dir.glob('*.sock') if p.is_socket()}
+    record_path = directory / 'terminal-code.json'
+    record = load(record_path)
+    current = windows()
+    owned = next((b for b in current if b['key'] == record.get('key')), None)
+    # Adopt an already tested window only when both browser and IPC are unambiguous.
+    if not record:
+        here = [b for b in current if on_right(b, env)]
+        if len(current) == 1 and len(here) == 1 and len(sockets()) == 1:
+            owned = here[0]
+            record = {'key': owned['key'], 'ipc': next(iter(sockets()))}
+    call_env = dict(env)
+    call_env.pop('TODE_IPC', None)
+    if owned:
+        if not on_right(owned, env) or record.get('ipc') not in sockets():
+            raise RuntimeError('この会話のTerminal Codeを安全に再利用できません。別会話には開きません。')
+        call_env['TODE_IPC'] = record['ipc']
+        run([HOME / '.local/bin/tode', '--reuse-window', target], call_env)
+        save(record_path, record)
+        print(json.dumps({'browser': owned['key'], 'pane': owned['pane'], 'reused': True}))
+        return owned
+    checked, _ = resolve(env)
+    if checked['HERDR_PANE_ID'] != env['HERDR_PANE_ID']:
+        raise RuntimeError('会話が移動しました。もう一度実行してください。')
+    before_keys, before_ipc = {b['key'] for b in current}, sockets()
+    run([HOME / '.local/bin/tode', target, '--new-window', '--split', 'right', '--size', '0.55'], call_env)
+    fresh = [b for b in windows() if b['key'] not in before_keys and on_right(b, env)]
+    for _ in range(40):
+        new_ipc = sockets() - before_ipc
+        if new_ipc:
+            break
+        time.sleep(.25)
+    if len(fresh) != 1 or len(new_ipc) != 1:
+        raise RuntimeError('Terminal Codeの会話別ウィンドウを一意に登録できませんでした。')
+    owned = fresh[0]
+    save(record_path, {'key': owned['key'], 'ipc': next(iter(new_ipc))})
+    print(json.dumps({'browser': owned['key'], 'pane': owned['pane'], 'reused': False}))
+    return owned
+
+
 def cli(argv):
     # Help/version/setup are non-routing commands, and work even outside Herdr.
     if not argv or argv[0] in ('help', '--help', '-h', '--version', 'setup', 'upgrade') or '--help' in argv:
         return subprocess.call([str(UPSTREAM), *argv])
     if os.environ.get('HERDR_ENV') != '1':
-        if argv[0] == 'vscode':
+        if argv[0] in ('code', 'terminal-code', 'vscode'):
             raise RuntimeError('VS CodeはHerdr内で開いてください。')
         return subprocess.call([str(UPSTREAM), *argv])
     env, scope = resolve(os.environ)
     if argv[0] == 'context':
         print(json.dumps({k: env[k] for k in ('HERDR_PANE_ID', 'HERDR_TAB_ID', 'HERDR_WORKSPACE_ID')}))
         return 0
-    if argv[0] == 'vscode':
+    if argv[0] in ('code', 'terminal-code', 'vscode'):
         if len(argv) != 2:
             raise RuntimeError('usage: terminal-browser vscode /absolute/path')
         with locked(scope) as directory:
-            vscode(argv[1], env, scope, directory)
+            if argv[0] == 'vscode':
+                vscode(argv[1], env, scope, directory)
+            else:
+                terminal_code(argv[1], env, directory)
         return 0
     known = ('ls', 'action', 'new-tab', 'shutdown')
     if argv[0] not in known:
