@@ -1,5 +1,7 @@
 # Browser Use Cloud E2E
 
+Optional provider: use this when parallelism or managed browser capability is needed; the default is Devin local Chrome + Playwright in `e2e-devin-local.md`.
+
 Use this reference when a test-board case needs browser E2E, cloud execution, recording, or parallel runs.
 
 ## Current Official Baseline
