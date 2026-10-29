@@ -19,6 +19,10 @@ The parent owns shared rules: requirement gate, durable state, maker/checker sep
 
 Follow the parent requirement gate. If the question set becomes large, use both the parent `references/requirements-gate.md` and this Skill's `references/requirements-question-bank.md`.
 
+## Maker/Checker and Verification Record
+
+The Maker is Herdr/Codex; Devin is the independent Checker and must not approve its own work. The Checker verdict is `合格`, `不合格`, or `未検証あり`; merge and deploy decisions belong to a human. The GitHub Issue comment is the source of truth for Checker results, and the PR gets one summary comment (edit it for updates).
+
 ## Specialized Building Blocks
 
 1. **Work source**: GitHub Issues, CI failures, analytics signals, bug reports, or explicit backlog.
@@ -79,10 +83,20 @@ Minimum per test-board case:
 
 ## E2E And Auth
 
+Use Devin's local Chrome + Playwright as the default runner and capture a recording, screenshots, and a sanitized network log. Use a macOS Devin session for iOS/macOS apps. Browser Use Cloud is optional when parallelism is needed.
+
+For user-facing features that depend on network access or downloads, include condition cases for a slow connection (e.g. 3 Mbps with an empty cache), a blocked/offline external service, and cancel/resume.
+
 For Browser Use Cloud E2E, load:
 
 ```text
 ~/.agents/skills/test-case-board/references/e2e-browseruse-cloud.md
+```
+
+For the default local E2E runner, load:
+
+```text
+~/.agents/skills/test-case-board/references/e2e-devin-local.md
 ```
 
 For Testmail login/auth tests, load:
@@ -92,6 +106,17 @@ For Testmail login/auth tests, load:
 ```
 
 Auth tests should include fresh-user login, existing-user login, invalid/expired OTP, authorization denial, admin allowlist/role approval, logout, and session expiry where relevant.
+Represent relevant rows with `auth_state`: `anonymous`, `fresh_user`, `existing_user`, `method:<name>`, `expired`, `invalid`, `logout`, `denied`, `role:<name>`, `plan:<name>`, or `isolation:A_vs_B`. Test means are `synthetic-local` (local-only test login, disabled in production and never using production secrets), `testmail`, and `real-provider` (requires human approval). A row passed only with `synthetic-local` must be recorded as `real auth unverified`.
+
+## Security Gate
+
+For each PR, run Gitleaks on PR commits, `<pm> audit` for all dependencies and with `--prod`, OSV Scanner, Semgrep on changed files, and a manual review of added lines matching `dangerouslySetInnerHTML`, `innerHTML`, `eval(`, `new Function`, `postMessage`, `addEventListener("message"`, `importScripts`, `http://` or `https://` literals, `localStorage`, `sessionStorage`, and `document.cookie`.
+
+Compare findings with the PR base: only new findings are findings for that PR; record pre-existing findings in a separate inventory Issue. For newly introduced High+ dependency findings, record the dependency path and whether the package ships in the bundle or runtime.
+
+## Test Levels and E2E
+
+Unit (`単体`), integration (`結合`), system (`総合（システム）`), and acceptance (`受入`) are test levels; E2E is a technique used within system/acceptance testing. Passing E2E alone does not mean performance, security, or acceptance is complete.
 
 ## Loop Prompt Shape
 

@@ -54,12 +54,13 @@ Run this whenever the board may have drifted from reality, and periodically as a
 test-board gaps --board test-board.yaml --root .
 ```
 
-It reports four kinds of gaps:
+It reports five kinds of gaps:
 
 1. **Open cases without a real test on disk** — `todo`/`doing` cases whose `test_file` is empty or points to a file that does not exist. These are planned-but-unwritten.
 2. **Lying board** — `done` cases whose `test_file` does not exist on disk. Worst kind: the board claims coverage that is not there. Typical cause: the test was written on a branch that never merged to the default branch. Restore the test or set the case back to `todo` with a note saying where the work actually lives.
-3. **Empty layers** — zero cases of a `type` (e.g. `integration` or `regression` missing entirely).
-4. **Cases without linked issues** — weak traceability.
+3. **`done_without_run_evidence`** — `done` cases in the `e2e` or `security` layer without `last_run` or `last_run.evidence`.
+4. **Empty layers** — zero cases of a `type` (e.g. `integration` or `regression` missing entirely).
+5. **Cases without linked issues** — weak traceability.
 
 Fill gaps with this loop (proven in dom-to-pptx-ai#490):
 
@@ -103,6 +104,32 @@ cases:
     issues: [123]
 ```
 
+Each case may list applicable `auth_state` values and a `last_run` record with `revision`, `at`, `provider`, `result`, and `evidence`. For `e2e` and `security` cases marked `done`, `last_run.evidence` must show evidence from that layer; a unit/integration-only `test_file` or evidence does not qualify.
+
+```yaml
+auth_state: [fresh_user, method:testmail_otp]
+last_run:
+  revision: abc123
+  at: "2026-06-12T00:00:00Z"
+  provider: devin-local-playwright
+  result: passed
+  evidence: [.e2e/TC-120/run-1/results.json]
+```
+
+## Authentication State And Test Means
+
+Use `auth_state` as a list of applicable rows:
+
+- `anonymous`: signed out; do not fetch user data or models.
+- `fresh_user` and `existing_user`.
+- `method:<name>` for each login method (e.g. `workos`, `access`, `oauth_mcp`, `legacy_token`, `testmail_otp`).
+- `expired` and `invalid` for expired or incorrect credentials/session state.
+- `logout` and `denied`.
+- `role:<name>` and `plan:<name>` where the app uses roles or plans.
+- `isolation:A_vs_B` for user-data and learning-result separation.
+
+Record the test means as `synthetic-local` (local-only test login, disabled in production and never using production secrets), `testmail`, or `real-provider` (requires human approval). Any row passed only with `synthetic-local` must be recorded as `real auth unverified`.
+
 Recommended `status`: `todo`, `doing`, `done`, `blocked`, `skip`.
 
 Recommended `type`: `unit`, `integration`, `e2e`, `security`, `regression`, `manual`.
@@ -118,6 +145,8 @@ When GitHub Issue-driven development is active:
 - The PR body should mention which test-board cases were added, changed, or completed.
 
 ## E2E With Browser Use Cloud
+
+Optional provider: use Browser Use Cloud when parallelism or managed browser capability is needed; the default local runner is documented in `references/e2e-devin-local.md`.
 
 For Browser Use Cloud E2E and video evidence, read `references/e2e-browseruse-cloud.md`.
 
