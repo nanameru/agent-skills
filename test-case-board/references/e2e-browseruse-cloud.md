@@ -71,7 +71,7 @@ Recommended manifest:
       "endedAt": "2026-06-12T00:01:00.000Z",
       "liveUrl": "",
       "recordingUrl": "",
-      "recordingPath": ".e2e/recordings/TC-120.mp4"
+      "recordingPath": ".e2e/TC-120/<run-id>/recording.mp4"
     }
   ]
 }
