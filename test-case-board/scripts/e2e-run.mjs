@@ -283,7 +283,7 @@ async function main(argv) {
     result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
     if (finishMessage?.step && !result.test.failedStep) result.test.failedStep = finishMessage.step;
     if (finishMessage?.error) result.error = finishMessage.error;
-    if (!finishMessage || !operations) result.error ||= 'runner did not complete the supported contract with browser operations';
+    if (!interrupted && (!finishMessage || !operations)) result.error ||= 'runner did not complete the supported contract with browser operations';
     await checkTarget();
     if (!protocolError) result.recording.targetContinuity = 'passed';
   } catch (error) { result.error ||= interrupted || error.message; if (startAttempted && result.recording.start !== 'passed') result.recording.start = 'failed'; if (result.test.status === 'running') result.test.status = 'failed'; }
@@ -346,7 +346,9 @@ async function main(argv) {
       catch { console.error('test-board e2e: Allure result write failed'); }
     }
     process.stdout.write(JSON.stringify({ result: resultPath, test: result.test, recording: result.recording }) + '\n');
-    await new Promise((resolve) => setImmediate(resolve));
+    // The first check phase can precede the poll phase that delivers a signal
+    // received during synchronous writes. Yield through a subsequent poll too.
+    await new Promise((resolve) => setImmediate(() => setImmediate(resolve)));
   }
   return !interrupted && !lateSignal && result.test.status === 'passed' && result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified' ? 0 : 1;
 }
