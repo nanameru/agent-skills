@@ -1,0 +1,7 @@
+# Native CDP runner（明示選択）
+
+`test-board e2e` に `--provider native-cdp --url http://127.0.0.1:PORT/ --chrome /absolute/path/to/chrome` を加える。`--browser` は agent-browser 0.43.0 の実行ファイル、`--data-kind fixture` は必須。URL は localhost / 127.0.0.1 / ::1 に限定する。URL の fixture server は呼び出し側が用意する。各試行の private UUID ディレクトリに専用 profile、空 config、socket と session を作る。
+
+runner は `contractVersion = 'test-board-native-cdp-v1'` と `async run({ caseId, step, cdp, page })` を export する。`await step('name', async () => { ... })` の中で `await cdp.send(method, params, page.sessionId, timeoutMs)`、`await page.evaluate(expression, opts)`、`await page.evalValue(expression, opts)` を使う。`cdp.on(method, handler)` は解除関数を返す。event handler は `(params, sessionId)`、`'*'` は `(method, params, sessionId)` を受ける。`page.sleep(ms)` と `page.waitFor(expression, options)` も利用できる。元テストの所有確認用 `cdp.send('Target.getTargets')` は browser 読取だけを許可する。step と送信は逐次 await し、並行・未 await・step 外の操作を行わない。Target の作成・変更、Browser method、session 切替は公開しない。これは信頼済み runner の契約であり JavaScript sandbox ではない。入力と assertion・待機・速度は元テストに合わせる。
+
+録画前に fixture を open して正式 `get cdp-url` の loopback browser endpoint を取得し、CLI tab と CDP 全 target/context の生観測を private log に同期保存してから単一 page を検査する。標準 `record start` 後に endpoint を再取得し、target/context と集合の一致を確かめてから worker に所有 session を解放する。各 step の前後で再検査し、個々の入力間に CLI を挟まない。CDP method・params・送信時刻は private log に残る。endpoint や生ログは公開しない。標準 stop、全 decode・実 PTS・hash、worker の実 exit/signal、result-v1 と中断の分離は共通入口を使う。capture 内部 target や画面内容の目視は自動合格にならない。実行ごとの原本を保持し、retry は新しい試行にする。

@@ -14,6 +14,8 @@ test-board e2e --case TC-001 --runner ./path/to/adapter.mjs \
 
 保存先や実行引数、step、コマンド、stdout/stderr、git の未追跡ファイル名は private 結果に記録され得る。秘密情報や実顧客データを使わない fixture を優先し、証跡の取り扱いに注意する。CLI は許可されていないアップロードや YAML 更新をしない。`--issue` と `--environment` は任意。終了コード 0 はテストと機械確認の双方が通った意味で、動画の目視確認完了を意味しない。失敗でも `result.json` 内に元の worker exit code/signal と録画・保存・読戻し状態を分ける。証跡出力自体が不能なら stderr と非ゼロを返し、保存済みとしない。
 
+native CDP は明示選択の別契約として [e2e-native-cdp.md](e2e-native-cdp.md) を参照する。既定の契約は以下のまま。
+
 ## runner 契約 `test-board-agent-browser-v1`
 
 ES module として `contractVersion` と `run` を export する。`run` はこの入口が渡す API を通してのみ対象ブラウザを操作し、各操作と assertion を名前付き `step` で囲む。外部のブラウザ実行・直接 CDP 接続・別セッション・module import 時の画面操作は契約外。runner は信頼できるコードであることが前提で、Node のセキュリティ sandbox ではない。既存 runner が他の方法で直接ブラウザを起動する場合は対応 adapter に変更し、その動作を独立に検証するまで未対応として扱う。元の assertion、exit、待機・速度を弱めない。
