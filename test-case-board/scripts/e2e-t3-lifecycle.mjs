@@ -52,7 +52,7 @@ export async function receipt(dir, entry) {
   await fsp.appendFile(path.join(run.dir,'run.log'),JSON.stringify(entry)+'\n',{mode:0o600});
 }
 function analyze(entries) {
-  let phase='initial', tab=null, priorTabs=null, before=null, pending=null, operations=0, invalid=[], failures=[], testErrors=[], steps=[], startedAt=null, stop=null, test=null, previous=0;
+  let phase='initial', tab=null, priorTabs=null, before=null, pending=null, operations=0, invalid=[], failures=[], testErrors=[], steps=[], startedAt=null, stop=null, test=null, interruption=null, previous=0;
   const bad = s => invalid.push(s);
   const validId = id => typeof id === 'string' && id.trim().length > 0;
   const matchesBefore = e => validId(before) && validId(e.operationId) && before === e.operationId;
@@ -63,6 +63,14 @@ function analyze(entries) {
     if (e.kind === 'test') {
       if (test || phase !== 'started' || pending || before !== null || operations === 0) bad('test receipt outside completed steps and before stop');
       if (!test) test=e;
+      if (e.interruption != null) {
+        const value=e.interruption;
+        let observed=null;
+        if (typeof value === 'string' && value.trim() && validTime(e.at)) observed={reason:value,observedAt:e.at};
+        else if (typeof value === 'object' && typeof value.reason === 'string' && value.reason.trim() && validTime(value.observedAt)) observed={reason:value.reason,observedAt:value.observedAt};
+        else bad('invalid interruption');
+        if (!interruption && observed) interruption=observed;
+      }
       continue;
     }
     if (!e.ok && !['start','step','stop'].includes(e.kind)) { bad(`${e.kind} failed`); continue; }
@@ -102,13 +110,6 @@ function analyze(entries) {
   if (phase !== 'done' || pending || before !== null || !operations || !test || !stop || !startedAt) bad('required receipt or post-status missing');
   if (test?.status === 'passed' && steps.some(s => s.status !== 'passed')) testErrors.push('passed test contains failed step');
   if (test && (!['passed','failed','not-run'].includes(test.status) || !(test.exitCode === null || Number.isInteger(test.exitCode)) || !(test.signal === null || typeof test.signal === 'string') || !('interruption' in test))) bad('invalid test receipt');
-  let interruption=null;
-  if (test?.interruption != null) {
-    const value=test.interruption;
-    if (typeof value === 'string' && value.trim()) interruption={reason:value,observedAt:test.at};
-    else if (typeof value === 'object' && typeof value.reason === 'string' && value.reason.trim() && validTime(value.observedAt)) interruption={reason:value.reason,observedAt:value.observedAt};
-    else bad('invalid interruption');
-  }
   return {invalid,failures,testErrors,steps,startedAt,stop,test,interruption,operations};
 }
 async function inspectVideo(file, framesFile) {
