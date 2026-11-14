@@ -175,7 +175,7 @@ export async function derive(dir, edit) {
   const timeline={plannedDuration,plannedSegments:plans.map(p=>({start:p.plannedDerivedStart,end:p.plannedDerivedEnd})),plannedFreeze:{start:cursor,end:plannedDuration},observed:null,durationCheck:'not-attempted',verifiedBoundaries:[]};
   try {
     const graph=filters.join(';');
-    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-copyts','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-color_range','tv','-n',file]);
+    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-copyts','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-color_range','tv','-bsf:v','h264_metadata=video_full_range_flag=0','-n',file]);
     if(enc.stderr) warnings.push(enc.stderr);
     inspected=await inspectVideo(file,path.join(d,`derived-${id}-frames.json`));
     timeline.observed={duration:inspected.duration,firstPts:inspected.first.pts,lastPts:inspected.last.pts,decodedFrames:inspected.decodedFrames};
