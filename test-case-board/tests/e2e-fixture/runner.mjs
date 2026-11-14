@@ -33,7 +33,20 @@ export async function run({ step, command }) {
       assert.equal(result, 'INTENTIONALLY-ABSENT', 'intentional fixture assertion');
     });
   }
-  if (['sigint', 'sigterm', 'timeout'].includes(scenario)) {
+  if (scenario === 'timeout') {
+    await step('pending-interruption', async () => {
+      // Complete the browser command in the recording session before holding
+      // the worker, so the entrypoint deadline is the interruption stimulus.
+      const { result } = await command('eval', `(async () => {
+        const url = new URL('/pending', location.href);
+        url.search = location.search;
+        return (await fetch(url)).ok;
+      })()`);
+      assert.equal(result, true, 'pending fixture request was not acknowledged');
+      await new Promise(() => {});
+    });
+  }
+  if (['sigint', 'sigterm'].includes(scenario)) {
     await step('pending-interruption', async () => {
       // The server sees this request only after record start and this step began.
       // The unresolved promise keeps the step active until the entrypoint stops it.

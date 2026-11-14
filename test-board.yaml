@@ -2,7 +2,7 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs"
+  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
 source_roots: [test-case-board]
 cases:
   - id: TC-046-E2E
@@ -472,4 +472,17 @@ cases:
     test_file: test-case-board/tests/ledger-cli.test.mjs
     issues: [48]
     command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-TIMEOUT-FIXTURE
+    title: "fixture timeout: finite pending request leaves the worker step active until SIGTERM"
+    feature: "timeout fixture worker IPC regression"
+    scenario: "finite pending request followed by an unfinished worker step"
+    expected: "有限commandでpendingに到達後、worker内の未完了stepとSIGTERM停止を観測する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/tests/e2e-fixture/runner.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/timeout-fixture.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/timeout-fixture.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"

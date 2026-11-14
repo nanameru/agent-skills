@@ -56,6 +56,8 @@ jobs:
           node --check test-case-board/scripts/test-board.test.mjs
           node --check test-case-board/tests/e2e-regression.test.mjs
           node --check test-case-board/tests/ledger-cli.test.mjs
+          node --check test-case-board/tests/e2e-fixture/runner.mjs
+          node --check test-case-board/tests/timeout-fixture.test.mjs
 
       - name: Run test-case-board tests
-        run: node --test --test-reporter=tap test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs
+        run: node --test --test-reporter=tap test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs

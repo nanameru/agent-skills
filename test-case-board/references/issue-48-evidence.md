@@ -14,7 +14,11 @@
 
 ## Issue #48 のCLI結合・fake回帰
 
-新規4件はCLIを別プロセスで呼び、Issue番号の完全な一致、sourceの親子・兄弟パス、test_fileの完全一致と関連Issueの重複排除、非空test_fileの存在・欠損を検証する。空のdone test_fileはこの4件の対象外。実行前に利用者が `TB_FAKE_TEST_DIR` をcheckout外の既存owner-only private directoryに設定する。`project.test_command` は既存CLI 4件・fake 24件・新規CLI 4件の3ファイルを指定する。
+新規4件はCLIを別プロセスで呼び、Issue番号の完全な一致、sourceの親子・兄弟パス、test_fileの完全一致と関連Issueの重複排除、非空test_fileの存在・欠損を検証する。空のdone test_fileはこの4件の対象外。実行前に利用者が `TB_FAKE_TEST_DIR` をcheckout外の既存owner-only private directoryに設定する。`project.test_command` は既存CLI 4件・fake 24件・新規CLI 4件・timeout fixture直接回帰1件の4ファイルを指定する。
+
+`TC-048-TIMEOUT-FIXTURE` は実worker IPCとlocalhost HTTPを使い、ブラウザーcommandを模擬する直接回帰。有限commandの応答後に未完了stepとworkerの生存、SIGTERM停止を観測する。実ブラウザー、録画、入口45秒timerや長時間CLI/CDP命令のdeadlineの検証ではない。実行結果は担当の最新状況と固定SHAの原本で確認し、定義の追加だけで合格にしない。
+
+固定 `d7d5a47ab527c3f1b3f61370291053ee1aebce15` の実E2Eは[旧失敗と録画の記録](https://github.com/nanameru/agent-skills/issues/48#issuecomment-6872737303)のとおり5/7で停止した。timeoutの永久evalが約30秒で失敗し入口45秒deadlineに先行、内部のどの30秒層が先行したかは未確定。元証跡は `issue-48/real-e2e-b053e664-365f-4ce8-b8c5-8d4bf48c4fe0/` に保持され、今回の修正や後の結果で旧失敗を上書きしない。
 
 今後のIssue #48実行については、[担当の最新状況](https://github.com/nanameru/agent-skills/issues/48#issuecomment-6871926265)に記録される対象SHA・command・exit・private原本参照を確認する。この参照は下記の旧SHAによる実E2Eの時刻や元resultとは別であり、実行前に合格を意味しない。
 
