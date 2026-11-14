@@ -12,6 +12,12 @@
 - `539ecdd2-b2c8-41c6-bd52-6e5870052c78/02-e2e-regression-tests.meta` と `539ecdd2-b2c8-41c6-bd52-6e5870052c78/02-e2e-regression-tests.stdout`
 - `539ecdd2-b2c8-41c6-bd52-6e5870052c78/environment.txt`、`manifest.json`、`checksums.txt`（後者も同じディレクトリ内）
 
+## 今後の実fixtureコマンドの前提
+
+台帳の `command` はリポジトリルートから実行するdriverコマンド。実行前に `TB_EVIDENCE_DIR` をcheckout外に既存の本人所有・owner-only private directoryとして用意し、`TB_BROWSER` に対応するagent-browser実行ファイル、`AGENT_BROWSER_EXECUTABLE_PATH` にChrome実行ファイルを指定する。`PATH` にffmpegとffprobeが必要。`TB_E2E_ENVIRONMENT` には実際の環境を設定する。timeoutの待機時間を変える場合のみ `TB_TIMEOUT_MS` を指定する。実行ごとに録画をprivate保存し読戻し・実操作の目視確認を行う。これらは将来の実行条件であり、以下の過去の元結果を変更しない。
+
+各driverは期待どおりならexit 0。内部の入口exitはsuccessが0、assertion・sigint・sigterm・timeoutが各1、retryは初回1・再試行0をdriverが検証する。`&&` はdriverが失敗したら後続コマンドを実行しない。意図的な入口失敗はdriver成功とは区別し、予期しない失敗を成功やskipに変えない。
+
 ## 実fixtureの過去7試行
 
 以下は `9186047b9b099062d8e6a255dc37fc0911179dd3` clean の2026-11-14 UTC、macOS 27.2 arm64 / Node 24.22.2 / Chrome 157.0.8103.80 / agent-browser 0.43.0 / ffmpeg 9.0.2のlocalhost実行。driverは各コマンドexit 0、表のexitは入口の元結果。driver実行方法と環境の詳細・checksumは `exec-swe2flash-16f66b22-4937-4476-bd47-961b2251b90c/commands.md`、同ディレクトリの `environment.md`、`manifest.sha256` を参照する。表の各パスは元 `result.json` で、同じディレクトリに元動画とログがある。
@@ -32,6 +38,7 @@
 
 ## 境界と不足
 
-- CLIの4 assertionは `gaps` 出力に対象行があるかないかと終了コードのみを確認する。証跡の内容や層を検証しない。unitとして独立した純粋関数テストは現状なく、機能を跨ぐCLIテストをunitと改称しない。parserの引用符やinline list等の独立した入力境界は追加テスト候補だが、PR #32の未mergeの19件やparser変更は含めない。
-- 安全対策としてF13は別sessionのopen/引数がfake CLIに到達しないこと、F15は非private directoryが拒否され空のままであること、F17〜18は指定した2つのglobal flagがfake CLIに渡らないことをassertする。対象はそれぞれの入力例とfake境界に限る。全flag、symlinkや競合、実ブラウザー、他OS、権限構成、秘密の流出、全repoの脆弱性の検証ではない。実際に必要な追加候補は未許可flagの別形式とprivate directoryのsymlink・権限変化の拒否を観測する直接回帰。安全な検証環境と仕様の確認が必要。
+- CLIの4 assertionは `gaps` 出力に対象行があるかないかと終了コードのみを確認する。証跡の内容や層を検証しない。unitとして独立した純粋関数テストは現状なく、機能を跨ぐCLIテストをunitと改称しない。今回の変更は定義・参照・追加CLI結合テストであり公開pure APIの新設を必要としないため、今回のunit追加は非該当。プロジェクト全体のunit網羅は未検証。parserの引用符やinline list等の独立した入力境界は追加テスト候補だが、PR #32の未mergeの19件やparser変更は含めない。
+- `doneMissingFile` は `test_file` が非空のときだけ欠損パスを検出するため、doneの空または未設定の `test_file` は検出しない。これはコードの静的確認であり実行再現は未実施。今回runtimeを修正せず、この欠落をpassやskipとして扱わない。
+- 今回runtimeは変更しない。既存の安全対策としてF13は別sessionのopen/引数がfake CLIに到達しないこと、F15は非private directoryが拒否され空のままであること、F17〜18は指定した2つのglobal flagがfake CLIに渡らないことをassertする。対象はそれぞれの入力例とfake境界に限る。全flag、symlinkや競合、実ブラウザー、他OS、権限構成、秘密の流出、全repoの脆弱性の検証ではない。未検証の拡張候補は未許可flagの別形式とprivate directoryのsymlink・権限変化の拒否を観測する直接回帰。安全な検証環境と仕様の確認が必要。
 - 他OS・CI・他ブラウザー、SIGKILL/電源断、全フレーム目視、実capture対象の同一性、Allure画面、両ハーネスの異常系は未検証。認証や課金の実フローはこのlocalhost fixtureの対象外で、合格とは扱わない。
