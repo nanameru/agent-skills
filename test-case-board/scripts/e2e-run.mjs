@@ -178,6 +178,7 @@ async function main(argv) {
   let logError = null;
   log.on('error', (error) => { logError = error; });
   const result = { schema: 'test-board-e2e-result-v1', runId: id, caseId: opts['--case'], issue: opts['--issue'] || null, runner: path.basename(runner), dataKind: opts['--data-kind'], startedAt: new Date().toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, environment: { platform: process.platform, arch: process.arch, node: process.version, description: opts['--environment'] || 'unspecified', agentBrowser: null, captureMethod: 'unobserved' }, git: null, test: { status: 'not-run', exitCode: null, signal: null, failedStep: null }, recording: { start: 'not-attempted', stop: 'not-attempted', save: 'not-verified', targetContinuity: 'not-verified', captureTargetIdentity: 'unverified', readback: { status: 'not-attempted', visualInspection: 'unverified' } }, artifacts: { video: 'recording.webm', log: 'run.log' }, steps: [], error: null };
+  if (native) Object.assign(result.test, { nativeCdpOperations: 0, nativeInputOperations: 0 });
   const session = `tb-${randomUUID()}`;
   const browserEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('AGENT_BROWSER_')));
   if (process.env.AGENT_BROWSER_EXECUTABLE_PATH) browserEnv.AGENT_BROWSER_EXECUTABLE_PATH = path.resolve(process.env.AGENT_BROWSER_EXECUTABLE_PATH);
@@ -285,8 +286,10 @@ async function main(argv) {
         else if (msg.type === 'cdp-send' && native) {
           if (!currentStep || currentStep !== msg.step || (msg.sessionId !== nativeSession && !(msg.method === 'Target.getTargets' && msg.sessionId === null)) || typeof msg.method !== 'string' || !/^[A-Za-z]+\.[A-Za-z]+$/.test(msg.method) || (/^(Target|Browser)\./.test(msg.method) && msg.method !== 'Target.getTargets') || !msg.params || typeof msg.params !== 'object' || Array.isArray(msg.params) || !Number.isSafeInteger(msg.timeoutMs) || msg.timeoutMs < 1 || msg.timeoutMs > 120000) { protocolError = true; throw new Error('invalid native operation'); }
           append({ type: 'cdp-send', step: currentStep, method: msg.method, params: msg.params, started: new Date().toISOString() });
-          operations++;
-          return reply(await cdp.send(msg.method, msg.params, msg.sessionId === null ? undefined : nativeSession, msg.timeoutMs));
+          operations++; result.test.nativeCdpOperations++;
+          const value = await cdp.send(msg.method, msg.params, msg.sessionId === null ? undefined : nativeSession, msg.timeoutMs);
+          if (['Input.dispatchTouchEvent', 'Input.dispatchKeyEvent', 'Input.dispatchMouseEvent'].includes(msg.method)) result.test.nativeInputOperations++;
+          return reply(value);
         }
         else if (msg.type === 'command' && !native) {
           if (!currentStep || currentStep !== msg.step) { protocolError = true; throw new Error('unsupported browser command or step'); }
@@ -326,7 +329,7 @@ async function main(argv) {
     const exit = await workerClosed;
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
     result.test.exitCode = exit.code; result.test.signal = exit.signal;
-    result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
+    result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && (!native || result.test.nativeInputOperations > 0) && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
     if (finishMessage?.step && !result.test.failedStep) result.test.failedStep = finishMessage.step;
     if (finishMessage?.error) result.error = finishMessage.error;
     if (!interrupted && (!finishMessage || !operations)) result.error ||= 'runner did not complete the supported contract with browser operations';
@@ -339,6 +342,10 @@ async function main(argv) {
     if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); await boundedWait(workerClosed, 3000); if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }
     if (workerClosed) await boundedWait(workerClosed, 3000);
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
+    if (native && result.test.nativeInputOperations === 0) {
+      const reason = 'no successful native CDP input operations';
+      result.error = result.error ? `${result.error}; ${reason}` : reason;
+    }
     if (cdp) cdp.close();
     if (startAttempted) {
       try { await browserCommand(['record','stop'], true); result.recording.stop = 'passed'; } catch (error) { result.recording.stop = 'failed'; append({ type: 'stop-error', error: error.message }); }

@@ -18,6 +18,7 @@ function usage(code = 0) {
   test-board sync-github --board test-board.yaml --issue 123 [--apply]
   test-board serve --board test-board.yaml [--root .] [--port 41800]
   test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live
+  Native CDP contract: test-case-board/references/e2e-native-cdp.md
 `;
   console.log(text);
   process.exit(code);
