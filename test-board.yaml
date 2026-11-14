@@ -1,0 +1,26 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+source_roots: [autonomous-dev, config/common-agents]
+cases:
+  - id: TC-051-01
+    title: 3ファイルの原本照合とprivacy・参照確認
+    feature: autonomous-dev source registration
+    scenario: 原本全文と許容差分および必須依存を確認する
+    status: doing
+    priority: high
+    type: manual
+    source: [autonomous-dev, managed-skills.json, config/common-agents/README.md]
+    test_file: ""
+    issues: [51]
+  - id: TC-051-02
+    title: 共通AGENTSの限定復元と停止条件
+    feature: common agents security selection
+    scenario: 一時コピーで未適用・既適用・部分適用・文脈不一致とリンク保全を確認する
+    status: doing
+    priority: high
+    type: integration
+    source: [config/common-agents]
+    test_file: ""
+    issues: [51]

@@ -2,6 +2,12 @@
   "version": 1,
   "skills": [
     {
+      "name": "autonomous-dev",
+      "source": "nanameru/agent-skills",
+      "path": "autonomous-dev",
+      "install": false
+    },
+    {
       "name": "github-issue-driven-dev",
       "source": "nanameru/github-issue-driven-dev-skill",
       "path": "github-issue-driven-dev",
