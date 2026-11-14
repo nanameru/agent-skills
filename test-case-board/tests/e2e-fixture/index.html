@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Issue 46 local fixture</title></head>
+<body>
+  <h1>Local fixture</h1>
+  <p id="status" role="status">READY</p>
+  <button id="action" type="button">Click</button>
+  <script>
+    window.fixtureReported = false;
+    document.querySelector('#action').addEventListener('click', async () => {
+      document.querySelector('#status').textContent = 'CLICKED';
+      console.log('fixture-clicked');
+      const url = new URL('/clicked', location.href);
+      url.search = location.search;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('fixture event was not acknowledged');
+      window.fixtureReported = true;
+    });
+  </script>
+</body>
+</html>

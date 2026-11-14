@@ -1,0 +1,488 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
+source_roots: [test-case-board]
+cases:
+  - id: TC-046-E2E
+    title: "共通入口でlocalhostの画面操作と録画を対応付ける"
+    feature: "browser e2e entrypoint"
+    scenario: "READY click CLICKED success and intentional assertion failure"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-fixture/driver.mjs
+    issues: [46, 48]
+    expected: "READYからCLICKEDへ操作し成功と意図したassertion失敗を別々に保存する"
+    command: "node test-case-board/tests/e2e-fixture/driver.mjs --scenario success && node test-case-board/tests/e2e-fixture/driver.mjs --scenario assertion"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-046-INTERRUPT
+    title: "録画中の割り込みとtimeoutの元結果を保存する"
+    feature: "browser e2e interruption"
+    scenario: "SIGINT SIGTERM timeout"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs]
+    test_file: test-case-board/tests/e2e-fixture/driver.mjs
+    issues: [46, 48]
+    expected: "SIGINT SIGTERM timeoutの失敗と録画保存を別々に保持する"
+    command: "node test-case-board/tests/e2e-fixture/driver.mjs --scenario sigint && node test-case-board/tests/e2e-fixture/driver.mjs --scenario sigterm && node test-case-board/tests/e2e-fixture/driver.mjs --scenario timeout"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-046-RETRY
+    title: "失敗後の再試行が前の証跡を保持する"
+    feature: "browser e2e retry"
+    scenario: "intentional failure followed by success"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs]
+    test_file: test-case-board/tests/e2e-fixture/driver.mjs
+    issues: [46, 48]
+    expected: "失敗した初回の結果と動画とログを保ち別の再試行を保存する"
+    command: "node test-case-board/tests/e2e-fixture/driver.mjs --scenario retry"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-046-FAKE
+    title: "テスト結果と録画結果を区別し不正な入力を拒否する"
+    feature: "browser e2e boundary regression"
+    scenario: "fake CLI media contract environment interruption and Allure"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    expected: "fake境界の個別24件はTC-048-F01からF24を参照する"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-CLI01
+    title: "reports an e2e done case without last_run"
+    feature: "gaps CLI subprocess"
+    scenario: "reports an e2e done case without last_run"
+    expected: "e2e doneの証跡欠落を報告する"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/scripts/test-board.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/scripts/test-board.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-CLI02
+    title: "does not report an e2e done case with run evidence"
+    feature: "gaps CLI subprocess"
+    scenario: "does not report an e2e done case with run evidence"
+    expected: "e2e doneの証跡値があれば欠落として報告しない"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/scripts/test-board.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/scripts/test-board.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-CLI03
+    title: "does not report a unit done case without last_run"
+    feature: "gaps CLI subprocess"
+    scenario: "does not report a unit done case without last_run"
+    expected: "unit doneに証跡欠落を報告しない"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/scripts/test-board.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/scripts/test-board.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-CLI04
+    title: "reports a security done case without run evidence"
+    feature: "gaps CLI subprocess"
+    scenario: "reports a security done case without run evidence"
+    expected: "security doneの証跡欠落を報告する"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/scripts/test-board.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/scripts/test-board.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F01
+    title: "fake: finalization record-stop preserves SIGINT"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: finalization record-stop preserves SIGINT"
+    expected: "record-stop中のSIGINTを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F02
+    title: "fake: finalization record-stop preserves SIGTERM"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: finalization record-stop preserves SIGTERM"
+    expected: "record-stop中のSIGTERMを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F03
+    title: "fake: finalization log-hash preserves SIGINT"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: finalization log-hash preserves SIGINT"
+    expected: "log-hash中のSIGINTを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F04
+    title: "fake: finalization log-hash preserves SIGTERM"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: finalization log-hash preserves SIGTERM"
+    expected: "log-hash中のSIGTERMを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F05
+    title: "fake: finalization result-write preserves SIGINT"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: finalization result-write preserves SIGINT"
+    expected: "result-write中のSIGINTで確定済みsnapshotとAllure passedを保持し、遅い中断をstructured stderrへ分離する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F06
+    title: "fake: finalization result-write preserves SIGTERM"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: finalization result-write preserves SIGTERM"
+    expected: "result-write中のSIGTERMで確定済みsnapshotとAllure passedを保持し、遅い中断をstructured stderrへ分離する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F07
+    title: "fake: SIGINT waits for dispatched operation before record stop"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: SIGINT waits for dispatched operation before record stop"
+    expected: "送信済み操作と応答の完了後に録画を停止する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F08
+    title: "fake: empty media cannot be accepted even when the test passes"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: empty media cannot be accepted even when the test passes"
+    expected: "empty動画はテスト成功でも保存未検証かつ読戻し失敗となる"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F09
+    title: "fake: corrupt media cannot be accepted even when the test passes"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: corrupt media cannot be accepted even when the test passes"
+    expected: "corrupt動画はテスト成功でも保存未検証かつ読戻し失敗となる"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F10
+    title: "fake: failing assertion remains failed while recording and readback pass"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: failing assertion remains failed while recording and readback pass"
+    expected: "assertion失敗と録画読戻し成功を別々に記録する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F11
+    title: "fake: recording stop failure remains failed when the test and decode pass"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: recording stop failure remains failed when the test and decode pass"
+    expected: "テストとdecodeが成功しても録画停止失敗を保持する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F12
+    title: "fake: unsupported versioned runner is rejected before recording"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: unsupported versioned runner is rejected before recording"
+    expected: "非対応runnerを録画前に拒否する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F13
+    title: "fake: alternate session arguments are rejected within the v1 contract"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: alternate session arguments are rejected within the v1 contract"
+    expected: "別session指定を拒否しopenと指定がfake CLIへ届かない"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F14
+    title: "fake: incompatible browser version fails before recording"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: incompatible browser version fails before recording"
+    expected: "非対応browser versionを録画前に拒否する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F15
+    title: "fake: nonprivate evidence directory is rejected before creating a run"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: nonprivate evidence directory is rejected before creating a run"
+    expected: "非private directoryを拒否しrunを作らない"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F16
+    title: "fake: retry retains the failing attempt and uses distinct UUID, video and log"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: retry retains the failing attempt and uses distinct UUID, video and log"
+    expected: "失敗した初回をhash不変で保持し別IDと別動画と別ログで再試行する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F17
+    title: "fake: runner cannot pass --auto-connect into the browser invocation"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: runner cannot pass --auto-connect into the browser invocation"
+    expected: "--auto-connectを拒否しfake CLIへ渡さない"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F18
+    title: "fake: runner cannot pass --config=untrusted.json into the browser invocation"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: runner cannot pass --config=untrusted.json into the browser invocation"
+    expected: "--config=untrusted.jsonを拒否しfake CLIへ渡さない"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F19
+    title: "fake: SIGINT during version preflight preserves a result"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: SIGINT during version preflight preserves a result"
+    expected: "version確認中のSIGINTで未実行と録画未開始の結果を残す"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F20
+    title: "fake: SIGTERM during version preflight preserves a result"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: SIGTERM during version preflight preserves a result"
+    expected: "version確認中のSIGTERMで未実行と録画未開始の結果を残す"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F21
+    title: "fake: timeout during version preflight preserves a result"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: timeout during version preflight preserves a result"
+    expected: "version確認中のtimeoutで未実行と録画未開始の結果を残す"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F22
+    title: "fake: Allure does not report passed for empty evidence with a passing test"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: Allure does not report passed for empty evidence with a passing test"
+    expected: "emptyの録画異常をテスト成功と分離しAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F23
+    title: "fake: Allure does not report passed for corrupt evidence with a passing test"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: Allure does not report passed for corrupt evidence with a passing test"
+    expected: "corruptの録画異常をテスト成功と分離しAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-F24
+    title: "fake: Allure does not report passed for stop-fails evidence with a passing test"
+    feature: "fake CLI boundary regression"
+    scenario: "fake: Allure does not report passed for stop-fails evidence with a passing test"
+    expected: "stop-failsの録画異常をテスト成功と分離しAllureをbrokenにする"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46, 48]
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-ISSUE
+    title: "issue selects whole issue numbers 48 and 148 and returns their test files"
+    feature: "ledger CLI integration"
+    scenario: "issue selects whole issue numbers 48 and 148 and returns their test files"
+    expected: "Issue番号を部分一致させず各番号のケースとテストファイルを返す"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-IMPACT-SOURCE
+    title: "impact matches source directory descendants and ancestors without matching sibling prefixes"
+    feature: "ledger CLI integration"
+    scenario: "impact matches source directory descendants and ancestors without matching sibling prefixes"
+    expected: "sourceの親子パスを一致させ隣接する名前の接頭辞を誤一致させない"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-IMPACT-TEST
+    title: "impact traces an exact test_file and deduplicates related issues across matched cases"
+    feature: "ledger CLI integration"
+    scenario: "impact traces an exact test_file and deduplicates related issues across matched cases"
+    expected: "test_fileの完全一致を辿り関連Issueを重複排除する"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-GAPS-PATH
+    title: "gaps distinguishes todo and done for nonempty test_file paths missing on disk"
+    feature: "ledger CLI integration"
+    scenario: "gaps distinguishes todo and done for nonempty test_file paths missing on disk"
+    expected: "非空の欠損パスについてtodoとdoneを区別し存在するパスを欠損に含めない"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-TIMEOUT-FIXTURE
+    title: "fixture timeout: finite pending request leaves the worker step active until SIGTERM"
+    feature: "timeout fixture worker IPC regression"
+    scenario: "finite pending request followed by an unfinished worker step"
+    expected: "有限commandでpendingに到達後、worker内の未完了stepとSIGTERM停止を観測する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/tests/e2e-fixture/runner.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/timeout-fixture.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/timeout-fixture.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
