@@ -114,7 +114,7 @@ function analyze(entries) {
 async function inspectVideo(file, framesFile) {
   const st=await fsp.lstat(file); if (!st.isFile() || !st.size) fail('video missing or empty');
   const firstHash=await hash(file), warnings=[];
-  const probe=await cmd('ffprobe',['-v','warning','-select_streams','v:0','-show_entries','stream=codec_name,width,height,pix_fmt:format=duration','-of','json',file]); if(probe.stderr) warnings.push(probe.stderr);
+  const probe=await cmd('ffprobe',['-v','warning','-select_streams','v:0','-show_entries','stream=codec_name,width,height,pix_fmt,color_range:format=duration','-of','json',file]); if(probe.stderr) warnings.push(probe.stderr);
   const info=JSON.parse(probe.stdout); if (!info.streams?.length) fail('video stream missing');
   const dec=await cmd('ffmpeg',['-v','warning','-xerror','-i',file,'-map','0:v:0','-f','null','-']); if(dec.stderr) warnings.push(dec.stderr);
   const frames=await cmd('ffprobe',['-v','warning','-select_streams','v:0','-show_frames','-show_entries','frame=pts_time','-of','json',file]); if(frames.stderr) warnings.push(frames.stderr);
@@ -147,26 +147,48 @@ export async function derive(dir, edit) {
   const frames=JSON.parse(await fsp.readFile(path.join(d,'source-frames.json'),'utf8'));
   if (frames.sha256!==sourceHash || !Array.isArray(frames.frames) || !frames.frames.length) fail('source frames unavailable');
   if (!Array.isArray(edit?.segments) || !edit.segments.length || !Number.isFinite(edit.outputFps) || edit.outputFps<=0 || edit.outputFps>120 || !Number.isFinite(edit.freezeSeconds) || edit.freezeSeconds<0 || edit.freezeSeconds>60) fail('invalid edit');
+  // Re-probe old runs too: their stored result predates color_range metadata.
+  const sourceProbe=await cmd('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=pix_fmt,color_range','-of','json',source]);
+  const sourceStream=JSON.parse(sourceProbe.stdout).streams?.[0];
+  if (!sourceStream?.pix_fmt) fail('source pixel format unavailable');
+  const declaredRange=sourceStream.color_range || null;
+  const inferredJpegRange=sourceStream.pix_fmt.startsWith('yuvj');
+  if (inferredJpegRange && declaredRange && !['pc','unknown'].includes(declaredRange)) fail('conflicting source color range');
+  const knownRange=inferredJpegRange || declaredRange === 'pc' ? 'pc' : declaredRange === 'tv' ? 'tv' : null;
+  // Unknown range can still be rendered under an explicit assumption, but cannot
+  // provide verified source equivalence.
+  const inputRange=knownRange || 'tv';
+  const normalization=`scale=in_range=${inputRange}:out_range=tv,format=yuv420p`;
+  const colorNormalization={sourcePixelFormat:sourceStream.pix_fmt,sourceColorRange:declaredRange,inputRange,rangeBasis:knownRange ? (inferredJpegRange ? 'yuvj pixel format' : 'stream metadata') : 'assumed tv; source equivalence unverified',outputPixelFormat:'yuv420p',outputColorRange:'tv',filter:normalization};
   const filters=[], plans=[]; let cursor=0;
   for (let i=0;i<edit.segments.length;i++) {
     const s=edit.segments[i]; if (![s.start,s.end,s.speed].every(Number.isFinite) || s.start<0 || s.end<=s.start || s.speed<=0 || s.speed>16 || s.start<frames.frames[0].pts || s.end>frames.frames.at(-1).pts) fail('invalid or out-of-range segment');
     const selected=frames.frames.filter(f=>f.pts>=s.start && f.pts<s.end); if(selected.length<2) fail('segment has fewer than two actual frames');
-    filters.push(`[0:v]trim=start=${s.start}:end=${s.end},setpts=(PTS-STARTPTS)/${s.speed}[s${i}]`);
-    const duration=(s.end-s.start)/s.speed; plans.push({sourceStart:s.start,sourceEnd:s.end,speed:s.speed,sourceFrames:selected,firstRetainedSourcePts:selected[0].pts,lastRetainedSourcePts:selected.at(-1).pts,actualAnchorRule:'first retained frame; setpts resets its PTS to zero',plannedDerivedStart:cursor,plannedDerivedEnd:cursor+duration,planningBasis:'requested duration only; actual frame durations, concat offsets and fps rounding unverified',verified:false}); cursor+=duration;
+    const duration=(s.end-s.start)/s.speed;
+    filters.push(`[0:v]${normalization},trim=start=${s.start}:end=${s.end},setpts=(PTS-STARTPTS)/${s.speed},fps=fps=${edit.outputFps}:eof_action=pass,trim=duration=${duration},setpts=PTS-STARTPTS[s${i}]`); plans.push({sourceStart:s.start,sourceEnd:s.end,speed:s.speed,sourceFrames:selected,firstRetainedSourcePts:selected[0].pts,lastRetainedSourcePts:selected.at(-1).pts,actualAnchorRule:'first retained frame; setpts resets its PTS to zero',plannedDerivedStart:cursor,plannedDerivedEnd:cursor+duration,planningBasis:'requested duration only; actual frame durations, concat offsets and fps rounding unverified',verified:false}); cursor+=duration;
   }
   const concat=edit.segments.map((_,i)=>`[s${i}]`).join('');
-  filters.push(`${concat}concat=n=${edit.segments.length}:v=1:a=0,tpad=stop_mode=clone:stop_duration=${edit.freezeSeconds},fps=${edit.outputFps},format=yuv420p[out]`);
+  const plannedDuration=cursor+edit.freezeSeconds;
+  filters.push(`${concat}concat=n=${edit.segments.length}:v=1:a=0,tpad=stop_mode=clone:stop_duration=${edit.freezeSeconds},fps=fps=${edit.outputFps}:eof_action=pass,trim=duration=${plannedDuration},setpts=PTS-STARTPTS,format=yuv420p[out]`);
   const id=randomUUID(), file=path.join(d,`derived-${id}.mp4`), sidecar=path.join(d,`derived-${id}.json`);
   let status='failed', error=null, inspected=null, warnings=[], verifiedMapping=[], verificationError=null;
+  const timeline={plannedDuration,plannedSegments:plans.map(p=>({start:p.plannedDerivedStart,end:p.plannedDerivedEnd})),plannedFreeze:{start:cursor,end:plannedDuration},observed:null,durationCheck:'not-attempted',verifiedBoundaries:[]};
   try {
     const graph=filters.join(';');
-    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-copyts','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-n',file]);
+    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-copyts','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-color_range','tv','-n',file]);
     if(enc.stderr) warnings.push(enc.stderr);
     inspected=await inspectVideo(file,path.join(d,`derived-${id}-frames.json`));
-    if(inspected.stream.pix_fmt !== 'yuv420p') fail('derived pixel format mismatch');
+    timeline.observed={duration:inspected.duration,firstPts:inspected.first.pts,lastPts:inspected.last.pts,decodedFrames:inspected.decodedFrames};
+    // CFR permits one frame of rounding per segment and at the final boundary.
+    const tolerance=(edit.segments.length+2)/edit.outputFps;
+    timeline.tolerance=tolerance;
+    if (!Number.isFinite(inspected.duration) || inspected.duration<=0 || Math.abs(inspected.first.pts)>1/edit.outputFps || Math.abs(inspected.duration-plannedDuration)>tolerance || inspected.last.pts>=plannedDuration+tolerance) { timeline.durationCheck='failed'; fail('derived duration outside planned bounds'); }
+    timeline.durationCheck='passed';
+    if(inspected.stream.pix_fmt !== 'yuv420p' || inspected.stream.color_range !== 'tv') fail('derived pixel format or color range mismatch');
     if(await hash(source)!==sourceHash) fail('source changed during derivation');
     status='generated';
     try {
+      if (!knownRange) fail('source color range unknown; normalized pixel correspondence unverified');
       const md5 = async args => {
         const r=await cmd('ffmpeg',['-v','warning','-xerror',...args,'-an','-fps_mode','passthrough','-pix_fmt','yuv420p','-f','framemd5','-']);
         if(r.stderr) warnings.push(r.stderr);
@@ -174,7 +196,7 @@ export async function derive(dir, edit) {
         const lines=r.stdout.split('\n').filter(line=>line && !line.startsWith('#'));
         return lines.map(line=>{ const cols=line.split(',').map(x=>x.trim()); const pts=Number(cols[2])*Number(tb[1])/Number(tb[2]); if(cols.length!==6 || !/^[0-9a-f]{32}$/i.test(cols[5]) || !Number.isSafeInteger(Number(cols[2])) || !Number.isFinite(pts)) fail('invalid framemd5 output'); return {hash:cols[5].toLowerCase(),pts}; });
       };
-      const sourcePixels=await md5(['-copyts','-i',source,'-map','0:v:0']);
+      const sourcePixels=await md5(['-copyts','-i',source,'-map','0:v:0','-vf',normalization]);
       const filteredPixels=await md5(['-copyts','-i',source,'-filter_complex',graph,'-map','[out]']);
       const decodedPixels=await md5(['-i',file,'-map','0:v:0']);
       const derivedFrames=JSON.parse(await fsp.readFile(path.join(d,`derived-${id}-frames.json`),'utf8')).frames;
@@ -192,7 +214,7 @@ export async function derive(dir, edit) {
       if(await hash(source)!==sourceHash || await hash(file)!==inspected.sha256) fail('video changed during frame matching');
     } catch(e) { verifiedMapping=[]; verificationError=e.message; if(e.stderr) warnings.push(e.stderr); }
   } catch(e) { error=e.message; if(e.stderr) warnings.push(e.stderr); }
-  const mapping={schema:'test-board-t3-derived-v1',status,error,source:{file:'recording.mp4',sha256:sourceHash,frames:'source-frames.json'},derived:{file:path.basename(file),sha256:inspected?.sha256 || null,readback:inspected},edit,plannedMapping:plans,verifiedMapping,mappingStatus:verifiedMapping.length?'partially-verified':'unverified',verificationError,verificationMethod:'yuv420p framemd5: unique source and filter frame, lossless decoded frame match by ordinal and PTS within 1 microsecond',reason:'pixel equivalence only; repeated identical frames, freeze duplicates, operation meaning, and unpaired frames remain unverified',warnings,visualInspection:'unverified'};
+  const mapping={schema:'test-board-t3-derived-v1',status,error,source:{file:'recording.mp4',sha256:sourceHash,frames:'source-frames.json'},derived:{file:path.basename(file),sha256:inspected?.sha256 || null,readback:inspected},edit,colorNormalization,timeline,plannedMapping:plans,verifiedMapping,mappingStatus:verifiedMapping.length?'partially-verified':'unverified',verificationError,verificationMethod:'explicit-range normalized yuv420p framemd5: unique source and filter frame, lossless decoded frame match by ordinal and PTS within 1 microsecond',reason:'pixel equivalence only; repeated identical frames, freeze duplicates, operation meaning, and unpaired frames remain unverified',warnings,visualInspection:'unverified'};
   await write(sidecar,mapping); const read=JSON.parse(await fsp.readFile(sidecar,'utf8')); if(read.source.sha256!==sourceHash || read.verifiedMapping.length!==verifiedMapping.length) fail('derived sidecar readback failed');
   return {sidecar,status,error,mappingStatus:mapping.mappingStatus,verifiedFrames:verifiedMapping.length,verificationError};
 }
