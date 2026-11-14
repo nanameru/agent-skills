@@ -106,6 +106,8 @@ async function observe(label, endpoint, fixtureURL) {
   try {
     const targets = await cdp.send('Target.getTargets');
     const contexts = await cdp.send('Target.getBrowserContexts');
+    await append({ type: 'observation', phase: label, tabs, targets, contexts });
+    await log.sync();
     const identity = pageIdentity(tabs, targets, contexts, fixtureURL);
     await append({ type: 'identity', phase: label, ...publicIdentity(identity) });
     return identity;
@@ -153,7 +155,7 @@ try {
   const url = `http://127.0.0.1:${server.address().port}/`;
   // Setup only: navigation loads the fixture; no input test happens before start.
   opened = true;
-  await browser(['--profile', profile, '--executable-path', chrome, '--no-webmcp', 'open', url]);
+  await browser(['--profile', profile, '--executable-path', chrome, '--no-webmcp', '--args', 'about:blank', 'open', url]);
   const endpoint = checkEndpoint((await browser(['get', 'cdp-url'])).cdpUrl);
   const before = await observe('before-record-start', endpoint, url);
   startAttempted = true;
