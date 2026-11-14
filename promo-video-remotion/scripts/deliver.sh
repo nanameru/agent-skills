@@ -7,9 +7,10 @@ if [ "$#" -lt 2 ]; then
   echo "Usage: deliver.sh <out.mp4> <basename-without-ext>" >&2
   exit 1
 fi
-src="$1"; name="$2"; dst="$HOME/Downloads/${name}.mp4"
-if [ -e "$dst" ]; then dst="$HOME/Downloads/${name}_$(date +%H%M%S).mp4"; fi
+src="$1"; name="$2"
 ffprobe -v error -show_entries format=duration:stream=nb_frames -of default=nw=1 "$src"
+dir=$(mktemp -d "$HOME/Downloads/${name}.XXXXXX")
+dst="$dir/${name}.mp4"
 cp "$src" "$dst"
 osascript -e 'tell application "QuickTime Player" to close every document' >/dev/null 2>&1 || true
 open -a "QuickTime Player" "$dst"

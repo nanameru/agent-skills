@@ -59,4 +59,15 @@ cases:
     source: [promo-video-remotion/scripts/deliver.sh, promo-video-remotion/scripts/contact-sheet.sh]
     test_file: ""
     issues: [29]
-    notes: "新統合版は未実行。コマンド: bash promo-video-remotion/scripts/deliver.sh; bash promo-video-remotion/scripts/deliver.sh dummy; bash promo-video-remotion/scripts/contact-sheet.sh; bash promo-video-remotion/scripts/contact-sheet.sh dummy。各Usageとexit 1、副作用なしを確認。旧958b537の実行証拠: https://github.com/nanameru/agent-skills/issues/29#issuecomment-6880960863。正常引数での実動画処理・生成・実認証・install・E2Eは未検証。"
+    notes: "e024f04の統合固定版は4境界をUsage/exit 1/副作用なしで検証済み: https://github.com/nanameru/agent-skills/issues/29#issuecomment-6881472200。納品先修正後の固定版を再実行しIssue履歴へ記録する。コマンド: /usr/bin/env PATH=/nonexistent /bin/bash <script> [dummy]、対象はsourceの2本、各0/1引数。旧958b537の証跡もIssue履歴に保持。正常引数での実動画処理・生成・実認証・install・E2Eは未検証。"
+  - id: TC-029-02
+    title: 納品名が衝突しても既存ファイルと先の納品を保持する
+    feature: promo-video-remotion delivery
+    scenario: 同じ名前で2回納品し既存の本名と時刻付き名を内容比較する
+    status: todo
+    priority: high
+    type: regression
+    source: [promo-video-remotion/scripts/deliver.sh]
+    test_file: promo-video-remotion/tests/deliver-no-overwrite.sh
+    issues: [29]
+    notes: "コマンド: bash promo-video-remotion/tests/deliver-no-overwrite.sh [path-to-deliver.sh]。private一時HOMEと合成ファイルを使いffprobe/GUI/sleep/dateをstub化。旧e024f04の時刻付きファイル上書きを失敗で検出し、修正版の既存2ファイル・納品内容・納品先の一意性・先の納品保全を確認する。実Downloads・実動画・GUIは使わない。固定版での実行結果はIssue #29履歴へ記録する。同時実行は静的確認のみ。"

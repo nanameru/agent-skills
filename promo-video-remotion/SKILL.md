@@ -83,7 +83,7 @@ bash .agents/skills/promo-video-remotion/scripts/contact-sheet.sh out/<name>.mp4
 ```sh
 bash .agents/skills/promo-video-remotion/scripts/deliver.sh out/<name>.mp4 <name>_v<尺>s_<tag>
 ```
-Downloads へ **別名(バージョン付き)** で保存し QuickTime で開く。**QuickTime で開いているファイルを上書きしない**(表示が空になる)。
+Downloads 内に一意のフォルダを作り、その中に指定名の MP4 を保存して QuickTime で開く。スクリプトは納品先パスを出力する。**QuickTime で開いているファイルを上書きしない**(表示が空になる)。
 
 ## 8. Git / 共同作業
 
