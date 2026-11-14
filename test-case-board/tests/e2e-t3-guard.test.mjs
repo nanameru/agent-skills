@@ -150,6 +150,109 @@ test('mock full success, intentional failure, AbortError, and retry preserve v1 
   assert.equal(e.result.recording.stop, 'passed');
 });
 
+test('late abort preserves the first test and interruption across stop boundaries', async () => {
+  const sourceBefore = await readFile(syntheticVideo.path);
+  for (const [boundary, status] of [
+    ['before stop', 'passed'],
+    ['after stop tool, before post-status', 'failed'],
+    ['after stop post-status', 'passed'],
+  ]) {
+    const run = await makeRun(null, syntheticVideo);
+    await run.ready(); await run.step(status); await run.testResult(status);
+    const expectedTest = { status, exitCode: status === 'passed' ? 0 : 1,
+      signal: null, failedStep: status === 'failed' ? 'click' : null };
+    let stopTicket;
+    if (boundary !== 'before stop') {
+      let next = await run.guard.handle({ action: 'begin', kind: 'stop' });
+      assert.equal(next.ticket.boundary, 'before', boundary);
+      next = await run.call(next.ticket);
+      assert.equal(next.ticket.tool, 'preview_recording_stop', boundary);
+      assert.equal(next.ticket.boundary, 'operation', boundary);
+      next = await run.call(next.ticket);
+      stopTicket = next.ticket;
+      assert.equal(stopTicket.tool, 'preview_status', boundary);
+      assert.equal(stopTicket.boundary, 'after', boundary);
+      if (boundary === 'after stop post-status') await run.call(stopTicket);
+    }
+
+    const at = run.now();
+    await run.guard.handle({ action: 'abort', at, error: { name: 'SIGINT', message: 'synthetic late interruption' } });
+    if (boundary === 'before stop') await run.triplet('stop');
+    // After the stop operation, abort discards its pending post-status ticket.
+    // Do not manufacture a status response or report continuity as complete.
+    const journalBeforeFinalize = await readFile(path.join(run.runDir, 'run.log'), 'utf8');
+    const entries = journalBeforeFinalize.trim().split('\n').map(JSON.parse);
+    const tests = entries.filter(entry => entry.kind === 'test');
+    assert.equal(tests.length, 2, boundary);
+    assert.deepEqual({ status: tests[0].status, exitCode: tests[0].exitCode,
+      signal: tests[0].signal, failedStep: tests[0].failedStep }, expectedTest, boundary);
+    assert.equal(tests[0].interruption, null, boundary);
+    assert.deepEqual(tests[1].interruption, { reason: 'SIGINT', observedAt: at }, boundary);
+    const stop = entries.find(entry => entry.kind === 'stop');
+    const postStatuses = entries.filter(entry => entry.kind === 'status' && entry.position === 'after' && entry.operationId === stop.operationId);
+    assert.equal(postStatuses.length, boundary === 'after stop tool, before post-status' ? 0 : 1, boundary);
+
+    const outcome = await run.guard.handle({ action: 'finalize' });
+    assert.equal(outcome.ok, false, boundary);
+    assert.deepEqual(outcome.result.test, expectedTest, boundary);
+    assert.deepEqual(outcome.result.interruption, { reason: 'SIGINT', observedAt: at }, boundary);
+    assert.ok(outcome.result.protocolErrors.some(error => /test receipt outside completed steps and before stop/.test(error)), boundary);
+    if (boundary === 'after stop tool, before post-status') {
+      assert.ok(outcome.result.protocolErrors.includes('required receipt or post-status missing'), boundary);
+    }
+    assert.equal(outcome.result.recording.targetContinuity, 'failed', boundary);
+    assert.equal(outcome.result.recording.stop, 'passed', boundary);
+    assert.equal(outcome.result.recording.save, 'verified', boundary);
+    assert.equal(outcome.result.recording.readback.status, 'passed', boundary);
+    assert.deepEqual(await readFile(path.join(run.runDir, 'recording.mp4')), sourceBefore, boundary);
+    assert.equal(await readFile(path.join(run.runDir, 'run.log'), 'utf8'), journalBeforeFinalize, boundary);
+    assert.deepEqual(await readJson(run.runDir, 'result.json'), outcome.result, boundary);
+  }
+  assert.deepEqual(await readFile(syntheticVideo.path), sourceBefore);
+});
+
+test('late abort retains the first valid interruption and rejects invalid or absent duplicates', async () => {
+  const initial = await makeRun();
+  await initial.ready(); await initial.step();
+  const initialAt = initial.now();
+  await initial.guard.handle({ action: 'test', result: { at: initialAt, status: 'failed', exitCode: 1,
+    signal: null, failedStep: null, interruption: { reason: 'AbortError', observedAt: initialAt } } });
+  const laterAt = initial.now();
+  await initial.guard.handle({ action: 'abort', at: laterAt, error: { name: 'SIGTERM' } });
+  const withInitial = await initial.stopAndFinalize();
+  assert.equal(withInitial.ok, false);
+  assert.deepEqual(withInitial.result.test, { status: 'failed', exitCode: 1, signal: null, failedStep: null });
+  assert.deepEqual(withInitial.result.interruption, { reason: 'AbortError', observedAt: initialAt });
+  assert.ok(withInitial.result.protocolErrors.some(error => /test receipt outside completed steps and before stop/.test(error)));
+
+  const repeated = await makeRun();
+  await repeated.ready(); await repeated.step(); await repeated.testResult();
+  const firstAt = repeated.now();
+  await repeated.guard.handle({ action: 'abort', at: firstAt, error: { name: 'SIGINT' } });
+  const secondAt = repeated.now();
+  await repeated.guard.handle({ action: 'abort', at: secondAt, error: { name: 'SIGTERM' } });
+  // A malformed raw receipt is appended before finalization to exercise the
+  // analyzer; no recorded receipt or finalized result is rewritten.
+  const invalidAt = repeated.now();
+  await receipt(repeated.runDir, { kind: 'test', at: invalidAt, status: 'failed', exitCode: 1,
+    signal: null, interruption: { reason: ' ', observedAt: invalidAt } });
+  const withInvalid = await repeated.stopAndFinalize();
+  assert.equal(withInvalid.ok, false);
+  assert.deepEqual(withInvalid.result.test, { status: 'passed', exitCode: 0, signal: null, failedStep: null });
+  assert.deepEqual(withInvalid.result.interruption, { reason: 'SIGINT', observedAt: firstAt });
+  assert.ok(withInvalid.result.protocolErrors.some(error => /test receipt outside completed steps and before stop/.test(error)));
+  assert.ok(withInvalid.result.protocolErrors.includes('invalid interruption'));
+
+  const duplicate = await makeRun();
+  await duplicate.ready(); await duplicate.step(); await duplicate.testResult();
+  await assert.rejects(duplicate.testResult('failed'), /test is out of sequence/);
+  const withoutInterruption = await duplicate.stopAndFinalize();
+  assert.equal(withoutInterruption.ok, false);
+  assert.deepEqual(withoutInterruption.result.test, { status: 'passed', exitCode: 0, signal: null, failedStep: null });
+  assert.equal(withoutInterruption.result.interruption, null);
+  assert.ok(withoutInterruption.result.protocolErrors.some(error => /test receipt outside completed steps and before stop/.test(error)));
+});
+
 const stepPlan = { kind: 'step', stepId: 'click', tool: 'preview_act', arguments: { action: 'click' } };
 async function expectBlocked(run, action, pattern) {
   await assert.rejects(action, pattern);
