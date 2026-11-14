@@ -19,8 +19,8 @@ prepare の JSON 出力の `runDir` と `runId` を使う。retry は新しい p
 1. `preview_status` を引数なしで呼び `kind:status` として記録。既存 tab 一覧を保持する。`ok:true` かつ `available:false`, `tabId:null`, `tabs` 省略は tab 未作成の空集合として扱う。`ok:false` は失敗。
 2. `preview_open({reuseExistingTab:false,...})` を呼び、`kind:open`、実際の `arguments` と `structuredContent` を渡す。新規 tab ID が既存一覧にないことと ownership を検証する。
 3. `preview_status({tabId})` → `kind:status,position:before,operationId:'start-1'`、`preview_recording_start({tabId})` → `kind:start,operationId:'start-1'`、再度 status → `position:after,operationId:'start-1'`。同じ tab と agent ownership を照合する。
-4. 各操作は毎回 status(before) → 実際の preview tool → `kind:step` → status(after)。3件の `operationId` は同じ一意値。step には `stepId`, `tool`, `startedAt`, `outcome:passed|failed` と tool の `structuredContent` を付ける。assertion の結果もハーネスが outcome に記録し、失敗を成功に変えない。ステップ全体が操作を含まない場合も tool receipt を捏造しない。
-5. テスト終了時は `kind:test` に `status:passed|failed|not-run`, `exitCode`（無ければ null）, `signal`（無ければ null）, `interruption`（無ければ null）, 任意の `failedStep` を記録。テスト状態は録画状態と独立。
+4. 各操作は毎回 status(before) → 実際の preview tool → `kind:step` → status(after)。3件の `operationId` は同じ非空文字列の一意値。前の status がない場合、また null・空・非文字列・重複 ID は順序違反となる。step には `stepId`, `tool`, `startedAt`, `outcome:passed|failed` と tool の `structuredContent` を付ける。assertion の結果もハーネスが outcome に記録し、失敗を成功に変えない。tool 自体が失敗した `ok:false` の step も ID・tool・開始終了時刻と failed を保存し、対応する事後 status を確認する。tool 失敗と順序・tab の違反は分けて記録する。ステップ全体が操作を含まない場合も tool receipt を捏造しない。
+5. テスト終了時は `kind:test` に `status:passed|failed|not-run`, `exitCode`（無ければ null）, `signal`（無ければ null）, `interruption`（無ければ null）, 任意の `failedStep` を記録。最後の step の事後 status 完了後、stop の事前 status より前に記録する。早期・重複・stop 途中の申告や判定後の新たな step は契約違反だが、最初の申告は結果に残す。テスト状態は録画状態と独立。
 6. 成否・扱える中断を問わず status(before) → `preview_recording_stop({tabId})` → status(after) の receipt を渡し、finalize。失敗した stop も渡す。finalize は stop の path のコピーを試み、失敗と欠落を記録する。CLI 0 は test と機械証跡が通った場合だけで、目視の合格を意味しない。
 
 成功例の一部（`structuredContent` は実際の応答をそのまま渡す。下記は形の例）:
@@ -36,9 +36,9 @@ prepare の JSON 出力の `runDir` と `runId` を使う。retry は新しい p
 
 ## 原本と派生物
 
-`result.json` は既存 `test-board-e2e-result-v1` 共通 fields を維持する。`recording.mp4` は stop が返した原本の排他的コピー。source hash、全 decode、実 decoded frame ごとの PTS を `source-frames.json` に保存して読戻す。warning は readback 内に残す。各 step の wall-clock と startedAt の差だけでは実 media PTS に同期できないため `seekable:false`、目視は `unverified`。
+`result.json` は既存 `test-board-e2e-result-v1` 共通 fields を維持する。`error` は string または null、`environment.agentBrowser` は null、`interruption` は `{reason,observedAt}` または null。文字列の中断申告は receipt の `at` を観測時刻にし、object は非空 reason と有効な observedAt を要する。無効な申告は protocol error とし、原文は run.log に残る。`protocolErrors`・`toolFailures`・`testErrors` は追加情報で、原 test 状態を書き換えない。`recording.mp4` は stop が返した原本の排他的コピー。source hash、全 decode、実 decoded frame ごとの PTS を `source-frames.json` に保存して読戻す。warning は readback 内に残す。各 step の wall-clock と startedAt の差だけでは実 media PTS に同期できないため `seekable:false`、目視は `unverified`。
 
-編集入力例: `{"segments":[{"start":0.2,"end":2.5,"speed":2}],"freezeSeconds":1,"outputFps":30}`。秒は source PTS、複数 segment の順序で結合し末尾を freeze。実 frame 2枚未満や範囲外は拒否する。ffmpeg 標準 filter と libx264 lossless (`-qp 0`, yuv420p) で原本とは別の UUID MP4 を作り、全 decode / PTS / hash を読戻す。libx264 が使えない場合、派生生成は失敗として記録する。
+編集入力例: `{"segments":[{"start":0.2,"end":2.5,"speed":2}],"freezeSeconds":1,"outputFps":30}`。秒は ffprobe が読んだ source PTS。encode と filter の再実行は `-copyts` により入力 PTS 軸を保持し、trim 後に setpts で開始を揃える。source の frame hash は同じ入力軸で取得し、decoded output との照合は ordinal を使う。複数 segment の順序で結合し末尾を freeze。実 frame 2枚未満や範囲外は拒否する。ffmpeg 標準 filter と libx264 lossless (`-qp 0`, yuv420p) で原本とは別の UUID MP4 を作り、全 decode / PTS / hash を読戻す。libx264 が使えない場合、派生生成は失敗として記録する。
 
 `derived-UUID.json` は原本・派生の hash、編集内容、実 source frames、`plannedMapping`、`verifiedMapping` を区別する。trim 後の最初の実 frame の PTS を別途記録し、setpts はその frame を 0 に戻す。要求した開始時刻と最初の frame は一致するとは限らない。予定時間は要求範囲からの計算値で、frame duration・結合位置・fps 丸めは未確認。
 

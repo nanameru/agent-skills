@@ -52,37 +52,64 @@ export async function receipt(dir, entry) {
   await fsp.appendFile(path.join(run.dir,'run.log'),JSON.stringify(entry)+'\n',{mode:0o600});
 }
 function analyze(entries) {
-  let phase='initial', tab=null, priorTabs=null, before=null, pending=null, operations=0, invalid=[], steps=[], startedAt=null, stop=null, test=null, previous=0;
+  let phase='initial', tab=null, priorTabs=null, before=null, pending=null, operations=0, invalid=[], failures=[], testErrors=[], steps=[], startedAt=null, stop=null, test=null, previous=0;
   const bad = s => invalid.push(s);
-  const seenOperations = new Set();
+  const validId = id => typeof id === 'string' && id.trim().length > 0;
+  const matchesBefore = e => validId(before) && validId(e.operationId) && before === e.operationId;
   const target = c => c?.available === true && c.tabId === tab && c.control?.ownedByCaller === true && c.control?.owner === 'agent' && Array.isArray(c.tabs) && c.tabs.some(t => t.tabId === tab && t.ownedByCaller === true && t.owner === 'agent');
+  const seenOperations = new Set();
   for (const e of entries) {
     const ts=Date.parse(e.at); if (!Number.isFinite(ts) || ts < previous) bad('receipt time missing or out of order'); previous=ts;
-    if (e.kind === 'test') { if (test || phase === 'done') bad('duplicate or late test receipt'); test=e; continue; }
-    if (!e.ok) { bad(`${e.kind} failed`); if(e.kind==='start') phase='started'; if(e.kind==='stop') {stop=e; phase='done';} continue; }
+    if (e.kind === 'test') {
+      if (test || phase !== 'started' || pending || before !== null || operations === 0) bad('test receipt outside completed steps and before stop');
+      if (!test) test=e;
+      continue;
+    }
+    if (!e.ok && !['start','step','stop'].includes(e.kind)) { bad(`${e.kind} failed`); continue; }
     const c=e.structuredContent;
     if (e.kind === 'status') {
       if (phase === 'initial') { if (!(c.available === false && c.tabId === null && c.tabs === undefined) && !(c.available === true && Array.isArray(c.tabs))) bad('initial status unavailable or incomplete'); priorTabs = new Set((c.tabs || []).map(t=>t.tabId)); phase='status'; }
-      else { if (!['opened','started','stopping'].includes(phase)) bad('status outside lifecycle'); if (!target(c)) bad('target ownership or identity mismatch'); if (pending) { if(e.position !== 'after' || e.operationId !== pending.operationId) bad('missing matching post-status'); pending=null; } else { if(e.position !== 'before' || !e.operationId || before || seenOperations.has(e.operationId)) bad('missing or duplicate pre-status operationId'); before=e.operationId; seenOperations.add(e.operationId); } }
+      else {
+        if (!['opened','started','stopping'].includes(phase)) bad('status outside lifecycle');
+        if (!target(c)) bad('target ownership or identity mismatch');
+        if (pending) {
+          if(e.position !== 'after' || !validId(e.operationId) || !validId(pending.operationId) || e.operationId !== pending.operationId) bad('missing matching post-status');
+          pending=null;
+        } else {
+          if(e.position !== 'before' || !validId(e.operationId) || before !== null || seenOperations.has(e.operationId)) { bad('missing or duplicate pre-status operationId'); before=null; }
+          else { before=e.operationId; seenOperations.add(e.operationId); }
+        }
+      }
     } else if (e.kind === 'open') {
       if (phase !== 'status' || e.arguments?.reuseExistingTab !== false || !c.tabId || priorTabs?.has(c.tabId)) bad('open must create a new tab');
       tab=c.tabId; if (!target(c)) bad('new tab is not owned'); phase='opened';
     } else if (e.kind === 'start') {
-      if (phase !== 'opened' || !before || before !== e.operationId || c.tabId !== tab || c.recording !== true || !validTime(c.startedAt)) bad('invalid recording start');
-      startedAt=c.startedAt; before=null; pending=e; phase='started';
+      if (phase !== 'opened' || pending || test || !matchesBefore(e) || (e.ok && (c.tabId !== tab || c.recording !== true || !validTime(c.startedAt)))) bad('invalid recording start');
+      if (e.ok) startedAt=c.startedAt; else failures.push('start failed');
+      before=null; pending=e; phase='started';
     } else if (e.kind === 'step') {
-      if (phase !== 'started' || pending || before !== e.operationId || !e.stepId || !e.tool || !validTime(e.startedAt) || Date.parse(e.startedAt)>Date.parse(e.at) || typeof e.outcome !== 'string' || !['passed','failed'].includes(e.outcome)) bad('invalid step sequence');
-      operations++; steps.push({id:e.stepId,startedAt:e.startedAt || e.at,finishedAt:e.at,status:e.outcome,tool:e.tool,frameMapping:{seekable:false,status:'unverified',reason:'wall clock and media PTS are not calibrated'}}); before=null; pending=e;
+      if (phase !== 'started' || pending || test || !matchesBefore(e) || !e.stepId || !e.tool || !validTime(e.startedAt) || Date.parse(e.startedAt)>Date.parse(e.at) || (e.ok && !['passed','failed'].includes(e.outcome))) bad('invalid step sequence');
+      const status=e.ok ? e.outcome : 'failed';
+      if (!e.ok) failures.push('step tool failed');
+      operations++; steps.push({id:e.stepId,startedAt:e.startedAt || e.at,finishedAt:e.at,status,tool:e.tool,...(!e.ok ? {error:e.error ?? null} : {}),frameMapping:{seekable:false,status:'unverified',reason:'wall clock and media PTS are not calibrated'}}); before=null; pending=e;
     } else if (e.kind === 'stop') {
-      if (phase !== 'started' || pending || before !== e.operationId || c.tabId !== tab || c.mimeType !== 'video/mp4' || typeof c.path !== 'string' || !c.path || !(c.sizeBytes > 0)) bad('invalid recording stop');
+      if (phase !== 'started' || pending || !matchesBefore(e) || (e.ok && (c.tabId !== tab || c.mimeType !== 'video/mp4' || typeof c.path !== 'string' || !c.path || !(c.sizeBytes > 0)))) bad('invalid recording stop');
+      if (!e.ok) failures.push('stop failed');
       before=null; pending=e; stop=e; phase='stopping';
     }
     if (phase === 'stopping' && !pending) phase='done';
   }
-  if (phase !== 'done' || pending || before || !operations || !test || !stop || !startedAt) bad('required receipt or post-status missing');
-  if (test?.status === 'passed' && steps.some(s => s.status !== 'passed')) bad('passed test contains failed step');
+  if (phase !== 'done' || pending || before !== null || !operations || !test || !stop || !startedAt) bad('required receipt or post-status missing');
+  if (test?.status === 'passed' && steps.some(s => s.status !== 'passed')) testErrors.push('passed test contains failed step');
   if (test && (!['passed','failed','not-run'].includes(test.status) || !(test.exitCode === null || Number.isInteger(test.exitCode)) || !(test.signal === null || typeof test.signal === 'string') || !('interruption' in test))) bad('invalid test receipt');
-  return {invalid,steps,startedAt,stop,test,operations};
+  let interruption=null;
+  if (test?.interruption != null) {
+    const value=test.interruption;
+    if (typeof value === 'string' && value.trim()) interruption={reason:value,observedAt:test.at};
+    else if (typeof value === 'object' && typeof value.reason === 'string' && value.reason.trim() && validTime(value.observedAt)) interruption={reason:value.reason,observedAt:value.observedAt};
+    else bad('invalid interruption');
+  }
+  return {invalid,failures,testErrors,steps,startedAt,stop,test,interruption,operations};
 }
 async function inspectVideo(file, framesFile) {
   const st=await fsp.lstat(file); if (!st.isFile() || !st.size) fail('video missing or empty');
@@ -105,13 +132,13 @@ export async function finalize(dir) {
   try { entries=raw.split('\n').filter(Boolean).map(JSON.parse); } catch(e) { parseError=e.message; }
   const a=analyze(entries); if(parseError) a.invalid.push(`journal parse: ${parseError}`);
   const t=a.test || {};
-  const result={schema:'test-board-e2e-result-v1',runId:meta.runId,caseId:meta.caseId,issue:meta.issue,runner:'t3-harness',dataKind:meta.dataKind,startedAt:meta.startedAt,finishedAt:new Date().toISOString(),timezone:meta.timezone,environment:{platform:process.platform,arch:process.arch,node:process.version,description:meta.environment,provider:'t3-preview',captureMethod:'unobserved'},git:meta.git,retryOf:meta.retryOf,test:{status:t.status || 'not-run',exitCode:t.exitCode ?? null,signal:t.signal ?? null,failedStep:t.failedStep ?? null},interruption:t.interruption ?? null,recording:{start:a.startedAt?'passed':'failed',startedAt:a.startedAt,stop:a.stop?.ok?'passed':'failed',save:'not-verified',targetContinuity:a.invalid.length?'failed':'passed',captureTargetIdentity:'unverified',readback:{status:'not-attempted',visualInspection:'unverified'}},artifacts:{video:'recording.mp4',log:'run.log'},steps:a.steps,error:a.invalid.length?a.invalid:null};
+  const result={schema:'test-board-e2e-result-v1',runId:meta.runId,caseId:meta.caseId,issue:meta.issue,runner:'t3-harness',dataKind:meta.dataKind,startedAt:meta.startedAt,finishedAt:new Date().toISOString(),timezone:meta.timezone,environment:{platform:process.platform,arch:process.arch,node:process.version,description:meta.environment,agentBrowser:null,provider:'t3-preview',captureMethod:'unobserved'},git:meta.git,retryOf:meta.retryOf,test:{status:t.status || 'not-run',exitCode:t.exitCode ?? null,signal:t.signal ?? null,failedStep:t.failedStep ?? null},interruption:a.interruption,recording:{start:a.startedAt?'passed':'failed',startedAt:a.startedAt,stop:a.stop?.ok?'passed':'failed',save:'not-verified',targetContinuity:a.invalid.length?'failed':'passed',captureTargetIdentity:'unverified',readback:{status:'not-attempted',visualInspection:'unverified'}},artifacts:{video:'recording.mp4',log:'run.log'},steps:a.steps,error:[...a.invalid,...a.failures,...a.testErrors].join('; ') || null,protocolErrors:a.invalid,toolFailures:a.failures,testErrors:a.testErrors};
   if (a.stop?.ok && typeof a.stop.structuredContent?.path === 'string') {
     try { const source=a.stop.structuredContent.path; const stat=await fsp.lstat(source); if (!stat.isFile() || stat.size !== a.stop.structuredContent.sizeBytes) fail('stop source size mismatch'); await fsp.copyFile(source,path.join(d,'recording.mp4'),fs.constants.COPYFILE_EXCL); if (await hash(source)!==await hash(path.join(d,'recording.mp4'))) fail('copy hash mismatch'); result.recording.save='verified'; result.recording.readback=await inspectVideo(path.join(d,'recording.mp4'),path.join(d,'source-frames.json')); } catch(e) { result.recording.readback={status:'failed',error:e.message,visualInspection:'unverified'}; }
   }
   result.artifacts.logSha256=await hash(path.join(d,'run.log')); result.artifacts.logStatus='verified';
   await write(path.join(d,'result.json'),result); const saved=JSON.parse(await fsp.readFile(path.join(d,'result.json'),'utf8')); if(saved.runId!==meta.runId) fail('result readback failed');
-  return {result,ok:!a.invalid.length && result.test.status==='passed' && result.test.exitCode===0 && !result.test.signal && !result.interruption && result.recording.start==='passed' && result.recording.stop==='passed' && result.recording.save==='verified' && result.recording.readback.status==='passed'};
+  return {result,ok:!a.invalid.length && !a.failures.length && !a.testErrors.length && result.test.status==='passed' && result.test.exitCode===0 && !result.test.signal && !result.interruption && result.recording.start==='passed' && result.recording.stop==='passed' && result.recording.save==='verified' && result.recording.readback.status==='passed'};
 }
 export async function derive(dir, edit) {
   const {dir:d}=await getRun(dir), result=JSON.parse(await fsp.readFile(path.join(d,'result.json'),'utf8'));
@@ -133,7 +160,7 @@ export async function derive(dir, edit) {
   let status='failed', error=null, inspected=null, warnings=[], verifiedMapping=[], verificationError=null;
   try {
     const graph=filters.join(';');
-    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-n',file]);
+    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-copyts','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-n',file]);
     if(enc.stderr) warnings.push(enc.stderr);
     inspected=await inspectVideo(file,path.join(d,`derived-${id}-frames.json`));
     if(inspected.stream.pix_fmt !== 'yuv420p') fail('derived pixel format mismatch');
@@ -147,8 +174,8 @@ export async function derive(dir, edit) {
         const lines=r.stdout.split('\n').filter(line=>line && !line.startsWith('#'));
         return lines.map(line=>{ const cols=line.split(',').map(x=>x.trim()); const pts=Number(cols[2])*Number(tb[1])/Number(tb[2]); if(cols.length!==6 || !/^[0-9a-f]{32}$/i.test(cols[5]) || !Number.isSafeInteger(Number(cols[2])) || !Number.isFinite(pts)) fail('invalid framemd5 output'); return {hash:cols[5].toLowerCase(),pts}; });
       };
-      const sourcePixels=await md5(['-i',source,'-map','0:v:0']);
-      const filteredPixels=await md5(['-i',source,'-filter_complex',graph,'-map','[out]']);
+      const sourcePixels=await md5(['-copyts','-i',source,'-map','0:v:0']);
+      const filteredPixels=await md5(['-copyts','-i',source,'-filter_complex',graph,'-map','[out]']);
       const decodedPixels=await md5(['-i',file,'-map','0:v:0']);
       const derivedFrames=JSON.parse(await fsp.readFile(path.join(d,`derived-${id}-frames.json`),'utf8')).frames;
       if(sourcePixels.length!==frames.frames.length || filteredPixels.length!==decodedPixels.length || decodedPixels.length!==derivedFrames.length || !decodedPixels.length || filteredPixels.some((f,i)=>f.hash!==decodedPixels[i].hash || Math.abs(f.pts-derivedFrames[i].pts)>0.000001)) fail('frame counts, filter/decode pixels or PTS differ beyond 1 microsecond');
