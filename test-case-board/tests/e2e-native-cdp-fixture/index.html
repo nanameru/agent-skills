@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Native input recording fixture</title>
+  <style>
+    body { margin: 0; background: #f2f5fa; color: #17243b; font: 20px/1.4 system-ui, sans-serif; }
+    main { max-width: 960px; margin: auto; padding: 20px; }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    p { margin: 6px 0 12px; }
+    #surface { min-height: 215px; border: 3px solid #26548a; border-radius: 12px; background: #fff;
+      display: grid; place-items: center; touch-action: none; -webkit-user-select: none; user-select: none; }
+    #surface p { pointer-events: none; font-size: 24px; font-weight: 700; }
+    dl { display: grid; grid-template-columns: 13rem 1fr; gap: 6px 16px; margin: 16px 0; }
+    dt { font-weight: 700; } dd { margin: 0; }
+  </style>
+  <script type="module" src="/fixture.mjs"></script>
+</head>
+<body>
+<main>
+  <h1>Native input recording fixture</h1>
+  <p>Local test surface. The labels report DOM events observed on this page.</p>
+  <div id="surface"><p>Touch, click, pan and wheel here</p></div>
+  <dl>
+    <dt>Touch</dt><dd id="touch">Waiting</dd>
+    <dt>Space + click</dt><dd id="space">Waiting</dd>
+    <dt>Pan</dt><dd id="pan">Waiting</dd>
+    <dt>Ctrl + wheel</dt><dd id="zoom">Waiting</dd>
+  </dl>
+</main>
+</body>
+</html>
