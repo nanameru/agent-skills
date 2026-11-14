@@ -634,3 +634,51 @@ cases:
     test_file: promo-video-remotion/tests/deliver-no-overwrite.sh
     issues: [29]
     notes: "コマンド: bash promo-video-remotion/tests/deliver-no-overwrite.sh [path-to-deliver.sh]。private一時HOMEと合成ファイルを使いffprobe/GUI/sleep/dateをstub化。旧e024f04の時刻付きファイル上書きを失敗で検出し、修正版の既存2ファイル・納品内容・納品先の一意性・先の納品保全を確認する。実Downloads・実動画・GUIは使わない。固定版での実行結果はIssue #29履歴へ記録する。同時実行は静的確認のみ。"
+  - id: TC-054-TARGET-RECORD
+    title: "専用targetと標準録画の両立を限定fixtureで確認する"
+    feature: "native CDP target and standard recording gate"
+    scenario: "AC-1 AC-5 secretなしlocalhost fixtureで標準録画とCDP入力を同一targetへ接続"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/tests/e2e-cdp-fixture/run.mjs, test-case-board/tests/e2e-cdp-fixture/protocol.mjs, test-case-board/scripts/e2e-run.mjs]
+    test_file: test-case-board/tests/e2e-cdp-fixture/run.mjs
+    issues: [54]
+    expected: "専用browser・profile・target各1つを排他所有し、正式取得したloopback endpointを使う。標準record開始前後のcontext・target再作成を実測し、開始後のCDP操作と録画が同じ実targetを使うことを逐次操作・新tab禁止の下で確認する。映像も目視で照合し、両立不可なら停止する。"
+    notes: "計画中で両立未実証。初回限定fixture c06fe760521b6e9ae4125efa76acecc55c1b0887、2026-11-14T18:19:53.367Z〜18:19:57.040Z、macOS arm64・Node 24・agent-browser 0.43.0ではprepare exit 0、run exit 1・signalなし。録画前の所有gateでCLI tab 1／CDP page 2となり、worker・入力・録画は未実施。E2E合格ではない。private結果の相対参照: issue54-469061bd-cf2f-409c-831b-85ca4a5a1e24/result.json。履歴: https://github.com/nanameru/agent-skills/issues/54#issuecomment-6882155430"
+  - id: TC-054-NATIVE-INPUT
+    title: "元テストのnative入力とassert・待機・速度を保持する"
+    feature: "native CDP input preservation"
+    scenario: "AC-2 touch Start End Cancel、Space保持、経路付き往復pan、Ctrl+wheel"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/tests/e2e-cdp-fixture/README.md, test-case-board/tests/e2e-cdp-fixture/worker.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: ""
+    issues: [54]
+    expected: "元テストとread-only比較し、touchStart・touchEnd・touchCancel、Space keyDown中の操作、途中経路を通る往復pan、Ctrl+wheelと元のassert・待機・操作速度を保持したnative入力を限定fixtureで確認する。dispatchEventをnative touchと扱わない。"
+    notes: "計画ケースのテストは未実装。既存の限定fixtureはtrusted clickの両立実証用であり、これらのnative入力や製品動作の証明ではない。"
+  - id: TC-054-RUN-EVIDENCE
+    title: "試行別の録画と失敗原本を保全する"
+    feature: "native CDP recording lifecycle"
+    scenario: "AC-3 成功・意図的失敗・扱える中断・retryを別runで保存"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/references/e2e-recording.md, test-case-board/tests/e2e-cdp-fixture/run.mjs]
+    test_file: ""
+    issues: [54]
+    expected: "成功・意図的失敗・扱える中断・retryを各新runとし、finallyで録画停止、private保存と読戻し、全decode・実decoded-frame PTS・hashを確認する。過去の失敗原本の前後hashが不変であることを確かめ、元の試行を上書きしない。"
+    notes: "計画ケースのテストは未実装。録画不能・保存未達・読戻し未達・目視未確認をテスト成否と別に保持する。救済不能な中断や保存失敗を成功と扱わない。"
+  - id: TC-054-RESULT-V1
+    title: "実workerの終了情報を既存result-v1へ対応付ける"
+    feature: "native CDP result contract"
+    scenario: "AC-4 case・commit・日時・環境・stepと実worker exit・signal"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs, test-case-board/references/e2e-entrypoint.md]
+    test_file: ""
+    issues: [54]
+    expected: "case、対象commit、開始・終了日時と環境、step、実worker-processのexit codeとsignalを既存test-board-e2e-result-v1へ対応付けて互換照合し、未起動・未取得を区別する。ケース正本は既存test-board.yamlとする。"
+    notes: "計画ケースのテストとnative CDP adapterのresult-v1対応は未実装。限定fixtureの実験用resultを既存result-v1互換やT3 in-process正規化0/1の変更と扱わない。"
