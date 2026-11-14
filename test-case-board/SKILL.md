@@ -13,6 +13,10 @@ When this Skill is used as part of autonomous or scheduled development, first re
 
 The parent owns shared loop rules. This Skill owns YAML test inventory, regression impact, E2E metadata, and the `test-board` CLI.
 
+## Browser E2E entry point
+
+Use `test-board e2e --help` and [the browser E2E contract](references/e2e-entrypoint.md) for a supported, recorded agent-browser run. The Git board retains case definitions; each private run retains its machine result and evidence. A passing test and a decoded video do not replace visual inspection of the actual operation.
+
 Use this skill to keep test intent outside transient chat. The source of truth is `test-board.yaml` in the repository root. Boards, dashboards, GitHub comments, and run reports are views or mirrors; edit the YAML first.
 
 ## Core Workflow

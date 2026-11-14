@@ -17,6 +17,7 @@ function usage(code = 0) {
   test-board plan-issue --board test-board.yaml --issue 123 --source src/a.ts --feature "feature" --scenario "scenario" [--apply]
   test-board sync-github --board test-board.yaml --issue 123 [--apply]
   test-board serve --board test-board.yaml [--root .] [--port 41800]
+  test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live
 `;
   console.log(text);
   process.exit(code);
@@ -466,6 +467,10 @@ function cmdServe(args) {
   });
 }
 
+if (process.argv[2] === 'e2e') {
+  process.argv.splice(2, 1);
+  await import('./e2e-run.mjs');
+} else {
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
 
@@ -483,4 +488,5 @@ try {
 } catch (error) {
   console.error(`test-board: ${error.message}`);
   process.exit(1);
+}
 }

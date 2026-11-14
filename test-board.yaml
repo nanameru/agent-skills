@@ -1,0 +1,47 @@
+version: 1
+project:
+  name: agent-skills
+  repo: nanameru/agent-skills
+  test_command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+source_roots: [test-case-board]
+cases:
+  - id: TC-046-E2E
+    title: "共通入口でlocalhostの画面操作と録画を対応付ける"
+    feature: "browser e2e entrypoint"
+    scenario: "READY click CLICKED success and intentional assertion failure"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-fixture/driver.mjs
+    issues: [46]
+  - id: TC-046-INTERRUPT
+    title: "録画中の割り込みとtimeoutの元結果を保存する"
+    feature: "browser e2e interruption"
+    scenario: "SIGINT SIGTERM timeout"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs]
+    test_file: test-case-board/tests/e2e-fixture/driver.mjs
+    issues: [46]
+  - id: TC-046-RETRY
+    title: "失敗後の再試行が前の証跡を保持する"
+    feature: "browser e2e retry"
+    scenario: "intentional failure followed by success"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs]
+    test_file: test-case-board/tests/e2e-fixture/driver.mjs
+    issues: [46]
+  - id: TC-046-FAKE
+    title: "テスト結果と録画結果を区別し不正な入力を拒否する"
+    feature: "browser e2e boundary regression"
+    scenario: "fake CLI media contract environment interruption and Allure"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-regression.test.mjs
+    issues: [46]
