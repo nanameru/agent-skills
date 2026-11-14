@@ -482,7 +482,10 @@ function cmdServe(args) {
 
 if (process.argv[2] === 'e2e') {
   process.argv.splice(2, 1);
-  await import('./e2e-run.mjs');
+  if (process.argv[2] === '--provider' && process.argv[3] === 't3') {
+    process.argv.splice(2, 2);
+    await import('./e2e-t3-cli.mjs');
+  } else await import('./e2e-run.mjs');
 } else {
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];

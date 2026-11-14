@@ -15,7 +15,7 @@ The parent owns shared loop rules. This Skill owns YAML test inventory, regressi
 
 ## Browser E2E entry point
 
-Use `test-board e2e --help` and [the browser E2E contract](references/e2e-entrypoint.md) for a supported, recorded agent-browser run. The Git board retains case definitions; each private run retains its machine result and evidence. A passing test and a decoded video do not replace visual inspection of the actual operation.
+For T3 preview use `test-board e2e --provider t3 --help` and [the T3 receipt contract](references/e2e-t3-preview.md). Use `test-board e2e --help` and [the browser E2E contract](references/e2e-entrypoint.md) for a supported, recorded agent-browser run. The Git board retains case definitions; each private run retains its machine result and evidence. A passing test and a decoded video do not replace visual inspection of the actual operation.
 
 Use this skill to keep test intent outside transient chat. The source of truth is `test-board.yaml` in the repository root. Boards, dashboards, GitHub comments, and run reports are views or mirrors; edit the YAML first.
 
