@@ -1,0 +1,4 @@
+interface:
+  display_name: "Figma Design Source"
+  short_description: "Figmaを明示指定された案件のデザインを管理します"
+  default_prompt: "この案件でFigmaの作成・変更を明示的に希望する場合は、$figma-design-source を使い、既存・新規・hybridのモードを判定してデザインを進めてください。"

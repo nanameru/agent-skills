@@ -2,7 +2,7 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-source_roots: [autonomous-dev, config/common-agents]
+source_roots: [autonomous-dev, config/common-agents, figma-design-source]
 cases:
   - id: TC-051-01
     title: 3ファイルの原本照合とprivacy・参照確認
@@ -38,3 +38,14 @@ cases:
       provider: SWE-2 Flash high + Sol xhigh manual
       result: passed
       evidence: [https://github.com/nanameru/agent-skills/issues/51#issuecomment-6876402363]
+  - id: TC-015-01
+    title: Figma明示指定時の適用条件と登録確認
+    feature: figma-design-source registration
+    scenario: 公開用の許容差分と登録を手順書に従い確認する
+    status: todo
+    priority: high
+    type: manual
+    source: [figma-design-source, managed-skills.json, restore-skills.sh]
+    test_file: figma-design-source/README.md
+    issues: [15]
+    notes: "1bd175cの限定確認は成功。自動レビュー指摘に基づくファイル未作成時の文書分岐を追記したため、この差分の固定版確認は未実施。実Figma操作・実復元・外部作成能力の確認は対象外。"
