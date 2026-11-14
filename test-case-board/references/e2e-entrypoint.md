@@ -45,7 +45,9 @@ socket は各 private 試行内の `sockets` に置く。CLI の作業ディレ�
 
 各実行は上書きしない UUID ディレクトリ。例外・INT・TERM・timeout では worker を停止し、録画停止・保存と読戻しを試みる。SIGKILL・電源断・OS crash などの救済不能な中断や保存自体の失敗は保証できない。retry は別実行として前の証跡を保持する。自動 retry はしない。
 
-中断時、送信済み CLI 操作は既存の制限時間内で終了を待ってから録画停止を要求する。CLI の終了だけでは daemon 側の操作終了を保証できず、daemon や対象が応答しない場合は停止・読戻しを失敗として残す。中断されたテストは成功にしない。
+中断時、送信済み CLI 操作は既存の制限時間内で終了を待ってから録画停止を要求する。CLI の終了だけでは daemon 側の操作終了を保証できず、daemon や対象が応答しない場合は停止・読戻しを失敗として残す。中断された実行は成功にしない。
+
+SIGINT・SIGTERM は結果の確定まで受け付ける。録画・ログ・添付の非同期処理を終えた後、イベントループが観測した中断を `result.json` の `interruption` に記録し、元の test 状態・worker exit/signal と分ける。その時点を確定境界とし、結果と Allure を同期書込みし、結果を同期読戻しする。境界前の中断は Allure を broken、終了コードを非ゼロとする。境界以後にハンドラが観測した signal は確定済みの結果やログを書き換えず、`phase: after-result-finalization` の構造化 stderr と非ゼロ終了で示す。同期保存中に到着した signal はイベントループが処理できる境界後に観測される場合があり、その場合 Allure は確定時の状態を表す。
 
 元 `recording.webm` の SHA-256 を読戻し、ffmpeg で全 decode、ffprobe で実 decoded frame の index と PTS を列挙し、最初と最後を記録する。duration の比率による seek はしない。空・破損・PTS 不足・読戻し中の hash 変化は失敗。decode 成功は映像内容の正しさを保証しない。映像の対象と失敗箇所が見えるかの目視は `visualInspection: unverified` のまま別担当が確認する。動画、JSON、ログは成功・失敗を問わず削除しない。明示的に指定された private 保存先は利用者側で永続性・共有範囲を確認する。
 

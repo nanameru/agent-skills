@@ -177,13 +177,23 @@ async function main(argv) {
   browserEnv.AGENT_BROWSER_NAMESPACE = `tb-${randomUUID()}`;
   browserEnv.AGENT_BROWSER_CONFIG = path.join(dir, 'browser-config.json');
   const controller = new AbortController();
-  let child, workerClosed, interrupted = null, startAttempted = false, browserOpened = false, currentStep = null, operations = 0, protocolError = false, readyResolve, readyReject, readyId, finishMessage = null, killTimer, pendingRequest = null;
+  let child, workerClosed, interrupted = null, interruptionAt = null, finalized = false, lateSignal = null, startAttempted = false, browserOpened = false, currentStep = null, operations = 0, protocolError = false, readyResolve, readyReject, readyId, finishMessage = null, killTimer, pendingRequest = null;
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
   // A signal during preflight can reject before execution reaches await ready.
   // Observe it immediately without changing what the later await receives.
   ready.catch(() => {});
   const append = (obj) => { log.write(`${JSON.stringify({ time: new Date().toISOString(), ...obj })}\n`); };
-  const interrupt = (why) => { if (interrupted) return; interrupted = why; controller.abort(); child?.kill('SIGTERM'); if (child) killTimer = setTimeout(() => child.kill('SIGKILL'), 3000); readyReject(new Error(why)); };
+  const interrupt = (why) => {
+    if (finalized) {
+      process.exitCode = 1;
+      if (!lateSignal) { lateSignal = why; console.error(`test-board e2e: ${JSON.stringify({ interruption: why, phase: 'after-result-finalization' })}`); }
+      return;
+    }
+    if (interrupted) return;
+    interrupted = why; interruptionAt = new Date().toISOString(); controller.abort();
+    if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); killTimer = setTimeout(() => child.kill('SIGKILL'), 3000); }
+    readyReject(new Error(why));
+  };
   const onInt = () => interrupt('SIGINT'), onTerm = () => interrupt('SIGTERM');
   process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
   const timer = setTimeout(() => interrupt('timeout'), timeoutMs);
@@ -276,21 +286,18 @@ async function main(argv) {
     if (!finishMessage || !operations) result.error ||= 'runner did not complete the supported contract with browser operations';
     await checkTarget();
     if (!protocolError) result.recording.targetContinuity = 'passed';
-  } catch (error) { result.error = interrupted || error.message; if (startAttempted && result.recording.start !== 'passed') result.recording.start = 'failed'; if (result.test.status === 'running') result.test.status = 'failed'; }
+  } catch (error) { result.error ||= interrupted || error.message; if (startAttempted && result.recording.start !== 'passed') result.recording.start = 'failed'; if (result.test.status === 'running') result.test.status = 'failed'; }
   finally {
     clearTimeout(timer);
     clearTimeout(killTimer);
     if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); await boundedWait(workerClosed, 3000); if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }
     if (workerClosed) await boundedWait(workerClosed, 3000);
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
-    if (interrupted) { result.error = interrupted; result.test.failedStep ||= currentStep; if (result.test.status === 'running') result.test.status = 'failed'; }
     if (startAttempted) {
       try { await browserCommand(['record','stop'], true); result.recording.stop = 'passed'; } catch (error) { result.recording.stop = 'failed'; append({ type: 'stop-error', error: error.message }); }
       try { result.recording.readback = await readVideo(video); result.recording.save = 'verified'; } catch (error) { result.recording.readback = { status: 'failed', error: error.message, visualInspection: 'unverified' }; }
     }
     if (browserOpened) { try { await browserCommand(['close'], true); } catch {} }
-    process.removeListener('SIGINT', onInt); process.removeListener('SIGTERM', onTerm);
-    result.finishedAt = new Date().toISOString();
     if (!log.destroyed) await new Promise((resolve) => { log.once('error', resolve); log.end(resolve); });
     if (logError) { result.artifacts.logStatus = 'failed'; result.artifacts.logError = logError.message; }
     else {
@@ -303,9 +310,9 @@ async function main(argv) {
     }
     // Allure's documented result schema is separate from the authoritative result.
     // Hard links keep the original recording and log as the attachment bytes.
-    let allureOutput = null;
+    let attachments = null;
     try {
-      const attachments = [];
+      attachments = [];
       const logName = `${randomUUID()}-attachment.txt`;
       if (result.artifacts.logStatus !== 'verified') throw new Error('log unavailable');
       await fsp.link(logPath, path.join(dir, logName));
@@ -315,27 +322,32 @@ async function main(argv) {
         await fsp.link(video, path.join(dir, videoName));
         attachments.push({ name: 'original recording', source: videoName, type: 'video/webm' });
       }
-      const evidenceOk = result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified';
-      const allure = { uuid: id, historyId: sha(opts['--case']), testCaseId: opts['--case'], fullName: opts['--case'], name: opts['--case'], status: !evidenceOk ? 'broken' : result.test.status === 'passed' ? 'passed' : result.test.status === 'not-run' ? 'broken' : 'failed', statusDetails: { message: `test=${result.test.status}; recording start=${result.recording.start}, stop=${result.recording.stop}, target=${result.recording.targetContinuity}, save=${result.recording.save}, readback=${result.recording.readback.status}; log=${result.artifacts.logStatus}` }, start: Date.parse(result.startedAt), stop: Date.parse(result.finishedAt), labels: [{ name: 'framework', value: 'test-board-agent-browser-v1' }], steps: result.steps.map((s) => ({ name: s.id, status: s.status === 'passed' ? 'passed' : 'failed', start: Date.parse(s.startedAt), stop: s.finishedAt ? Date.parse(s.finishedAt) : Date.parse(result.finishedAt) })), attachments };
-      const allureFile = `${id}-result.json`;
-      allureOutput = { file: path.join(dir, allureFile), body: JSON.stringify(allure, null, 2) + '\n' };
-      result.artifacts.allure = { status: 'prepared', result: allureFile, render: 'unverified' };
-    } catch (error) { result.artifacts.allure = { status: 'failed', error: error.message }; }
+      result.artifacts.allure = { status: 'prepared', result: `${id}-result.json`, render: 'unverified' };
+    } catch (error) { attachments = null; result.artifacts.allure = { status: 'failed', error: error.message }; }
+    // This is the event-loop finalization boundary. No await occurs between
+    // snapshotting interruptions and writing/reading the immutable result.
+    if (interrupted) { result.error ||= interrupted; result.test.failedStep ||= currentStep; if (result.test.status === 'running') result.test.status = 'failed'; }
+    result.interruption = interrupted ? { reason: interrupted, observedAt: interruptionAt } : null;
+    result.finishedAt = new Date().toISOString();
+    const evidenceOk = result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified';
+    const allure = attachments && { uuid: id, historyId: sha(opts['--case']), testCaseId: opts['--case'], fullName: opts['--case'], name: opts['--case'], status: interrupted || !evidenceOk ? 'broken' : result.test.status === 'passed' ? 'passed' : result.test.status === 'not-run' ? 'broken' : 'failed', statusDetails: { message: `test=${result.test.status}; interruption=${interrupted || 'none'}; recording start=${result.recording.start}, stop=${result.recording.stop}, target=${result.recording.targetContinuity}, save=${result.recording.save}, readback=${result.recording.readback.status}; log=${result.artifacts.logStatus}` }, start: Date.parse(result.startedAt), stop: Date.parse(result.finishedAt), labels: [{ name: 'framework', value: 'test-board-agent-browser-v1' }], steps: result.steps.map((s) => ({ name: s.id, status: s.status === 'passed' ? 'passed' : 'failed', start: Date.parse(s.startedAt), stop: s.finishedAt ? Date.parse(s.finishedAt) : Date.parse(result.finishedAt) })), attachments };
+    finalized = true;
     const resultPath = path.join(dir, 'result.json');
     try {
-      await fsp.writeFile(resultPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-      const saved = await fsp.readFile(resultPath, 'utf8');
+      fs.writeFileSync(resultPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+      const saved = fs.readFileSync(resultPath, 'utf8');
       if (saved !== JSON.stringify(result, null, 2) + '\n') throw new Error('result readback mismatch');
     } catch {
       console.error(`test-board e2e: ${JSON.stringify({ result: 'not-saved', test: { status: result.test.status, exitCode: result.test.exitCode, signal: result.test.signal }, recording: { start: result.recording.start, stop: result.recording.stop, save: result.recording.save, readback: result.recording.readback.status }, priorFailure: Boolean(result.error), failure: interrupted || 'result-write-or-readback-failed' })}`);
       throw new Error('result write or readback failed');
     }
-    if (allureOutput) {
-      try { await fsp.writeFile(allureOutput.file, allureOutput.body, { flag: 'wx', mode: 0o600 }); }
+    if (allure) {
+      try { fs.writeFileSync(path.join(dir, result.artifacts.allure.result), JSON.stringify(allure, null, 2) + '\n', { flag: 'wx', mode: 0o600 }); }
       catch { console.error('test-board e2e: Allure result write failed'); }
     }
     process.stdout.write(JSON.stringify({ result: resultPath, test: result.test, recording: result.recording }) + '\n');
+    await new Promise((resolve) => setImmediate(resolve));
   }
-  return result.test.status === 'passed' && result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified' ? 0 : 1;
+  return !interrupted && !lateSignal && result.test.status === 'passed' && result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified' ? 0 : 1;
 }
 try { process.exitCode = await main(process.argv.slice(2)); } catch (error) { console.error(`test-board e2e: ${error.message}`); process.exitCode = 1; }
