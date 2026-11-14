@@ -1,11 +1,7 @@
 name: test-case-board
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/test-case-board.yml'
-      - 'test-case-board/**'
-      - 'test-board.yaml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,10 +11,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Check out PR head
+      - name: Check out selected ref commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Node
@@ -34,11 +30,11 @@ jobs:
 
       - name: Record environment and prepare private fake directory
         env:
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
           actual_sha=$(git rev-parse HEAD)
-          printf 'PR head SHA: %s\nCheckout SHA: %s\nUTC: %s\nRunner OS: %s\n' "$PR_HEAD_SHA" "$actual_sha" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$RUNNER_OS"
-          test "$actual_sha" = "$PR_HEAD_SHA"
+          printf 'Event: %s\nRef: %s\nExpected SHA: %s\nCheckout SHA: %s\nUTC: %s\nRunner OS: %s\n' "$GITHUB_EVENT_NAME" "$GITHUB_REF" "$EXPECTED_SHA" "$actual_sha" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$RUNNER_OS"
+          test "$actual_sha" = "$EXPECTED_SHA"
           node --version
           ffmpeg -version | sed -n '1p'
           ffprobe -version | sed -n '1p'

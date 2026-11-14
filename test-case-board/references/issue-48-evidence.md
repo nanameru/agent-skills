@@ -46,6 +46,12 @@
 
 旧SHAと固定SHAの `git diff --raw 9186047b9b099062d8e6a255dc37fc0911179dd3 2332bfde86de1531b57664249ca14e8bd3a9f78a -- test-case-board/scripts/e2e-run.mjs test-case-board/scripts/e2e-worker.mjs test-case-board/tests/e2e-fixture test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/fakes` は空。engine、worker、fixture、回帰テスト、fakeの各blobが同一である根拠であり、旧実行を新SHAで再実行したことにはならない。
 
+## 固定5fd86a7の実証・受入とその後の方針
+
+固定 `5fd86a795d639baf17ae4efa5e9035fc8291cc40` での担当検証（timeout直接回帰1/1、選択timeout 1回、全6シナリオ7試行の実E2E、同じheadの実CI 33/33 pass、録画・private保存・読戻し）は [修正固定版の担当検証結果と引継ぎ](https://github.com/nanameru/agent-skills/issues/48#issuecomment-6873319890)、独立Checker判定と管理役の受入は [実E2E・CI・独立確認と管理受入](https://github.com/nanameru/agent-skills/issues/48#issuecomment-6873432043) に、当時SHAの履歴として保持する。これらを別SHAのローカル検証やCI結果として読み替えず、旧失敗の記録も消さない。
+
+その後の管理決定 [ローカル検証を主にし、Actionsは必要時のみ手動実行](https://github.com/nanameru/agent-skills/issues/48#issuecomment-6874915255) により、`.github/workflows/test-case-board.yml` は `workflow_dispatch` のみの手動実行に変わり、ローカル検証を主とする。最新の対象SHA・検証結果・方針は、このコメント以降のIssue #48の記録を確認する。
+
 ## 境界と不足
 
 - CLIの4 assertionは `gaps` 出力に対象行があるかないかと終了コードのみを確認する。証跡の内容や層を検証しない。unitとして独立した純粋関数テストは現状なく、機能を跨ぐCLIテストをunitと改称しない。今回の変更は定義・参照・追加CLI結合テストであり公開pure APIの新設を必要としないため、今回のunit追加は非該当。プロジェクト全体のunit網羅は未検証。parserの引用符やinline list等の独立した入力境界は追加テスト候補だが、PR #32の未mergeの19件やparser変更は含めない。

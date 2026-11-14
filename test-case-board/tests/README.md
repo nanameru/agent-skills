@@ -2,11 +2,22 @@
 
 These are **planned, unverified tests**. The commands below must be run by the designated execution role on a fixed commit. None of the files in this directory launch a browser when imported by the test worker; the explicit driver launches the entrypoint only when invoked. The board tracks plans; per-attempt outcomes are kept privately, not written as `pass` into `test-board.yaml`.
 
-## Pull request CI
+## Local-first verification
 
-`.github/workflows/test-case-board.yml` runs on pull requests that change the workflow, `test-case-board/**`, or the root `test-board.yaml`, regardless of base branch. On Ubuntu 24.04 with Node 24.22.2, it checks eight JavaScript files for syntax and runs the existing 32 tests plus one timeout fixture regression with the TAP reporter. Job logs record the PR head and actual checkout SHA, UTC, runner OS, and tool versions; the job fails if the two SHAs differ. It checks out the PR head explicitly, so this is not a test of GitHub's synthetic merge SHA.
+Local verification is primary; GitHub is used for the Issue/PR and the record of results. On a fixed, clean commit, the designated execution role runs, in order:
 
-CI's fake regressions use synthetic media in an owner-only runner temporary directory; they do not run the local real browser E2E fixture described below. CI uploads no media, logs, or results as artifacts. A workflow definition alone is not evidence of a passing run; consult the job log for its actual result.
+1. The 33 local tests across the same four files named by `project.test_command` in `test-board.yaml` (`node --test` on the board script tests, the fake-CLI regressions, the ledger CLI integration tests, and the timeout fixture regression).
+2. The real recorded fixture below, only where needed. When the fixture, runtime, and expectations are unchanged, an earlier real E2E is inherited for its own SHA by immutable blob comparison rather than re-run.
+3. Every attempt — success, failure, interruption, or rerun — follows the standard per-execution recording rules: record the actual screen, save the original video and logs under the approved private root, confirm machine readback (decode/duration/checksum), and perform a separate partial visual inspection. Recording or saving gaps are reported as such, never as a pass.
+4. A summary is recorded on the GitHub Issue/PR with the fixed commit, commands, strict exits, environment, and references to the private evidence. Each past result stays under its own SHA.
+
+## Manual workflow (workflow_dispatch)
+
+`.github/workflows/test-case-board.yml` has `workflow_dispatch` as its only trigger; it does not run on pull requests, pushes, or schedules. On Ubuntu 24.04 with Node 24.22.2, it checks eight JavaScript files for syntax and runs the 33 tests above with the TAP reporter. It checks out `github.sha`, the fixed last commit of the ref chosen at dispatch, so the job tests that commit even if the branch moves while queued. Job logs record the event name, selected ref, expected SHA, actual checkout SHA, UTC, runner OS, and tool versions; the job fails if the two SHAs differ.
+
+`workflow_dispatch` requires the workflow file to exist on the default branch, so whether a manual run can be started while this change is unmerged is unverified and must not be claimed. After the workflow reaches the default branch, run it only when needed by selecting the target ref, then record the selected ref, the actual checkout SHA from the job log, and the strict results. This change starts no run by itself. A workflow definition alone is not evidence of a passing run; consult the job log for its actual result.
+
+CI's fake regressions use synthetic media in an owner-only runner temporary directory; they do not run the local real browser E2E fixture described below. CI uploads no media, logs, or results as artifacts.
 
 ## Test layers
 
@@ -32,6 +43,12 @@ export TB_E2E_ENVIRONMENT='OS / browser version / harness'
 ```
 
 `TB_TIMEOUT_MS` optionally overrides the entrypoint timeout; default is 120000 ms, or 45000 ms for the deliberately pending timeout scenario. Use a deadline long enough for real setup to reach the pending step. An early timeout is a failure, not a valid timeout test. There is no automatic retry.
+
+## Authentication state
+
+Cases that depend on authentication are classified with the skill's `auth_state` rows — `anonymous`, `fresh_user`, `existing_user`, `method:<name>`, `role:<name>`, `plan:<name>`, and the other values defined in `test-case-board/SKILL.md` — together with that skill's `synthetic-local` / `testmail` / `real-provider` test means. Before executing such a case, confirm the actual state with a dedicated test user and a dedicated session, and keep each row's classification honest.
+
+The tests in this directory run `anonymous` against a localhost fixture and fake CLIs. They are not evidence of a real application's login, an admin role, or any real user account. Real application authentication, admin access, real users, and personal profiles are neither permitted nor verified for this work.
 
 ## Direct fake regressions
 
