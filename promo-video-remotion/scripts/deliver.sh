@@ -3,6 +3,10 @@
 # Copies the render to ~/Downloads under a NEW name, closes stale QuickTime
 # windows (an open file must never be overwritten in place) and plays it.
 set -euo pipefail
+if [ "$#" -lt 2 ]; then
+  echo "Usage: deliver.sh <out.mp4> <basename-without-ext>" >&2
+  exit 1
+fi
 src="$1"; name="$2"; dst="$HOME/Downloads/${name}.mp4"
 if [ -e "$dst" ]; then dst="$HOME/Downloads/${name}_$(date +%H%M%S).mp4"; fi
 ffprobe -v error -show_entries format=duration:stream=nb_frames -of default=nw=1 "$src"
