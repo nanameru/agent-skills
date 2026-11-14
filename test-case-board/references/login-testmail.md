@@ -1,5 +1,7 @@
 # Testmail Login/Auth Tests
 
+For the auth-state matrix and `synthetic-local` / `testmail` / `real-provider` split, see [Authentication State And Test Means](../SKILL.md#authentication-state-and-test-means).
+
 Use this reference when an E2E case needs a fresh email inbox, OTP, magic link, signup, invitation, or password reset flow.
 
 ## Current Official Baseline
