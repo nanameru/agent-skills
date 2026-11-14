@@ -13,6 +13,7 @@ const entry = path.join(repo, 'test-case-board/bin/test-board');
 const fake = path.join(repo, 'test-case-board/tests/fakes/agent-browser.mjs');
 const runner = path.join(repo, 'test-case-board/tests/fakes/runner.mjs');
 const unsupported = path.join(repo, 'test-case-board/tests/fakes/unsupported-runner.mjs');
+const finalizationPreload = path.join(repo, 'test-case-board/tests/fakes/finalization-preload.cjs');
 assert.ok(process.env.TB_FAKE_TEST_DIR, 'TB_FAKE_TEST_DIR must name an existing private directory outside the checkout');
 const root = await realpath(process.env.TB_FAKE_TEST_DIR);
 const rootStat = await stat(root);
@@ -41,16 +42,24 @@ function waitForMarker(file, description = 'fake version preflight marker') {
   return { promise, close() { clearTimeout(timer); watcher.close(); } };
 }
 
-async function invoke({ dir = batch, scenario = 'success', video = 'valid', version = '0.43.0', selectedRunner = runner, caseId = 'TC-046-FAKE', gate = null, actionGate = null, signal = null, timeoutMs = 120000 } = {}) {
+async function invoke({ dir = batch, scenario = 'success', video = 'valid', version = '0.43.0', selectedRunner = runner, caseId = 'TC-046-FAKE', gate = null, actionGate = null, finalization = null, signal = null, timeoutMs = 120000 } = {}) {
   const names = ['PATH', 'HOME', 'USER', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'TZ', 'SYSTEMROOT', 'WINDIR'];
   const env = Object.fromEntries(names.filter((key) => process.env[key] !== undefined).map((key) => [key, process.env[key]]));
   Object.assign(env, { TB_FAKE_SCENARIO: scenario, TB_FAKE_VIDEO_MODE: video, TB_FAKE_VERSION: version });
   if (gate) env.TB_FAKE_VERSION_GATE = gate;
   if (actionGate) env.TB_FAKE_ACTION_GATE = actionGate;
+  if (finalization) {
+    env.TB_FAKE_FINALIZATION_GATE = finalization.gate;
+    env.TB_FAKE_FINALIZATION_PHASE = finalization.phase;
+    env.TB_FAKE_FINALIZATION_SIGNAL = finalization.signal;
+    env.TB_FAKE_FINALIZATION_ROOT = dir;
+    env.NODE_OPTIONS = `--require ${JSON.stringify(finalizationPreload)}`;
+  }
   const args = ['e2e', '--case', caseId, '--runner', selectedRunner, '--browser', fake, '--evidence-dir', dir,
     '--data-kind', 'mock', '--issue', '46', '--environment', 'fake CLI; synthetic media; no browser', '--timeout-ms', String(timeoutMs)];
   // Register the watcher before spawning so a fast marker is not missed.
   const marker = gate ? waitForMarker(gate) : actionGate ? waitForMarker(path.join(actionGate, 'action-started'), 'fake operation start marker') : null;
+  const phaseMarker = finalization ? waitForMarker(path.join(finalization.gate, 'phase-armed'), 'finalization phase marker') : null;
   const child = spawn(entry, args, { cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = '';
   child.stdout.on('data', (chunk) => { stdout += chunk; }); child.stderr.on('data', (chunk) => { stderr += chunk; });
@@ -64,15 +73,73 @@ async function invoke({ dir = batch, scenario = 'success', video = 'valid', vers
       await writeFile(path.join(actionGate, 'release'), 'release\n', { flag: 'wx', mode: 0o600 });
     }
   }
+  let signalObserved = false;
+  if (phaseMarker) {
+    await Promise.race([phaseMarker.promise, closed.then(() => { throw new Error('entrypoint exited before the requested finalization phase'); })]).finally(() => phaseMarker.close());
+    const observed = finalization.phase === 'result-write' ? null : waitForMarker(path.join(finalization.gate, 'signal-observed'), 'finalization signal marker');
+    assert.equal(child.kill(finalization.signal), true, `could not send ${finalization.signal} during ${finalization.phase}`);
+    if (observed) {
+      signalObserved = await Promise.race([observed.promise.then(() => true), closed.then(() => false)]).finally(() => observed.close());
+    }
+    // For result-write the entrypoint is synchronously blocked: deliver the
+    // signal while it is blocked, then release it so its handler can run.
+    await writeFile(path.join(finalization.gate, 'release'), 'release\n', { flag: 'wx', mode: 0o600 });
+  }
   const exit = await closed;
   const line = stdout.trim().split('\n').filter(Boolean).at(-1);
   const output = line ? JSON.parse(line) : null;
   const result = output ? JSON.parse(await readFile(output.result, 'utf8')) : null;
-  return { exit, stdout, stderr, output, result };
+  return { exit, stdout, stderr, output, result, signalObserved };
 }
 const hash = async (file) => createHash('sha256').update(await readFile(file)).digest('hex');
 const videoPath = (run) => path.join(path.dirname(run.output.result), run.result.artifacts.video);
 const logPath = (run) => path.join(path.dirname(run.output.result), run.result.artifacts.log);
+
+for (const phase of ['record-stop', 'log-hash', 'result-write']) {
+  for (const interruption of ['SIGINT', 'SIGTERM']) {
+    test(`fake: finalization ${phase} preserves ${interruption}`, { timeout: 75000 }, async () => {
+      const gate = path.join(batch, `finalization-${randomUUID()}`);
+      await mkdir(gate, { mode: 0o700 });
+      const run = await invoke({ finalization: { gate, phase, signal: interruption } });
+      assert.deepEqual(run.exit, { code: 1, signal: null }, 'entrypoint must handle the signal and exit nonzero');
+      assert.ok(run.result, 'the original result.json must be saved and returned');
+      assert.equal(run.result.test.status, 'passed');
+      assert.equal(run.result.test.exitCode, 0);
+      assert.equal(run.result.test.signal, null);
+      assert.equal(run.result.test.failedStep, null);
+      assert.equal(run.result.recording.start, 'passed');
+      assert.equal(run.result.recording.stop, 'passed');
+      assert.equal(run.result.recording.save, 'verified');
+      assert.equal(run.result.recording.readback.status, 'passed');
+      assert.equal(run.result.recording.readback.visualInspection, 'unverified');
+      assert.ok((await stat(videoPath(run))).size > 0);
+      assert.equal(await hash(videoPath(run)), run.result.recording.readback.sha256);
+      assert.equal(run.result.artifacts.logStatus, 'verified');
+      assert.ok((await stat(logPath(run))).size > 0);
+      assert.equal(await hash(logPath(run)), run.result.artifacts.logSha256);
+      assert.equal(run.result.artifacts.allure.status, 'prepared');
+      const allurePath = path.join(path.dirname(run.output.result), run.result.artifacts.allure.result);
+      assert.ok((await lstat(allurePath)).isFile(), 'prepared Allure result must actually be saved');
+      const allure = JSON.parse(await readFile(allurePath, 'utf8'));
+      assert.equal(allure.testCaseId, run.result.caseId);
+      assert.match(allure.statusDetails?.message, /\btest=passed\b/);
+      if (phase === 'result-write') {
+        assert.equal(run.result.interruption, null, 'a signal received after the snapshot must not rewrite the result');
+        assert.equal(allure.status, 'passed', 'Allure must describe the already finalized snapshot');
+        const lateLine = run.stderr.split('\n').find((line) => line.startsWith('test-board e2e: {') && line.includes('"phase":"after-result-finalization"'));
+        assert.ok(lateLine, 'late interruption must be reported as structured stderr');
+        const late = JSON.parse(lateLine.slice('test-board e2e: '.length));
+        assert.deepEqual(late, { interruption, phase: 'after-result-finalization' });
+      } else {
+        assert.equal(run.signalObserved, true, 'the entrypoint signal handler must run before releasing the phase');
+        assert.equal(run.result.interruption?.reason, interruption);
+        assert.ok(Number.isFinite(Date.parse(run.result.interruption?.observedAt)), 'interruption timestamp must be recorded');
+        assert.equal(allure.status, 'broken');
+        assert.ok(allure.statusDetails.message.includes(`interruption=${interruption}`));
+      }
+    });
+  }
+}
 
 test('fake: SIGINT waits for dispatched operation before record stop', { timeout: 75000 }, async () => {
   const actionGate = path.join(batch, `inflight-${randomUUID()}`);

@@ -27,6 +27,21 @@ if (command[0] === 'record' && command[1] === 'start') {
   fs.writeFileSync(state, JSON.stringify({ video: command[2] }), { flag: 'wx', mode: 0o600 });
   respond(true);
 } else if (command[0] === 'record' && command[1] === 'stop') {
+  if (process.env.TB_FAKE_FINALIZATION_PHASE === 'record-stop') {
+    const gate = process.env.TB_FAKE_FINALIZATION_GATE;
+    fs.writeFileSync(path.join(gate, 'stop-entered'), 'stop entered\n', { flag: 'wx', mode: 0o600 });
+    await new Promise((resolve, reject) => {
+      const release = path.join(gate, 'release');
+      const watcher = fs.watch(gate, check);
+      const deadline = setTimeout(() => { watcher.close(); reject(new Error('fake stop release deadline')); }, 20000);
+      watcher.once('error', (error) => { clearTimeout(deadline); watcher.close(); reject(error); });
+      function check() {
+        if (!fs.existsSync(release)) return;
+        clearTimeout(deadline); watcher.close(); resolve();
+      }
+      check();
+    });
+  }
   const { video } = JSON.parse(fs.readFileSync(state, 'utf8'));
   const mode = process.env.TB_FAKE_VIDEO_MODE || 'valid';
   if (mode === 'empty') fs.writeFileSync(video, '', { flag: 'wx', mode: 0o600 });

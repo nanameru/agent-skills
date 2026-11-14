@@ -40,6 +40,14 @@ node --test --test-name-pattern='fake: SIGINT waits for dispatched operation bef
 
 This mock-only case waits for the fake operation to start and the worker to receive SIGTERM before releasing the fake response. It checks that the response completes before `record stop`, and separately checks the interruption result and synthetic video readback. Its deadline only bounds the fake; no real browser is started.
 
+To select the six fake late-interruption regressions (SIGINT and SIGTERM in each phase):
+
+```sh
+node --test --test-name-pattern='fake: finalization' test-case-board/tests/e2e-regression.test.mjs
+```
+
+The fake stop command, log hash stream, and test-only preload gate provide phase markers; no product hook or real browser is used. For the first two phases the signal handler must be observed before the gate is released. They expect the passed worker outcome and verified synthetic video/log to remain intact, `interruption.reason` to name the signal, exit 1, and a saved Allure result of `broken`. For result writing, the preload blocks synchronously just before the actual write after its arguments have been captured. The test sends the signal while blocked and releases the gate; on the fixed implementation this is after the finalization boundary. The immutable result and Allure retain their successful snapshot, while structured stderr reports `after-result-finalization` and the entrypoint exits 1. On the older implementation the analogous asynchronous write has already lost its signal handler and the result may be absent. The preload also gates that older write path so the same selected cases exercise both versions. Gate deadlines only bound the test double; no fixed delay is used to trigger a signal. The video is synthetic, not a real screen recording.
+
 Expected exit after the relevant product fixes: **0**. The pre-existing implementation at `37dc272fd9da89ce318b3c6f9b36d1578469bddf` is expected to fail the new preflight-interruption, unsupported-global-flag and Allure evidence-status checks; this is a static expectation and has not been run. The suite also checks empty/corrupt media rejection, unsupported runner contract and session argument, version and private-mode refusal, failing test with successfully read-back synthetic media, passing test with a fake recording-stop failure, and retry isolation. It compares the failed attempt's original result, synthetic video and log hashes before and after the retry. `visualInspection` is never asserted as passed. The mock-generated video is not an original recording of a real browser.
 
 Preflight `SIGINT`, `SIGTERM`, and timeout each wait for the fake version command to create its readiness marker. The fake holds that command; the test asserts a retained `result.json` with the original interruption and `not-run` test status. The underlying preflight subprocess has its own deadline, so these checks can take tens of seconds without a fixed wait to pass.
