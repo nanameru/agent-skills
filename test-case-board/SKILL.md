@@ -13,6 +13,10 @@ When this Skill is used as part of autonomous or scheduled development, first re
 
 The parent owns shared loop rules. This Skill owns YAML test inventory, regression impact, E2E metadata, and the `test-board` CLI.
 
+## Browser E2E entry point
+
+Use `test-board e2e --help` and [the browser E2E contract](references/e2e-entrypoint.md) for a supported, recorded agent-browser run. The Git board retains case definitions; each private run retains its machine result and evidence. A passing test and a decoded video do not replace visual inspection of the actual operation.
+
 Use this skill to keep test intent outside transient chat. The source of truth is `test-board.yaml` in the repository root. Boards, dashboards, GitHub comments, and run reports are views or mirrors; edit the YAML first.
 
 ## Core Workflow
@@ -54,12 +58,13 @@ Run this whenever the board may have drifted from reality, and periodically as a
 test-board gaps --board test-board.yaml --root .
 ```
 
-It reports four kinds of gaps:
+It reports five kinds of gaps:
 
 1. **Open cases without a real test on disk** — `todo`/`doing` cases whose `test_file` is empty or points to a file that does not exist. These are planned-but-unwritten.
 2. **Lying board** — `done` cases whose `test_file` does not exist on disk. Worst kind: the board claims coverage that is not there. Typical cause: the test was written on a branch that never merged to the default branch. Restore the test or set the case back to `todo` with a note saying where the work actually lives.
-3. **Empty layers** — zero cases of a `type` (e.g. `integration` or `regression` missing entirely).
-4. **Cases without linked issues** — weak traceability.
+3. **`done_without_run_evidence`** — `done` cases in the `e2e` or `security` layer without `last_run` or `last_run.evidence`.
+4. **Empty layers** — zero cases of a `type` (e.g. `integration` or `regression` missing entirely).
+5. **Cases without linked issues** — weak traceability.
 
 Fill gaps with this loop (proven in dom-to-pptx-ai#490):
 
@@ -103,6 +108,32 @@ cases:
     issues: [123]
 ```
 
+Each case may list applicable `auth_state` values and a `last_run` record with `revision`, `at`, `provider`, `result`, and `evidence`. For `e2e` and `security` cases marked `done`, `last_run.evidence` must show evidence from that layer; a unit/integration-only `test_file` or evidence does not qualify.
+
+```yaml
+auth_state: [fresh_user, method:testmail_otp]
+last_run:
+  revision: abc123
+  at: "2026-06-12T00:00:00Z"
+  provider: devin-local-playwright
+  result: passed
+  evidence: [.e2e/TC-120/run-1/results.json]
+```
+
+## Authentication State And Test Means
+
+Use `auth_state` as a list of applicable rows:
+
+- `anonymous`: signed out; do not fetch user data or models.
+- `fresh_user` and `existing_user`.
+- `method:<name>` for each login method (e.g. `workos`, `access`, `oauth_mcp`, `legacy_token`, `testmail_otp`).
+- `expired` and `invalid` for expired or incorrect credentials/session state.
+- `logout` and `denied`.
+- `role:<name>` and `plan:<name>` where the app uses roles or plans.
+- `isolation:A_vs_B` for user-data and learning-result separation.
+
+Record the test means as `synthetic-local` (local-only test login, disabled in production and never using production secrets), `testmail`, or `real-provider` (requires human approval). Any row passed only with `synthetic-local` must be recorded as `real auth unverified`.
+
 Recommended `status`: `todo`, `doing`, `done`, `blocked`, `skip`.
 
 Recommended `type`: `unit`, `integration`, `e2e`, `security`, `regression`, `manual`.
@@ -120,6 +151,8 @@ When GitHub Issue-driven development is active:
 ## E2E With Browser Use Cloud
 
 すべてのE2E実行（成功・失敗・中断・再実行）の録画と保存確認は [E2E録画・保存の共通手順](references/e2e-recording.md) に従う。ローカル・headless/CDP・CI・クラウド・端末の違いで省略しない。`last_run` は最新結果への参照であり、過去の実行証跡を上書き・削除しない。実際のテスト結果と録画／保存の達成状況は分けて報告する。
+
+Existing local Playwright and Browser Use Cloud workflows are documented in `references/e2e-devin-local.md` and `references/e2e-browseruse-cloud.md`. They are not supported by the common entry point until their recording session contract and adapter have been demonstrated.
 
 For Browser Use Cloud E2E and video evidence, read `references/e2e-browseruse-cloud.md`.
 

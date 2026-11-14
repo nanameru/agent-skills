@@ -17,6 +17,7 @@ function usage(code = 0) {
   test-board plan-issue --board test-board.yaml --issue 123 --source src/a.ts --feature "feature" --scenario "scenario" [--apply]
   test-board sync-github --board test-board.yaml --issue 123 [--apply]
   test-board serve --board test-board.yaml [--root .] [--port 41800]
+  test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live
 `;
   console.log(text);
   process.exit(code);
@@ -257,6 +258,11 @@ function cmdGaps(args) {
       c.test_file &&
       !fs.existsSync(path.resolve(root, String(c.test_file)))
   );
+  const doneWithoutRunEvidence = board.cases.filter((c) => {
+    if (c.status !== "done" || !["e2e", "security"].includes(c.type)) return false;
+    const evidence = c.last_run?.evidence;
+    return !evidence || (Array.isArray(evidence) && evidence.length === 0);
+  });
   const unlinked = board.cases.filter((c) => !caseIssues(c).length);
 
   const typeCounts = {};
@@ -283,6 +289,11 @@ function cmdGaps(args) {
     console.log(`\nLYING BOARD — done but test_file missing on disk (${doneMissingFile.length}):`);
     printCases(doneMissingFile);
   }
+  if (doneWithoutRunEvidence.length) {
+    gapCount += doneWithoutRunEvidence.length;
+    console.log(`\ndone_without_run_evidence (${doneWithoutRunEvidence.length}):`);
+    printCases(doneWithoutRunEvidence);
+  }
   if (thinLayers.length) {
     gapCount += thinLayers.length;
     console.log(`\nempty layers: ${thinLayers.join(", ")}`);
@@ -302,6 +313,9 @@ function cmdGaps(args) {
   }
   if (doneMissingFile.length) {
     console.log("- done cases with missing files are the worst kind of gap: restore the test or set the case back to todo");
+  }
+  if (doneWithoutRunEvidence.length) {
+    console.log("- add the layer-appropriate last_run record and evidence, or set the case back to todo");
   }
   if (thinLayers.includes("regression")) {
     console.log("- regression=0: reclassify bug-fix-derived cases to type: regression (keep their IDs)");
@@ -466,6 +480,10 @@ function cmdServe(args) {
   });
 }
 
+if (process.argv[2] === 'e2e') {
+  process.argv.splice(2, 1);
+  await import('./e2e-run.mjs');
+} else {
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
 
@@ -483,4 +501,5 @@ try {
 } catch (error) {
   console.error(`test-board: ${error.message}`);
   process.exit(1);
+}
 }
