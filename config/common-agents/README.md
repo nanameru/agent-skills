@@ -26,7 +26,11 @@ patch, target = (pathlib.Path(p).read_text() for p in sys.argv[1:])
 paragraphs = [line[1:] for line in patch.splitlines() if line.startswith('+') and not line.startswith('+++') and len(line) > 1]
 if len(paragraphs) != 1:
     raise SystemExit('patch の段落が曖昧です')
-print('完全一致した段落数:', target.split('\n\n').count(paragraphs[0]))
+lines = target.splitlines()
+count = lines.count(paragraphs[0])
+print('完全一致した段落数:', count)
+if count > 1 or any('Security 2.0' in line and line != paragraphs[0] for line in lines):
+    raise SystemExit('重複・部分適用・別表現の可能性があるため停止します')
 PYCODE
 ```
 
