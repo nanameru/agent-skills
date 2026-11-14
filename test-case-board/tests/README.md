@@ -2,10 +2,28 @@
 
 These are **planned, unverified tests**. The commands below must be run by the designated execution role on a fixed commit. None of the files in this directory launch a browser when imported by the test worker; the explicit driver launches the entrypoint only when invoked. The board tracks plans; per-attempt outcomes are kept privately, not written as `pass` into `test-board.yaml`.
 
-## Two separate layers
+## Local-first verification
 
-- `e2e-fixture/driver.mjs` runs the **real** localhost page through `bin/test-board e2e` and the `test-board-agent-browser-v1` runner. No credential, remote page, direct browser launch, or separate browser session is used by the runner. READY, an actual button click, and CLICKED are named steps. The page sends `/clicked`; the server records timestamped events and the runner captures the browser console in the entrypoint log. Correlate these with step timestamps and the original video. `/pending` is sent within `pending-interruption` only after the entrypoint releases the worker following recording start; the driver then sends the requested signal to the entrypoint process. Timeout instead leaves the operation pending for the entrypoint deadline. No wait or slowdown is added to make a recording pass.
+Local verification is primary; GitHub is used for the Issue/PR and the record of results. On a fixed, clean commit, the designated execution role runs, in order:
+
+1. The 33 local tests across the same four files named by `project.test_command` in `test-board.yaml` (`node --test` on the board script tests, the fake-CLI regressions, the ledger CLI integration tests, and the timeout fixture regression).
+2. The real recorded fixture below, only where needed. When the fixture, runtime, and expectations are unchanged, an earlier real E2E is inherited for its own SHA by immutable blob comparison rather than re-run.
+3. Every attempt — success, failure, interruption, or rerun — follows the standard per-execution recording rules: record the actual screen, save the original video and logs under the approved private root, confirm machine readback (decode/duration/checksum), and perform a separate partial visual inspection. Recording or saving gaps are reported as such, never as a pass.
+4. A summary is recorded on the GitHub Issue/PR with the fixed commit, commands, strict exits, environment, and references to the private evidence. Each past result stays under its own SHA.
+
+## Manual workflow (workflow_dispatch)
+
+`.github/workflows/test-case-board.yml` has `workflow_dispatch` as its only trigger; it does not run on pull requests, pushes, or schedules. On Ubuntu 24.04 with Node 24.22.2, it checks eight JavaScript files for syntax and runs the 33 tests above with the TAP reporter. It checks out `github.sha`, the fixed last commit of the ref chosen at dispatch, so the job tests that commit even if the branch moves while queued. Job logs record the event name, selected ref, expected SHA, actual checkout SHA, UTC, runner OS, and tool versions; the job fails if the two SHAs differ.
+
+`workflow_dispatch` requires the workflow file to exist on the default branch, so whether a manual run can be started while this change is unmerged is unverified and must not be claimed. After the workflow reaches the default branch, run it only when needed by selecting the target ref, then record the selected ref, the actual checkout SHA from the job log, and the strict results. This change starts no run by itself. A workflow definition alone is not evidence of a passing run; consult the job log for its actual result.
+
+CI's fake regressions use synthetic media in an owner-only runner temporary directory; they do not run the local real browser E2E fixture described below. CI uploads no media, logs, or results as artifacts.
+
+## Test layers
+
+- `e2e-fixture/driver.mjs` runs the **real** localhost page through `bin/test-board e2e` and the `test-board-agent-browser-v1` runner. No credential, remote page, direct browser launch, or separate browser session is used by the runner. READY, an actual button click, and CLICKED are named steps. The page sends `/clicked`; the server records timestamped events and the runner captures the browser console in the entrypoint log. Correlate these with step timestamps and the original video. `/pending` is sent within `pending-interruption` only after the entrypoint releases the worker following recording start; the driver then sends the requested signal to the entrypoint process. For timeout, a finite browser command acknowledges `/pending`, then the worker holds the named step open for the entrypoint deadline. Signal scenarios retain their in-flight browser command. No wait or slowdown is added to make a recording pass.
 - `e2e-regression.test.mjs` is a **fake-CLI boundary regression**, not browser E2E. The fake produces synthetic video with local ffmpeg, deliberately empty/corrupt bytes, or a fake stop error, in new directories only. It never reads or modifies an earlier video. A fake `--version` may be held until its own safety deadline to exercise preflight signal/timeout handling. Its marker is observed before sending a signal. The regression keeps its synthetic output and logs privately for diagnosis; it never calls a real browser.
+- `timeout-fixture.test.mjs` drives the actual fixture runner through the actual worker IPC with a browser-command double and localhost HTTP server. It checks `/pending`, completion of the finite command, the still-active named step and worker, and termination by SIGTERM. A temporary IPC probe removes its own listener before reporting on the next event-loop turn; the worker's listener remains in place. This is not a browser, recording, or 45-second entrypoint deadline test.
 
 The reference at `nanameru/dom-to-pptx-ai` commit `3567375f7232b878c584d0d73339d5378f3321ac` uses the CLI JSON `data.result` for `eval`. This runner uses the same shape; `agent-browser` 0.43.0 `get --help` and `wait --help` show commands but do not themselves establish the `get text` JSON data shape. The fixture deliberately does not infer that shape. The fixed reference's successful 0.43.0 recording does not establish abnormal paths or CI behavior here.
 
@@ -26,7 +44,21 @@ export TB_E2E_ENVIRONMENT='OS / browser version / harness'
 
 `TB_TIMEOUT_MS` optionally overrides the entrypoint timeout; default is 120000 ms, or 45000 ms for the deliberately pending timeout scenario. Use a deadline long enough for real setup to reach the pending step. An early timeout is a failure, not a valid timeout test. There is no automatic retry.
 
+## Authentication state
+
+Cases that depend on authentication are classified with the skill's `auth_state` rows — `anonymous`, `fresh_user`, `existing_user`, `method:<name>`, `role:<name>`, `plan:<name>`, and the other values defined in `test-case-board/SKILL.md` — together with that skill's `synthetic-local` / `testmail` / `real-provider` test means. Before executing such a case, confirm the actual state with a dedicated test user and a dedicated session, and keep each row's classification honest.
+
+The tests in this directory run `anonymous` against a localhost fixture and fake CLIs. They are not evidence of a real application's login, an admin role, or any real user account. Real application authentication, admin access, real users, and personal profiles are neither permitted nor verified for this work.
+
 ## Direct fake regressions
+
+For the timeout fixture's worker IPC regression (one case; no real browser or recording):
+
+```sh
+node --test test-case-board/tests/timeout-fixture.test.mjs
+```
+
+The timeout on this regression is only a failure guard for an unresponsive test double; it does not trigger the worker's SIGTERM or change the real driver's deadline. The earlier fixture's indefinitely pending browser eval is expected to fail this check because the mocked command never completes.
 
 ```sh
 node --test test-case-board/tests/e2e-regression.test.mjs
