@@ -517,7 +517,7 @@ cases:
     priority: high
     type: regression
     source: [test-case-board/scripts]
-    test_file: ""
+    test_file: test-case-board/tests/e2e-t3.test.mjs
     issues: [50]
   - id: TC-050-DERIVED
     title: "原本と短縮動画のハッシュ・時刻対応を検証する"
@@ -554,3 +554,15 @@ cases:
     test_file: test-case-board/tests/e2e-fixture/t3-server.test.mjs
     issues: [50]
     command: "T3_FIXTURE_TEST_PRIVATE_DIR=/absolute/path/to/existing-private-dir node --test test-case-board/tests/e2e-fixture/t3-server.test.mjs"
+  - id: TC-050-T3-MOCK
+    title: "合成receiptと動画でT3連携の保存・回帰境界を確認する"
+    feature: "T3 receipt lifecycle mock regression"
+    scenario: "synthetic receipts and video without T3 or browser E2E"
+    expected: "成功・失敗・中断・再試行、受領欠落・所有権・上書き拒否、原本保全とPTS・無効編集を確認する"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/e2e-t3-lifecycle.mjs, test-case-board/scripts/e2e-t3-cli.mjs]
+    test_file: test-case-board/tests/e2e-t3.test.mjs
+    issues: [50]
+    command: "TB_FAKE_TEST_DIR=/absolute/path/to/existing-private-dir node --test test-case-board/tests/e2e-t3.test.mjs"
