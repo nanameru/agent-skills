@@ -14,7 +14,7 @@ cases:
     source: [autonomous-dev, managed-skills.json, config/common-agents/README.md]
     test_file: config/common-agents/README.md
     issues: [51]
-    notes: "AC-01/02/04。READMEの許容差分・依存を基準に原本3ファイルと公開7ファイルを全文確認。一時台本verify-51-v2.pyの全文照合/参照/manifest/restore dry-runと補助privacy検査はexit 0。恒久テストは追加せず、command/環境/失敗履歴/手動判定はevidence参照。実scanの結果ではない。"
+    notes: "AC-01/02/04。READMEの許容差分・依存を基準に原本3ファイルと公開7ファイルを全文確認。一時台本verify-51-v2.pyの全文照合/参照/manifest/restore dry-runと補助privacy検査はexit 0。最終参照確認でE2E録画手順の外部依存も実在確認しREADMEへ明記。恒久テストは追加せず、command/環境/失敗履歴/手動判定はevidenceとIssue履歴を参照。実scanの結果ではない。"
     last_run:
       revision: 97cd98f0dc08b4984a44197202912fbd9fcf0645
       at: "2026-11-14T11:09:12Z"

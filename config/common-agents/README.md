@@ -52,4 +52,4 @@ PYCODE
 - `SKILL.md`「成果物を見る」・「見える化」: ローカル URL と個別プロジェクトの canvas ツールパスを用途別 placeholder に変更。
 - `verified-facts.md`「確かめたこと」: ローカルプレビュー URL を placeholder に変更。`routing.md` は変更なし。
 
-必須の外部 Skill 参照は `github-issue-driven-dev/SKILL.md`、`grilling/SKILL.md`、`requirements-kickoff/SKILL.md` および `requirements-kickoff/references/canvas.md`。いずれも標準 Skill 置き場に実在を確認したが、この登録には含めない。`routing.md` と `verified-facts.md` は同じディレクトリに含める。manifest の `install: false` により通常の restore では導入されない。
+必須の外部 Skill 参照は `github-issue-driven-dev/SKILL.md`、`grilling/SKILL.md`、`requirements-kickoff/SKILL.md` および `requirements-kickoff/references/canvas.md`。E2E の実行・証跡の片付けには `test-case-board/references/e2e-recording.md` も必要。この録画手順は今回の配布元 base には未収録だが、他の依存とともに標準 Skill 置き場で実在を確認した。この登録には外部依存を同梱せず、該当手順の利用前に依存先を用意し、見つからなければ停止する。`routing.md` と `verified-facts.md` は同じディレクトリに含める。manifest の `install: false` により通常の restore では導入されない。
