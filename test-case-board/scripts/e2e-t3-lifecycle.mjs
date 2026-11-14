@@ -62,7 +62,7 @@ function analyze(entries) {
     if (!e.ok) { bad(`${e.kind} failed`); if(e.kind==='start') phase='started'; if(e.kind==='stop') {stop=e; phase='done';} continue; }
     const c=e.structuredContent;
     if (e.kind === 'status') {
-      if (phase === 'initial') { if (!c.available || !Array.isArray(c.tabs)) bad('initial status unavailable'); priorTabs = new Set((c.tabs || []).map(t=>t.tabId)); phase='status'; }
+      if (phase === 'initial') { if (!(c.available === false && c.tabId === null && c.tabs === undefined) && !(c.available === true && Array.isArray(c.tabs))) bad('initial status unavailable or incomplete'); priorTabs = new Set((c.tabs || []).map(t=>t.tabId)); phase='status'; }
       else { if (!['opened','started','stopping'].includes(phase)) bad('status outside lifecycle'); if (!target(c)) bad('target ownership or identity mismatch'); if (pending) { if(e.position !== 'after' || e.operationId !== pending.operationId) bad('missing matching post-status'); pending=null; } else { if(e.position !== 'before' || !e.operationId || before || seenOperations.has(e.operationId)) bad('missing or duplicate pre-status operationId'); before=e.operationId; seenOperations.add(e.operationId); } }
     } else if (e.kind === 'open') {
       if (phase !== 'status' || e.arguments?.reuseExistingTab !== false || !c.tabId || priorTabs?.has(c.tabId)) bad('open must create a new tab');
@@ -87,7 +87,7 @@ function analyze(entries) {
 async function inspectVideo(file, framesFile) {
   const st=await fsp.lstat(file); if (!st.isFile() || !st.size) fail('video missing or empty');
   const firstHash=await hash(file), warnings=[];
-  const probe=await cmd('ffprobe',['-v','warning','-select_streams','v:0','-show_entries','stream=codec_name,width,height:format=duration','-of','json',file]); if(probe.stderr) warnings.push(probe.stderr);
+  const probe=await cmd('ffprobe',['-v','warning','-select_streams','v:0','-show_entries','stream=codec_name,width,height,pix_fmt:format=duration','-of','json',file]); if(probe.stderr) warnings.push(probe.stderr);
   const info=JSON.parse(probe.stdout); if (!info.streams?.length) fail('video stream missing');
   const dec=await cmd('ffmpeg',['-v','warning','-xerror','-i',file,'-map','0:v:0','-f','null','-']); if(dec.stderr) warnings.push(dec.stderr);
   const frames=await cmd('ffprobe',['-v','warning','-select_streams','v:0','-show_frames','-show_entries','frame=pts_time','-of','json',file]); if(frames.stderr) warnings.push(frames.stderr);
@@ -128,11 +128,65 @@ export async function derive(dir, edit) {
     const duration=(s.end-s.start)/s.speed; plans.push({sourceStart:s.start,sourceEnd:s.end,speed:s.speed,sourceFrames:selected,firstRetainedSourcePts:selected[0].pts,lastRetainedSourcePts:selected.at(-1).pts,actualAnchorRule:'first retained frame; setpts resets its PTS to zero',plannedDerivedStart:cursor,plannedDerivedEnd:cursor+duration,planningBasis:'requested duration only; actual frame durations, concat offsets and fps rounding unverified',verified:false}); cursor+=duration;
   }
   const concat=edit.segments.map((_,i)=>`[s${i}]`).join('');
-  filters.push(`${concat}concat=n=${edit.segments.length}:v=1:a=0,tpad=stop_mode=clone:stop_duration=${edit.freezeSeconds},fps=${edit.outputFps}[out]`);
+  filters.push(`${concat}concat=n=${edit.segments.length}:v=1:a=0,tpad=stop_mode=clone:stop_duration=${edit.freezeSeconds},fps=${edit.outputFps},format=yuv420p[out]`);
   const id=randomUUID(), file=path.join(d,`derived-${id}.mp4`), sidecar=path.join(d,`derived-${id}.json`);
-  let status='failed', error=null, inspected=null, warnings=[];
-  try { const enc=await cmd('ffmpeg',['-v','warning','-xerror','-i',source,'-filter_complex',filters.join(';'),'-map','[out]','-an','-n',file]); if(enc.stderr) warnings.push(enc.stderr); inspected=await inspectVideo(file,path.join(d,`derived-${id}-frames.json`)); if(await hash(source)!==sourceHash) fail('source changed during derivation'); status='generated'; } catch(e) { error=e.message; if(e.stderr) warnings.push(e.stderr); }
-  const mapping={schema:'test-board-t3-derived-v1',status,error,source:{file:'recording.mp4',sha256:sourceHash,frames:'source-frames.json'},derived:{file:path.basename(file),sha256:inspected?.sha256 || null,readback:inspected},edit,plannedMapping:plans,verifiedMapping:[],mappingStatus:'unverified',reason:'filter timeline is a plan; frame correspondence and visual content have not been independently verified',warnings,visualInspection:'unverified'};
-  await write(sidecar,mapping); const read=JSON.parse(await fsp.readFile(sidecar,'utf8')); if(read.source.sha256!==sourceHash) fail('derived sidecar readback failed');
-  return {sidecar,status,error};
+  let status='failed', error=null, inspected=null, warnings=[], verifiedMapping=[], verificationError=null;
+  try {
+    const graph=filters.join(';');
+    const enc=await cmd('ffmpeg',['-v','warning','-xerror','-i',source,'-filter_complex',graph,'-map','[out]','-an','-fps_mode','passthrough','-c:v','libx264','-qp','0','-pix_fmt','yuv420p','-n',file]);
+    if(enc.stderr) warnings.push(enc.stderr);
+    inspected=await inspectVideo(file,path.join(d,`derived-${id}-frames.json`));
+    if(inspected.stream.pix_fmt !== 'yuv420p') fail('derived pixel format mismatch');
+    if(await hash(source)!==sourceHash) fail('source changed during derivation');
+    status='generated';
+    try {
+      const md5 = async args => {
+        const r=await cmd('ffmpeg',['-v','warning','-xerror',...args,'-an','-fps_mode','passthrough','-pix_fmt','yuv420p','-f','framemd5','-']);
+        if(r.stderr) warnings.push(r.stderr);
+        const tb=/^#tb 0: (\d+)\/(\d+)$/m.exec(r.stdout); if(!tb || Number(tb[2])===0) fail('framemd5 timebase unavailable');
+        const lines=r.stdout.split('\n').filter(line=>line && !line.startsWith('#'));
+        return lines.map(line=>{ const cols=line.split(',').map(x=>x.trim()); const pts=Number(cols[2])*Number(tb[1])/Number(tb[2]); if(cols.length!==6 || !/^[0-9a-f]{32}$/i.test(cols[5]) || !Number.isSafeInteger(Number(cols[2])) || !Number.isFinite(pts)) fail('invalid framemd5 output'); return {hash:cols[5].toLowerCase(),pts}; });
+      };
+      const sourcePixels=await md5(['-i',source,'-map','0:v:0']);
+      const filteredPixels=await md5(['-i',source,'-filter_complex',graph,'-map','[out]']);
+      const decodedPixels=await md5(['-i',file,'-map','0:v:0']);
+      const derivedFrames=JSON.parse(await fsp.readFile(path.join(d,`derived-${id}-frames.json`),'utf8')).frames;
+      if(sourcePixels.length!==frames.frames.length || filteredPixels.length!==decodedPixels.length || decodedPixels.length!==derivedFrames.length || !decodedPixels.length || filteredPixels.some((f,i)=>f.hash!==decodedPixels[i].hash || Math.abs(f.pts-derivedFrames[i].pts)>0.000001)) fail('frame counts, filter/decode pixels or PTS differ beyond 1 microsecond');
+      const sourceIndices=new Map(), filteredCounts=new Map();
+      sourcePixels.forEach((f,i)=>sourceIndices.set(f.hash,[...(sourceIndices.get(f.hash)||[]),i]));
+      filteredPixels.forEach(f=>filteredCounts.set(f.hash,(filteredCounts.get(f.hash)||0)+1));
+      for(let i=0;i<decodedPixels.length;i++) {
+        const h=decodedPixels[i].hash, candidates=sourceIndices.get(h) || [];
+        if(candidates.length!==1 || filteredCounts.get(h)!==1) continue;
+        const index=candidates[0], sourceFrame=frames.frames[index];
+        if(!edit.segments.some(s=>sourceFrame.pts>=s.start && sourceFrame.pts<s.end)) continue;
+        verifiedMapping.push({sourceFrame:index,sourcePts:sourceFrame.pts,filterFrame:i,filterPts:filteredPixels[i].pts,derivedFrame:i,derivedPts:derivedFrames[i].pts,pixelMd5:h,verification:'unique-source-and-filter-frame-pixel-match'});
+      }
+      if(await hash(source)!==sourceHash || await hash(file)!==inspected.sha256) fail('video changed during frame matching');
+    } catch(e) { verifiedMapping=[]; verificationError=e.message; if(e.stderr) warnings.push(e.stderr); }
+  } catch(e) { error=e.message; if(e.stderr) warnings.push(e.stderr); }
+  const mapping={schema:'test-board-t3-derived-v1',status,error,source:{file:'recording.mp4',sha256:sourceHash,frames:'source-frames.json'},derived:{file:path.basename(file),sha256:inspected?.sha256 || null,readback:inspected},edit,plannedMapping:plans,verifiedMapping,mappingStatus:verifiedMapping.length?'partially-verified':'unverified',verificationError,verificationMethod:'yuv420p framemd5: unique source and filter frame, lossless decoded frame match by ordinal and PTS within 1 microsecond',reason:'pixel equivalence only; repeated identical frames, freeze duplicates, operation meaning, and unpaired frames remain unverified',warnings,visualInspection:'unverified'};
+  await write(sidecar,mapping); const read=JSON.parse(await fsp.readFile(sidecar,'utf8')); if(read.source.sha256!==sourceHash || read.verifiedMapping.length!==verifiedMapping.length) fail('derived sidecar readback failed');
+  return {sidecar,status,error,mappingStatus:mapping.mappingStatus,verifiedFrames:verifiedMapping.length,verificationError};
+}
+
+// A trusted human/harness attests to the visual observation. Range validation
+// checks only that the cited PTS contains real decoded source frames.
+export async function inspect(dir, observation) {
+  const {dir:d}=await getRun(dir);
+  const result=JSON.parse(await fsp.readFile(path.join(d,'result.json'),'utf8'));
+  const source=path.join(d,'recording.mp4'), sourceHash=await hash(source);
+  if(result.recording.readback?.status!=='passed' || sourceHash!==result.recording.readback.sha256) fail('verified source required');
+  const frameData=JSON.parse(await fsp.readFile(path.join(d,'source-frames.json'),'utf8'));
+  if(frameData.sha256!==sourceHash || !Array.isArray(frameData.frames) || !frameData.frames.length) fail('source frame sidecar unavailable');
+  if(!observation || typeof observation.stepId!=='string' || !observation.stepId || observation.verdict!=='confirmed' || typeof observation.observer!=='string' || !observation.observer.trim() || typeof observation.note!=='string' || !observation.note.trim() || !validTime(observation.inspectedAt) || !Number.isFinite(observation.sourceStartPts) || !Number.isFinite(observation.sourceEndPts) || observation.sourceStartPts>observation.sourceEndPts) fail('invalid visual observation');
+  const steps=result.steps.filter(s=>s.id===observation.stepId); if(steps.length!==1) fail('step ID missing or ambiguous');
+  const list=frameData.frames;
+  if(observation.sourceStartPts<list[0].pts || observation.sourceEndPts>list.at(-1).pts) fail('visual range outside actual source PTS');
+  const selected=list.filter(f=>f.pts>=observation.sourceStartPts && f.pts<=observation.sourceEndPts);
+  if(!selected.length) fail('visual range has no decoded source frame');
+  const sidecar=path.join(d,`inspection-${randomUUID()}.json`);
+  const record={schema:'test-board-t3-inspection-v1',runId:result.runId,caseId:result.caseId,source:{file:'recording.mp4',sha256:sourceHash,frames:'source-frames.json'},stepId:observation.stepId,testStepStatus:steps[0].status,visualObservation:observation,actualFrames:{first:selected[0],last:selected.at(-1),count:selected.length},rangeCheck:'passed',seekable:true,seekBasis:'trusted visual observation and actual source PTS; not wall-clock inference'};
+  await write(sidecar,record); const saved=JSON.parse(await fsp.readFile(sidecar,'utf8')); if(saved.source.sha256!==sourceHash || saved.stepId!==record.stepId) fail('inspection sidecar readback failed');
+  return {sidecar,seekable:true};
 }
