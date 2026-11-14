@@ -50,6 +50,20 @@ export function nativeInputSatisfied(native, test) {
   return !native || test.nativeInputOperations > 0;
 }
 
+// Finalize the matching native step even when the ownership observation fails.
+export async function finishNativeStep({ result, step, status, error, observe }) {
+  let observationFailed = false, observationError;
+  try { await observe(); } catch (caught) { observationFailed = true; observationError = caught; }
+  const detail = observationFailed ? String(observationError?.message || observationError || 'ownership observation failed') : null;
+  Object.assign(result.steps.at(-1), {
+    status: observationFailed ? 'failed' : status,
+    finishedAt: new Date().toISOString(),
+    error: [error, detail].filter(Boolean).join('; ') || null,
+  });
+  if (observationFailed || status === 'failed') result.test.failedStep = step;
+  if (observationFailed) throw observationError;
+}
+
 // A minimal protocol transport, not a capture engine. No retries or discovery.
 export class CDP {
   constructor(ws) {

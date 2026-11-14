@@ -8,7 +8,7 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
-import { CDP, checkEndpoint, pageIdentity, sendNativeOperation, nativeInputSatisfied } from './e2e-native-cdp.mjs';
+import { CDP, checkEndpoint, pageIdentity, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
 
 const exec = promisify(execFile);
 const worker = fileURLToPath(new URL('./e2e-worker.mjs', import.meta.url));
@@ -160,6 +160,7 @@ async function main(argv) {
     if (!opts['--url'] || !opts['--chrome'] || opts['--data-kind'] !== 'fixture') throw new Error('native-cdp requires fixture, --url and --chrome');
     const u = new URL(opts['--url']);
     if (!['http:', 'https:'].includes(u.protocol) || !['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || u.username || u.password) throw new Error('native-cdp requires a localhost fixture URL');
+    opts['--url'] = u.href;
     if (!path.isAbsolute(opts['--chrome'])) throw new Error('chrome path must be absolute');
   } else if (opts['--url'] || opts['--chrome']) throw new Error('native options require native-cdp');
   const timeoutMs = Number(opts['--timeout-ms'] || 120000);
@@ -282,7 +283,17 @@ async function main(argv) {
       try {
         if (msg.type === 'ready') { if (readyId) throw new Error('duplicate ready'); readyId = msg.id; readyResolve(); return; }
         if (msg.type === 'step-start') { if (native) await observeNative('step-before'); if (currentStep) { protocolError = true; throw new Error('overlapping step'); } currentStep = msg.step; result.steps.push({ id: msg.step, startedAt: new Date().toISOString(), status: 'running' }); }
-        else if (msg.type === 'step-end') { if (native) await observeNative('step-after'); if (currentStep !== msg.step) { protocolError = true; throw new Error('step mismatch'); } Object.assign(result.steps.at(-1), { status: msg.status, finishedAt: new Date().toISOString(), error: msg.error || null }); if (msg.status === 'failed') result.test.failedStep = msg.step; currentStep = null; }
+        else if (msg.type === 'step-end') {
+          if (currentStep !== msg.step) { protocolError = true; throw new Error('step mismatch'); }
+          if (native) {
+            try { await finishNativeStep({ result, step: msg.step, status: msg.status, error: msg.error, observe: () => observeNative('step-after') }); }
+            finally { currentStep = null; }
+          } else {
+            Object.assign(result.steps.at(-1), { status: msg.status, finishedAt: new Date().toISOString(), error: msg.error || null });
+            if (msg.status === 'failed') result.test.failedStep = msg.step;
+            currentStep = null;
+          }
+        }
         else if (msg.type === 'cdp-send' && native) {
           if (!currentStep || currentStep !== msg.step || (msg.sessionId !== nativeSession && !(msg.method === 'Target.getTargets' && msg.sessionId === null)) || typeof msg.method !== 'string' || !/^[A-Za-z]+\.[A-Za-z]+$/.test(msg.method) || (/^(Target|Browser)\./.test(msg.method) && msg.method !== 'Target.getTargets') || !msg.params || typeof msg.params !== 'object' || Array.isArray(msg.params) || !Number.isSafeInteger(msg.timeoutMs) || msg.timeoutMs < 1 || msg.timeoutMs > 120000) { protocolError = true; throw new Error('invalid native operation'); }
           append({ type: 'cdp-send', step: currentStep, method: msg.method, params: msg.params, started: new Date().toISOString() });
