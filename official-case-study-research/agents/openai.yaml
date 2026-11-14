@@ -1,0 +1,4 @@
+interface:
+  display_name: "公式事例リサーチ"
+  short_description: "企業の公式事例と導入プロセスを一次情報から安全に整理する"
+  default_prompt: "Use $official-case-study-research to separate confirmed case-study facts, rollout mechanisms, and undisclosed details from official sources."
