@@ -604,6 +604,9 @@ test('mock full-range sparse VFR cut bounds the derived duration and preserves s
   assert.equal(attempt.result.steps[0].frameMapping.seekable, false);
 
   const derivedFile = path.join(attempt.runDir, mapping.derived.file);
+  const derivedStream = (await syntheticProbe(derivedFile, 'stream=pix_fmt,color_range', '-show_streams')).streams[0];
+  assert.equal(derivedStream.pix_fmt, 'yuv420p');
+  assert.equal(derivedStream.color_range, 'tv');
   const derivedBytes = await readFile(derivedFile);
   assert.notEqual(mapping.derived.file, 'recording.mp4');
   assert.equal(mapping.derived.sha256, sha(derivedBytes));
@@ -694,6 +697,10 @@ test('mock source with unknown range can render but cannot verify source frame c
   assert.equal(mapping.mappingStatus, 'unverified');
   assert.deepEqual(mapping.verifiedMapping, []);
   assert.match(mapping.verificationError, /range unknown/i);
+  const derivedFile = path.join(attempt.runDir, mapping.derived.file);
+  const derivedStream = (await syntheticProbe(derivedFile, 'stream=pix_fmt,color_range', '-show_streams')).streams[0];
+  assert.equal(derivedStream.pix_fmt, 'yuv420p');
+  assert.equal(derivedStream.color_range, 'tv');
   assert.deepEqual(mapping.timeline.verifiedBoundaries, []);
   assert.equal(mapping.visualInspection, 'unverified');
   assert.deepEqual(await readFile(input), original);
