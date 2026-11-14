@@ -558,7 +558,7 @@ cases:
     title: "合成receiptと動画でT3連携の保存・回帰境界を確認する"
     feature: "T3 receipt lifecycle mock regression"
     scenario: "synthetic receipts and video without T3 or browser E2E"
-    expected: "成功・失敗・中断・再試行、受領欠落・所有権・上書き拒否、原本保全とPTS・無効編集を確認する"
+    expected: "初回status・成功・失敗・中断・再試行、受領欠落・所有権・上書き拒否、原本保全とPTS・無効編集・inspectの拒否を確認する"
     status: todo
     priority: high
     type: integration

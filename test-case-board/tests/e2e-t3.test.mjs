@@ -10,7 +10,7 @@ import path from 'node:path';
 import { before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { prepare, receipt, finalize, derive } from '../scripts/e2e-t3-lifecycle.mjs';
+import { prepare, receipt, finalize, derive, inspect } from '../scripts/e2e-t3-lifecycle.mjs';
 
 const exec = promisify(execFile);
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -48,13 +48,14 @@ const owned = () => ({ available: true, tabId: 'fixture-tab', control: { owner: 
 
 function receipts({ testStatus = 'passed', stepOutcome = 'passed', interruption = null,
   signal = null, failedStep = null, missingPost = false, badOwner = false,
-  stopFailed = false, stopPath = video } = {}) {
+  stopFailed = false, stopPath = video, initiallyUnavailable = false } = {}) {
   const status = (n, position, operationId, content = owned()) => ({ kind: 'status', at: time(n), ok: true,
     position, operationId, structuredContent: content });
   const bad = owned();
   if (badOwner) bad.control.ownedByCaller = false;
   const entries = [
-    { kind: 'status', at: time(0), ok: true, structuredContent: { available: true, tabs: [] } },
+    { kind: 'status', at: time(0), ok: true, structuredContent: initiallyUnavailable
+      ? { available: false, tabId: null } : { available: true, tabs: [] } },
     { kind: 'open', at: time(1), ok: true, arguments: { reuseExistingTab: false }, structuredContent: owned() },
     status(2, 'before', 'start-1'),
     { kind: 'start', at: time(3), ok: true, operationId: 'start-1',
@@ -89,7 +90,7 @@ async function retained(dir) {
     .map(async (name) => [name, sha(await bytes(dir, name))])));
 }
 
-test('mock lifecycle keeps source, decoded PTS and an unverified derived mapping separate', async () => {
+test('mock lifecycle keeps source, decoded PTS and individual derived frame matches separate', async () => {
   const attempt = await run();
   const result = attempt.result;
   assert.equal(attempt.ok, true);
@@ -128,8 +129,20 @@ test('mock lifecycle keeps source, decoded PTS and an unverified derived mapping
   assert.equal(mapping.source.sha256, sha(source));
   assert.equal(mapping.plannedMapping[0].firstRetainedSourcePts, selected[0].pts);
   assert.equal(mapping.plannedMapping[0].lastRetainedSourcePts, selected.at(-1).pts);
-  assert.equal(mapping.mappingStatus, 'unverified');
-  assert.deepEqual(mapping.verifiedMapping, []);
+  assert.equal(mapping.mappingStatus, 'partially-verified');
+  assert.equal(mapping.verificationError, null);
+  assert.ok(mapping.verifiedMapping.length > 0);
+  assert.equal(new Set(mapping.verifiedMapping.map((match) => match.pixelMd5)).size, mapping.verifiedMapping.length);
+  assert.equal(new Set(mapping.verifiedMapping.map((match) => match.sourceFrame)).size, mapping.verifiedMapping.length);
+  assert.equal(new Set(mapping.verifiedMapping.map((match) => match.derivedFrame)).size, mapping.verifiedMapping.length);
+  const derivedFrames = await json(attempt.runDir, mapping.derived.readback.frames);
+  for (const match of mapping.verifiedMapping) {
+    assert.equal(match.sourcePts, frames.frames[match.sourceFrame].pts);
+    assert.equal(match.derivedPts, derivedFrames.frames[match.derivedFrame].pts);
+    assert.ok(match.sourcePts >= start && match.sourcePts < end);
+    assert.ok(Math.abs(match.filterPts - match.derivedPts) <= 0.000001);
+    assert.match(match.pixelMd5, /^[a-f0-9]{32}$/);
+  }
   assert.equal(mapping.visualInspection, 'unverified');
   assert.equal(mapping.derived.readback.status, 'passed');
   assert.equal(mapping.derived.sha256, sha(await bytes(attempt.runDir, mapping.derived.file)));
@@ -147,6 +160,20 @@ test('mock lifecycle keeps source, decoded PTS and an unverified derived mapping
   ];
   for (const invalid of invalidEdits) await assert.rejects(derive(attempt.runDir, invalid), /invalid|fewer than two/);
   assert.deepEqual(await retained(attempt.runDir), preserved);
+
+  // This is a synthetic attestation for API testing, not a visual inspection.
+  const observation = { stepId: 'click-fixture', verdict: 'confirmed', observer: 'mock-observer',
+    inspectedAt: time(13), sourceStartPts: frames.frames[1].pts, sourceEndPts: frames.frames[2].pts,
+    note: 'Synthetic observation; no human inspected the video.' };
+  await assert.rejects(inspect(attempt.runDir, { ...observation, stepId: 'missing-step' }), /step ID/);
+  await assert.rejects(inspect(attempt.runDir, { ...observation, sourceEndPts: end + 1 }), /outside actual source PTS/);
+  const inspection = await inspect(attempt.runDir, observation);
+  const sidecar = JSON.parse(await readFile(inspection.sidecar, 'utf8'));
+  assert.equal(sidecar.stepId, observation.stepId);
+  assert.equal(sidecar.source.sha256, sha(source));
+  assert.equal(sidecar.rangeCheck, 'passed');
+  assert.equal(sidecar.seekable, true);
+  assert.deepEqual(await retained(attempt.runDir), preserved);
 });
 
 test('mock failure and interruption remain failed while retry uses a distinct preserved run', async () => {
@@ -157,7 +184,7 @@ test('mock failure and interruption remain failed while retry uses a distinct pr
   assert.equal(failed.result.recording.save, 'verified');
   assert.equal(failed.result.recording.readback.status, 'passed');
   const original = await retained(failed.runDir);
-  const retried = await run({ retryOf: failed.runId });
+  const retried = await run({ retryOf: failed.runId, initiallyUnavailable: true });
   assert.equal(retried.ok, true);
   assert.notEqual(retried.runId, failed.runId);
   assert.notEqual(retried.runDir, failed.runDir);
