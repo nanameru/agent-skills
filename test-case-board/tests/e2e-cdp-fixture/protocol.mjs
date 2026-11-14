@@ -38,6 +38,21 @@ export function publicIdentity(identity) {
     contextSetHashes: identity.contexts.map(hash) };
 }
 
+// The input test, recording evidence, and an interrupted run are separate facts.
+export function experimentConclusion(result) {
+  const { test, recording, artifacts } = result;
+  if (result.interruption || result.error || test.status !== 'passed'
+      || recording.start !== 'passed' || recording.stop !== 'passed'
+      || recording.save !== 'verified' || recording.readback.status !== 'passed'
+      || artifacts.logStatus !== 'verified') return { conclusion: 'incomplete', exitCode: 1 };
+  const comparisons = [recording.sameTargetAtStart, recording.sameContextAtStart, recording.sameContextSetAtStart];
+  if (comparisons.some((value) => value === false)) {
+    return { conclusion: 'inconclusive-start-identity-changed', exitCode: 2 };
+  }
+  if (!comparisons.every((value) => value === true)) return { conclusion: 'incomplete', exitCode: 1 };
+  return { conclusion: 'automatic-checks-passed-manual-review-required', exitCode: 0 };
+}
+
 // A minimal protocol transport, not a capture engine. No retries or discovery.
 export class CDP {
   constructor(ws) {

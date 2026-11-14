@@ -9,9 +9,15 @@
 - 標準 recorder に `record start` / `record stop` を依頼する。`protocol.mjs` は CDP 入力・ID 観測用の通信のみで、独自 capture engine ではない。[CDP Target API](https://chromedevtools.github.io/devtools-protocol/tot/Target/) の `getTargets`、`getBrowserContexts`、`attachToTarget`、`getTargetInfo` を使う。実際の recorder 内部 target を外部から直接取得したわけではないので `captureTargetIdentity` は `unverified` のまま。動画とログの一致は別途目視する。
 - 既存 `scripts/e2e-run.mjs` は CLI の active target が録画前後で同一であることを先に要求し、worker の CDP 接続を受け付けない。今回の再作成の有無を観測し、変化した場合も録画後の target へ接続する実験にはそのまま使えない。全 decode・実 PTS・hash 読戻しの考え方を参照し、共通 runner・dispatch は変更していない。#50 の T3 lifecycle/result/abort は流用していない。
 
+## 初回失敗と再開条件
+
+固定 `c06fe760521b6e9ae4125efa76acecc55c1b0887` の初回は prepare exit 0、run exit 1。録画前に CLI は 1 active tab を返したが CDP の page は 2 件で、単一 page の検査で停止した。worker・入力・録画は未実施。その実行の target 集合はログに保存されておらず、余分な page の正体は不明。[固定版の source](https://github.com/vercel-labs/agent-browser/blob/1cc19526f3641c8543d55aa6700e7c55b37ac356/cli/src/native/browser.rs#L175-L184) では CLI は内部 URL を追跡対象から除き、[追跡 page が空のとき](https://github.com/vercel-labs/agent-browser/blob/1cc19526f3641c8543d55aa6700e7c55b37ac356/cli/src/native/browser.rs#L878-L909) `about:blank` を作るため、件数が違う可能性がある。親の read-only 照合では初回 profile の session 履歴に `chrome://new-tab-page/` と fixture URL があり、Preferences は正常終了・startup URL 未指定だった。ただし履歴は当時の target 集合と直接対応しないため、今回の原因と断定できない。
+
+[core commands](https://github.com/vercel-labs/agent-browser/blob/1cc19526f3641c8543d55aa6700e7c55b37ac356/skill-data/core/references/commands.md#L556-L560) は `--args` を公開し、[分割処理](https://github.com/vercel-labs/agent-browser/blob/1cc19526f3641c8543d55aa6700e7c55b37ac356/cli/src/flags.rs#L25-L55)と [Chrome 引数の追加・起動](https://github.com/vercel-labs/agent-browser/blob/1cc19526f3641c8543d55aa6700e7c55b37ac356/cli/src/native/cdp/chrome.rs#L570-L580)は `about:blank` を起動引数として渡せることを示す。[Chromium の headless 説明](https://chromium.googlesource.com/chromium/src/+/79a727c99ca83beccd458cb1d18b6f27fda3d720/headless/README.md)にも起動時 URL の例があり、初期 new-tab を避ける候補としては妥当。ただし全 CDP page が常に 1 件になる保証や、今回の余分な page が消える根拠は示していない。起動引数や単一 page の検査は変更していない。原因を確かめるには初回の target 集合に相当する根拠が必要で、既存証跡に無ければ別の観測が必要になる。実行再開の可否と最小観測は親が判断する。以下はその判断後の台本であり、追加実行の指示ではない。
+
 ## 次の実行係へ
 
-1. 親から渡された commit SHA を固定し、checkout が clean であることを確認する。Node 22+、指定 Chrome executable、`npx`、`ffmpeg` の libvpx、`ffprobe`、既存 owner-only private evidence root が必要。何もインストール・設定変更しない。`--prepare` は依存確認だけで、サーバー・ブラウザー・録画を起動しない。
+1. 親から渡された commit SHA を固定し、checkout が clean であることを確認する。Node 22+、指定 Chrome executable、`npx`、`ffmpeg` の libvpx、`ffprobe`、既存 owner-only private evidence root が必要。`--prepare` は `npx --yes agent-browser@0.43.0 --version` を実行し、npm cache に固定版がなければ取得・キャッシュする場合がある。グローバル install や設定変更は行わず、サーバー・ブラウザー・録画も起動しない。`--run` も同じ事前確認を行う。
 
    ```sh
    COMMIT='<親が採用したこの台本の完全な commit SHA>'
@@ -25,8 +31,8 @@
    node test-case-board/tests/e2e-cdp-fixture/run.mjs --run --chrome "$CHROME" --commit "$COMMIT"
    ```
 
-3. コマンドの exit と出力の private `result.json` を確認する。開始前後・操作前後の target/context hash と時刻、worker の exit/signal、録画 start/stop、全 decode、実 decoded-frame の PTS、録画とログの SHA-256 読戻しを同じ試行に残す。生動画・ログ・profile は既存 private root 直下の新しい `issue54-<UUID>` だけに保存し、削除・上書きしない。操作時の x/y は private log の step に記録する。`visualInspection: unverified` は自動で変更されない。
-4. 保存された元動画を別途見て、fixture・対象クリック・結果表示が記録されているか、ログの時刻や PTS と照合する。例えば `ffprobe -v error -select_streams v:0 -show_frames -show_entries frame=pts_time -of flat <private-video>` で全実 PTS を列挙できる。全 decode や hash の成功だけで目視済み・同一映像と判定しない。生ログ、元動画、実際に目視した範囲を区別し、公開記録に private 絶対 path や endpoint を載せない。
+3. コマンドの exit と出力の private `result.json` を確認する。開始前後の `sameTargetAtStart`・context 比較と、操作後の `workerTargetIdentity`・worker exit/signal を分けて記録する。開始時に target/context が変化したまま自動検査が通った場合は exit 2、`inconclusive-start-identity-changed` とし、両立不可と断定せず追加評価を要する。exit 0 も自動検査の結果であり、両立実証の合格を意味しない。`test.status` は入力テストの完了結果で、後処理中の中断は別の `interruption` と非 0 exit で表す。結果確定後に観測した signal は stderr に区別して出し非 0 とする。録画 start/stop、全 decode、実 decoded-frame の PTS、録画とログの SHA-256 読戻しを同じ試行に残す。生動画・ログ・profile は既存 private root 直下の新しい `issue54-<UUID>` だけに保存し、削除・上書きしない。操作時の x/y は private log の step に記録する。
+4. 標準 CLI の [record コマンド](https://github.com/vercel-labs/agent-browser/blob/1cc19526f3641c8543d55aa6700e7c55b37ac356/cli/src/commands.rs#L1868-L1894) に status はない。start/stop 応答は操作中ずっと有効だった証拠ではなく、`activeDuringOperation` と recorder 内部の `captureTargetIdentity` は `unverified` のまま。PTS は動画側の時刻であり、ログの wall clock や操作区間との対応は取得していない（`ptsToWallClockMapping` と `operationCoverage` は `unverified`）。別途元動画を目視し、fixture・対象クリック・結果表示が映った範囲を確認する。例えば `ffprobe -v error -select_streams v:0 -show_frames -show_entries frame=pts_time -of flat <private-video>` で全実 PTS を列挙できる。全 decode や hash の成功だけで目視済み・同一映像と判定しない。生ログ、元動画、実際に目視した範囲を区別し、公開記録に private 絶対 path や endpoint を載せない。
 
 いずれかの準備、単一 target/context の確認、標準録画、再接続、native 入力、assert、終了、保存、読戻しが失敗したら、その部分を未達として停止する。両立不可なら adapter 実装へ進まない。同じ原因の失敗が 2 回に達したら再試行しない。1 回目の失敗を削除・上書きせず、再試行が明示されたときも新 UUID の別試行とする。プロセスの強制終了などで `finally` が動かなければ、可能な限り残存データを保全し、欠落を報告する。標準録画の開始や停止が不確実でも台本は停止を試みるが、成功と推測しない。
 

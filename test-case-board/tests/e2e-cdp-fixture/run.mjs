@@ -10,7 +10,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { execFile, fork } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { CDP, checkEndpoint, pageIdentity, publicIdentity } from './protocol.mjs';
+import { CDP, checkEndpoint, pageIdentity, publicIdentity, experimentConclusion } from './protocol.mjs';
 
 const exec = promisify(execFile);
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -68,12 +68,26 @@ const result = { schema: 'issue54-ac5-experiment-v1', runId: id, issue: 54, data
   git: { head: pre.head, dirty: false }, command: ['node', 'test-case-board/tests/e2e-cdp-fixture/run.mjs', ...args],
   environment: { node: process.version, platform: process.platform,
     arch: process.arch, chromeExecutable: chrome, agentBrowser: pre.version },
-  test: { caseId: 'AC-5-fixture', status: 'not-run', workerExitCode: null, workerSignal: null },
+  test: { caseId: 'AC-5-fixture', status: 'not-run', completedAt: null,
+    workerExitCode: null, workerSignal: null, workerTargetIdentity: 'unverified' },
   recording: { start: 'not-attempted', stop: 'not-attempted', save: 'not-verified',
-    captureTargetIdentity: 'unverified', readback: { status: 'not-attempted', visualInspection: 'unverified' } },
-  artifacts: { log: 'run.jsonl', video: 'recording.webm' }, error: null };
-let server, opened = false, startAttempted = false, interrupted = null, worker = null, workerClosed = null;
-const onSignal = (signal) => { interrupted ||= signal; if (worker?.exitCode === null && worker?.signalCode === null) worker.kill('SIGTERM'); };
+    sameTargetAtStart: null, sameContextAtStart: null, sameContextSetAtStart: null,
+    activeDuringOperation: 'unverified', captureTargetIdentity: 'unverified',
+    ptsToWallClockMapping: 'unverified', operationCoverage: 'unverified',
+    readback: { status: 'not-attempted', visualInspection: 'unverified' } },
+  artifacts: { log: 'run.jsonl', video: 'recording.webm' }, error: null,
+  interruption: null, conclusion: 'incomplete' };
+let server, opened = false, startAttempted = false, interrupted = null, interruptionAt = null;
+let finalized = false, lateSignal = null, exitCode = 1, worker = null, workerClosed = null;
+const onSignal = (signal) => {
+  if (finalized) {
+    if (!lateSignal) { lateSignal = signal; console.error(JSON.stringify({ interruption: signal, phase: 'after-result-finalization' })); }
+    process.exitCode = 1;
+    return;
+  }
+  if (!interrupted) { interrupted = signal; interruptionAt = new Date().toISOString(); }
+  if (worker?.exitCode === null && worker?.signalCode === null) worker.kill('SIGTERM');
+};
 const onInt = () => onSignal('SIGINT'), onTerm = () => onSignal('SIGTERM');
 process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
 const timer = setTimeout(() => onSignal('timeout'), 120000);
@@ -149,6 +163,9 @@ try {
   const endpointAfter = checkEndpoint((await browser(['get', 'cdp-url'])).cdpUrl);
   assert.equal(endpointAfter, endpoint, 'browser endpoint changed after recording start');
   const after = await observe('after-record-start', endpointAfter, url);
+  result.recording.sameTargetAtStart = before.targetId === after.targetId;
+  result.recording.sameContextAtStart = before.contextId === after.contextId;
+  result.recording.sameContextSetAtStart = JSON.stringify(before.contexts) === JSON.stringify(after.contexts);
   result.recording.targetChangedAtStart = before.targetId !== after.targetId;
   result.recording.contextChangedAtStart = before.contextId !== after.contextId;
   result.recording.contextSetChangedAtStart = JSON.stringify(before.contexts) !== JSON.stringify(after.contexts);
@@ -168,7 +185,10 @@ try {
   const post = await observe('after-worker', endpointAfter, url);
   assert.equal(post.targetId, after.targetId, 'target changed during operation');
   assert.equal(post.contextId, after.contextId, 'context changed during operation');
+  ensureRunning();
+  result.test.workerTargetIdentity = publicIdentity(after);
   result.test.status = 'passed';
+  result.test.completedAt = new Date().toISOString();
 } catch (error) {
   result.error = error.message;
   if (startAttempted && result.recording.start !== 'passed') result.recording.start = 'failed';
@@ -192,17 +212,26 @@ try {
   }
   if (opened) { try { await browser(['close'], true); } catch (error) { await append({ type: 'close-error', message: error.message }); result.error ||= 'browser close failed'; } }
   if (server) await new Promise((resolve) => server.close(resolve));
-  result.finishedAt = new Date().toISOString(); result.interruption = interrupted;
   await log.sync(); await log.close();
   try {
     const first = await shaFile(logPath), second = await shaFile(logPath);
     assert.equal(first, second); result.artifacts.logSha256 = second; result.artifacts.logStatus = 'verified';
   } catch { result.artifacts.logStatus = 'failed'; }
+  // Finalize without yielding between the interruption snapshot and readback.
+  result.finishedAt = new Date().toISOString();
+  result.interruption = interrupted ? { reason: interrupted, observedAt: interruptionAt } : null;
+  const assessment = experimentConclusion(result);
+  result.conclusion = assessment.conclusion; exitCode = assessment.exitCode;
   const resultPath = path.join(dir, 'result.json');
-  await fsp.writeFile(resultPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-  const saved = JSON.parse(await fsp.readFile(resultPath, 'utf8'));
+  finalized = true;
+  fs.writeFileSync(resultPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+  const saved = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
   assert.equal(saved.runId, id, 'result readback failed');
+  console.log(JSON.stringify({ result: resultPath, test: result.test, recording: result.recording,
+    conclusion: result.conclusion, error: result.error, interruption: result.interruption }));
+  // Report signals observed after result finalization separately and fail the process.
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setTimeout(resolve, 0));
   process.removeListener('SIGINT', onInt); process.removeListener('SIGTERM', onTerm);
-  console.log(JSON.stringify({ result: resultPath, test: result.test, recording: result.recording, error: result.error, interruption: interrupted }));
 }
-if (interrupted || result.error || result.test.status !== 'passed' || result.recording.start !== 'passed' || result.recording.stop !== 'passed' || result.recording.save !== 'verified' || result.artifacts.logStatus !== 'verified') process.exitCode = 1;
+process.exitCode = lateSignal ? 1 : exitCode;
