@@ -2,6 +2,12 @@
 
 These are **planned, unverified tests**. The commands below must be run by the designated execution role on a fixed commit. None of the files in this directory launch a browser when imported by the test worker; the explicit driver launches the entrypoint only when invoked. The board tracks plans; per-attempt outcomes are kept privately, not written as `pass` into `test-board.yaml`.
 
+## Pull request CI
+
+`.github/workflows/test-case-board.yml` runs on pull requests that change the workflow, `test-case-board/**`, or the root `test-board.yaml`, regardless of base branch. On Ubuntu 24.04 with Node 24.22.2, it checks six JavaScript files for syntax and runs the existing 32 tests with the TAP reporter. Job logs record the PR head and actual checkout SHA, UTC, runner OS, and tool versions; the job fails if the two SHAs differ. It checks out the PR head explicitly, so this is not a test of GitHub's synthetic merge SHA.
+
+CI's fake regressions use synthetic media in an owner-only runner temporary directory; they do not run the local real browser E2E fixture described below. CI uploads no media, logs, or results as artifacts. A workflow definition alone is not evidence of a passing run; consult the job log for its actual result.
+
 ## Two separate layers
 
 - `e2e-fixture/driver.mjs` runs the **real** localhost page through `bin/test-board e2e` and the `test-board-agent-browser-v1` runner. No credential, remote page, direct browser launch, or separate browser session is used by the runner. READY, an actual button click, and CLICKED are named steps. The page sends `/clicked`; the server records timestamped events and the runner captures the browser console in the entrypoint log. Correlate these with step timestamps and the original video. `/pending` is sent within `pending-interruption` only after the entrypoint releases the worker following recording start; the driver then sends the requested signal to the entrypoint process. Timeout instead leaves the operation pending for the entrypoint deadline. No wait or slowdown is added to make a recording pass.
