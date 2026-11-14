@@ -63,6 +63,11 @@
       "name": "figma-design-source",
       "source": "nanameru/agent-skills",
       "path": "figma-design-source"
+    },
+    {
+      "name": "promo-video-remotion",
+      "source": "nanameru/agent-skills",
+      "path": "promo-video-remotion"
     }
   ],
   "postInstallLinks": [

@@ -13,6 +13,7 @@ npx skills add nanameru/agent-skills --skill official-case-study-research -g -y 
 npx skills add nanameru/agent-skills --skill slide-design-guide -g -y --copy
 npx skills add nanameru/slide-archetype-gen-skill --skill slide-archetype-gen -g -y --copy
 npx skills add nanameru/agent-skills --skill figma-design-source -g -y --copy
+npx skills add nanameru/agent-skills --skill promo-video-remotion -g -y --copy
 
 mkdir -p "$HOME/.local/bin" "$HOME/.claude/skills" "$HOME/.codex/skills"
 ln -sfn "$HOME"/.agents/skills/github-issue-driven-dev "$HOME"/.claude/skills/github-issue-driven-dev
