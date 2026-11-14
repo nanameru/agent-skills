@@ -12,6 +12,24 @@ test-board e2e --provider t3 inspect --run /private/evidence/TC-001-UUID --input
 
 prepare の JSON 出力の `runDir` と `runId` を使う。retry は新しい prepare に `--retry-of <prior-run-UUID>` を渡す。run は owner-only UUID ディレクトリで、既存ファイルを上書きしない。ハーネスは各 receipt を順次渡し、前の CLI の終了を待つ。ライブラリ `scripts/e2e-t3-lifecycle.mjs` は `prepare`, `receipt`, `finalize`, `derive`, `inspect` を export する。CLI と同じ引数・制約を守る。
 
+## 完全 receipt の事前検査（guard）
+
+新しい空 run に対して下記を1プロセスで起動し、stdin/stdout の **NDJSON** を1行ずつ往復する。各応答は `{ok:true,result:...}` または `{ok:false,error:...}`。JSON と応答は private に扱う。既存 `receipt` は互換性のため残すが、guard を迂回する raw 経路に事前検査はない。既存 finalize / result v1 / 動画原本の処理は共通のまま。
+
+```sh
+node test-case-board/scripts/e2e-t3-cli.mjs guard --run "$RUN_DIR"
+```
+
+1. `{"action":"begin","kind":"initial"}` → 発行された `result.ticket` の `tool` と `arguments` をハーネスが正式 T3 tool に渡す。1呼出しずつ完了を待ち、実際に返った標準 `CallToolResult` 全体を `response` に入れる。受理入力の形は `{"action":"accept","envelope":{"ticket":<直前に発行されたticket全体>,"tool":"<実際に呼んだtool名>","callId":"<呼出しごとに一意>","responseId":"<応答envelopeごとに一意>","startedAt":"<実呼出し直前のISO時刻>","finishedAt":"<実呼出し完了直後のISO時刻>","response":<実際のCallToolResult>}}`。ticket の run・tool・arguments・boundary・operationId を変更しない。時刻は直列で単調、開始は終了以前。`response.isError` と `structuredContent` は標準応答の値を使う。
+2. `{"action":"begin","kind":"open","arguments":{"reuseExistingTab":false,"url":"http://localhost:PORT/"}}` を同様に受理する。guard は新規 tab と所有権を照合する。`{"action":"begin","kind":"start"}` 以降は、受理応答に次の `ticket` がある間、必ずその呼出しと受理を繰り返す。各操作について fresh `preview_status` before → 指定 tool → fresh `preview_status` after の順に generator が operationId と boundary を付ける。
+3. 例: `{"action":"begin","kind":"step","stepId":"click-fixture","tool":"preview_act","arguments":{"action":"click","locator":"aria-ref=REF"}}`。stepId は最初の status 呼出しより前に必須。tabId は guard が付与する。対応 tool は `preview_act` / `preview_evaluate` / `preview_snapshot` / `preview_screenshot`。step の **operation** 応答だけ、envelope に `"outcome":"passed"` または `"failed"` を加える。これはハーネスが実応答と assertion から一度だけ正規化する値であり、標準 T3 応答のフィールドではない。tool error は `failed` にする。未設定・不正なら次操作を出さず失敗記録を残す。generator が stepId / outcome / 実開始終了・元応答を同じ receipt に結び付ける。
+4. 最終 after-status の後に `{"action":"test","result":{"at":"<実判定時刻>","status":"passed","exitCode":0,"signal":null,"interruption":null,"failedStep":null}}` を送る。失敗は `status:failed` と実際の exitCode / failedStep を渡す。扱える中断では実呼出しの終了または例外を待ってから `{"action":"abort","at":"<観測時刻>","error":{"name":"AbortError","message":"<実際の内容>"}}` を送り、失敗と中断を記録する。未完了の呼出しと stop を並列にしない。ハーネスは finally で `{"action":"begin","kind":"stop"}` とその ticket 群、続けて `{"action":"finalize"}` を実行する。finalize 応答の `result.ok` は既存 finalize の判定であり、CLI の transport の `ok` とは別。
+5. 事前検査や受理が失敗したら次の step は出ない。すでに記録された失敗を消さず、stop と finalize は引き続き試す。stop 前の status 自体が失敗した場合は `{"action":"cleanup"}` で一度だけ stop の ticket を出し、その実応答と可能なら after-status を受理して finalize する。この救済は before 欠落として protocol failure のまま保存を試み、成功へ読み替えない。stop ticket 発行後に応答が失われた場合は重複 stop を自動発行しない。強制終了・EOF・マシン障害のあとに処理が走る保証はない。
+
+発行された ticket、callId、responseId と実応答を既存 `run.log` の各 receipt に格納する。重複 callId または responseId、open と status の tool/ticket の食い違い、境界・operationId・時刻の欠落や逆転を拒否する。同一 JSON 内容の新しい status は拒否しない。guard は1 run/1プロセスで逐次動き、owner-only の `guard-owner` マーカーで2番目の guard を拒む。プロセス消失後は同じ guard を再開せず、既存 raw `finalize` で欠落を失敗として残す。raw 経路との同時使用や別の呼出しを混ぜない責任はハーネスにある。
+
+標準応答に callId / responseId / 時刻が付くと仮定しない。ハーネスが実際の各呼出しの周囲で一意な識別子と時刻を与え、発行 ticket・実引数・戻り値をそのまま結び付ける信頼境界である。署名や第三者認証ではなく、古い応答に偽の新 ID を付ける、あるいは ticket と違う引数で呼ぶ不誠実なハーネスは検出できない。応答内容 hash の重複では鮮度を判定しない。新依存・独自 capture engine・別結果台帳を増やさず、既存の receipt / analyzer / finalize を使うための薄い選択である。guard の mock テストは実 T3 の成功・録画・目視を証明しない。
+
 ## 順序と receipt
 
 各 receipt は JSON 1 object。`at` は操作完了時の ISO 時刻で単調順、`ok` は tool の成功、`structuredContent` は返却値をそのまま渡す。失敗も `{kind,at,ok:false,error}` で journal に残し、停止・finalize を試みる。状況次第で不足した receipt は欠落のまま非成功になる。
