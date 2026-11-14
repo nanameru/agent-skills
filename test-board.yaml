@@ -559,6 +559,7 @@ cases:
     feature: "T3 receipt lifecycle mock regression"
     scenario: "synthetic receipts and video without T3 or browser E2E"
     expected: "初回status・成功・失敗・中断・再試行、受領欠落・所有権・上書き拒否、原本保全とPTS・無効編集・inspectの拒否を確認する"
+    notes: "合成回帰には失敗step、操作IDとtest順序、result-v1型、正の開始PTSとframe対応を含む。実ブラウザーや録画ではない。"
     status: todo
     priority: high
     type: integration
