@@ -2,7 +2,7 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-  test_command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs"
 source_roots: [test-case-board]
 cases:
   - id: TC-046-E2E
@@ -55,7 +55,7 @@ cases:
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
     expected: "fake境界の個別24件はTC-048-F01からF24を参照する"
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-CLI01
     title: "reports an e2e done case without last_run"
@@ -113,79 +113,79 @@ cases:
     title: "fake: finalization record-stop preserves SIGINT"
     feature: "fake CLI boundary regression"
     scenario: "fake: finalization record-stop preserves SIGINT"
-    expected: "record-stop中のSIGINTで結果と録画とログとAllureを保持し、確定後のsignalはstderrへ分離する"
+    expected: "record-stop中のSIGINTを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
     status: todo
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F02
     title: "fake: finalization record-stop preserves SIGTERM"
     feature: "fake CLI boundary regression"
     scenario: "fake: finalization record-stop preserves SIGTERM"
-    expected: "record-stop中のSIGTERMで結果と録画とログとAllureを保持し、確定後のsignalはstderrへ分離する"
+    expected: "record-stop中のSIGTERMを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
     status: todo
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F03
     title: "fake: finalization log-hash preserves SIGINT"
     feature: "fake CLI boundary regression"
     scenario: "fake: finalization log-hash preserves SIGINT"
-    expected: "log-hash中のSIGINTで結果と録画とログとAllureを保持し、確定後のsignalはstderrへ分離する"
+    expected: "log-hash中のSIGINTを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
     status: todo
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F04
     title: "fake: finalization log-hash preserves SIGTERM"
     feature: "fake CLI boundary regression"
     scenario: "fake: finalization log-hash preserves SIGTERM"
-    expected: "log-hash中のSIGTERMで結果と録画とログとAllureを保持し、確定後のsignalはstderrへ分離する"
+    expected: "log-hash中のSIGTERMを確定前のinterruptionとして記録し、録画とログを検証してAllureをbrokenにする"
     status: todo
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F05
     title: "fake: finalization result-write preserves SIGINT"
     feature: "fake CLI boundary regression"
     scenario: "fake: finalization result-write preserves SIGINT"
-    expected: "result-write中のSIGINTで結果と録画とログとAllureを保持し、確定後のsignalはstderrへ分離する"
+    expected: "result-write中のSIGINTで確定済みsnapshotとAllure passedを保持し、遅い中断をstructured stderrへ分離する"
     status: todo
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F06
     title: "fake: finalization result-write preserves SIGTERM"
     feature: "fake CLI boundary regression"
     scenario: "fake: finalization result-write preserves SIGTERM"
-    expected: "result-write中のSIGTERMで結果と録画とログとAllureを保持し、確定後のsignalはstderrへ分離する"
+    expected: "result-write中のSIGTERMで確定済みsnapshotとAllure passedを保持し、遅い中断をstructured stderrへ分離する"
     status: todo
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F07
     title: "fake: SIGINT waits for dispatched operation before record stop"
@@ -198,7 +198,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F08
     title: "fake: empty media cannot be accepted even when the test passes"
@@ -211,7 +211,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F09
     title: "fake: corrupt media cannot be accepted even when the test passes"
@@ -224,7 +224,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F10
     title: "fake: failing assertion remains failed while recording and readback pass"
@@ -237,7 +237,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F11
     title: "fake: recording stop failure remains failed when the test and decode pass"
@@ -250,7 +250,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F12
     title: "fake: unsupported versioned runner is rejected before recording"
@@ -263,7 +263,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F13
     title: "fake: alternate session arguments are rejected within the v1 contract"
@@ -276,7 +276,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F14
     title: "fake: incompatible browser version fails before recording"
@@ -289,7 +289,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F15
     title: "fake: nonprivate evidence directory is rejected before creating a run"
@@ -302,7 +302,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F16
     title: "fake: retry retains the failing attempt and uses distinct UUID, video and log"
@@ -315,7 +315,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F17
     title: "fake: runner cannot pass --auto-connect into the browser invocation"
@@ -328,7 +328,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F18
     title: "fake: runner cannot pass --config=untrusted.json into the browser invocation"
@@ -341,7 +341,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F19
     title: "fake: SIGINT during version preflight preserves a result"
@@ -354,7 +354,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F20
     title: "fake: SIGTERM during version preflight preserves a result"
@@ -367,7 +367,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F21
     title: "fake: timeout during version preflight preserves a result"
@@ -380,7 +380,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F22
     title: "fake: Allure does not report passed for empty evidence with a passing test"
@@ -393,7 +393,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F23
     title: "fake: Allure does not report passed for corrupt evidence with a passing test"
@@ -406,7 +406,7 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
   - id: TC-048-F24
     title: "fake: Allure does not report passed for stop-fails evidence with a passing test"
@@ -419,5 +419,57 @@ cases:
     source: [test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
     test_file: test-case-board/tests/e2e-regression.test.mjs
     issues: [46, 48]
-    command: "TB_FAKE_TEST_DIR=<private-dir> node --test test-case-board/tests/e2e-regression.test.mjs"
+    command: "node --test test-case-board/tests/e2e-regression.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-ISSUE
+    title: "issue selects whole issue numbers 48 and 148 and returns their test files"
+    feature: "ledger CLI integration"
+    scenario: "issue selects whole issue numbers 48 and 148 and returns their test files"
+    expected: "Issue番号を部分一致させず各番号のケースとテストファイルを返す"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-IMPACT-SOURCE
+    title: "impact matches source directory descendants and ancestors without matching sibling prefixes"
+    feature: "ledger CLI integration"
+    scenario: "impact matches source directory descendants and ancestors without matching sibling prefixes"
+    expected: "sourceの親子パスを一致させ隣接する名前の接頭辞を誤一致させない"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-IMPACT-TEST
+    title: "impact traces an exact test_file and deduplicates related issues across matched cases"
+    feature: "ledger CLI integration"
+    scenario: "impact traces an exact test_file and deduplicates related issues across matched cases"
+    expected: "test_fileの完全一致を辿り関連Issueを重複排除する"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
+    evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-048-GAPS-PATH
+    title: "gaps distinguishes todo and done for nonempty test_file paths missing on disk"
+    feature: "ledger CLI integration"
+    scenario: "gaps distinguishes todo and done for nonempty test_file paths missing on disk"
+    expected: "非空の欠損パスについてtodoとdoneを区別し存在するパスを欠損に含めない"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/bin/test-board, test-case-board/scripts/test-board.mjs]
+    test_file: test-case-board/tests/ledger-cli.test.mjs
+    issues: [48]
+    command: "node --test test-case-board/tests/ledger-cli.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"

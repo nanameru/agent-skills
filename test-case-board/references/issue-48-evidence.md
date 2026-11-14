@@ -12,6 +12,12 @@
 - `539ecdd2-b2c8-41c6-bd52-6e5870052c78/02-e2e-regression-tests.meta` と `539ecdd2-b2c8-41c6-bd52-6e5870052c78/02-e2e-regression-tests.stdout`
 - `539ecdd2-b2c8-41c6-bd52-6e5870052c78/environment.txt`、`manifest.json`、`checksums.txt`（後者も同じディレクトリ内）
 
+## Issue #48 のCLI結合・fake回帰
+
+新規4件はCLIを別プロセスで呼び、Issue番号の完全な一致、sourceの親子・兄弟パス、test_fileの完全一致と関連Issueの重複排除、非空test_fileの存在・欠損を検証する。空のdone test_fileはこの4件の対象外。実行前に利用者が `TB_FAKE_TEST_DIR` をcheckout外の既存owner-only private directoryに設定する。`project.test_command` は既存CLI 4件・fake 24件・新規CLI 4件の3ファイルを指定する。
+
+今後のIssue #48実行については、[担当の最新状況](https://github.com/nanameru/agent-skills/issues/48#issuecomment-6871926265)に記録される対象SHA・command・exit・private原本参照を確認する。この参照は下記の旧SHAによる実E2Eの時刻や元resultとは別であり、実行前に合格を意味しない。
+
 ## 今後の実fixtureコマンドの前提
 
 台帳の `command` はリポジトリルートから実行するdriverコマンド。実行前に `TB_EVIDENCE_DIR` をcheckout外に既存の本人所有・owner-only private directoryとして用意し、`TB_BROWSER` に対応するagent-browser実行ファイル、`AGENT_BROWSER_EXECUTABLE_PATH` にChrome実行ファイルを指定する。`PATH` にffmpegとffprobeが必要。`TB_E2E_ENVIRONMENT` には実際の環境を設定する。timeoutの待機時間を変える場合のみ `TB_TIMEOUT_MS` を指定する。実行ごとに録画をprivate保存し読戻し・実操作の目視確認を行う。これらは将来の実行条件であり、以下の過去の元結果を変更しない。
