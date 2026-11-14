@@ -46,6 +46,8 @@ Do not use it for:
 
 ## Run Artifacts
 
+Follow [E2E recording and preservation](e2e-recording.md) for every run, including failures, interruptions, and retries. Download expiring recordings into approved private storage and verify the saved video before the temporary environment is removed. A recording URL alone is not completed preservation.
+
 For every cloud E2E run, record:
 
 - case ID
@@ -69,7 +71,7 @@ Recommended manifest:
       "endedAt": "2026-06-12T00:01:00.000Z",
       "liveUrl": "",
       "recordingUrl": "",
-      "recordingPath": ".e2e/recordings/TC-120.mp4"
+      "recordingPath": ".e2e/TC-120/<run-id>/recording.mp4"
     }
   ]
 }

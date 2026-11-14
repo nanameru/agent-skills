@@ -66,6 +66,8 @@ Do not let the Maker move the goalpost by rewriting tests merely to pass.
 
 ## Durable State
 
+E2Eは全実行（失敗・中断・再実行も含む）を録画してprivateに保存し、保存後に動画を読戻す。詳細は `test-case-board/references/e2e-recording.md`。録画／保存の未達とテスト成否を分け、過去の未録画を読み替えない。
+
 Use durable artifacts instead of chat memory:
 
 - GitHub Issue: work record and knowledge log.

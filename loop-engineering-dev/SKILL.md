@@ -79,6 +79,8 @@ Minimum per test-board case:
 
 ## E2E And Auth
 
+すべてのE2E実行の録画・失敗時の保全・保存後の読戻しは `test-case-board/references/e2e-recording.md` に従う。定期実行や再試行も対象で、成功時だけの削除・最新結果への上書きで過去の証跡を失わない。
+
 For Browser Use Cloud E2E, load:
 
 ```text
