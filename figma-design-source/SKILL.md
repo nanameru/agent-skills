@@ -116,7 +116,7 @@ docs/design-intake/
    - `design-system/figma-state.json`
    - `figma.config.json`
 3. 状態ファイルからFigma URL / file key、進行中phase、tokens、components、未完了工程を読む
-4. 状態ファイルがなければFigma URLまたはfile keyをユーザーへ確認する
+4. 状態ファイルがなければ、既存Figmaファイルを使う案件ではURLまたはfile keyをユーザーへ確認する。ファイル自体が未作成なら既存URLを要求せず、次の連携ゲートで新規作成の可否を確認する
 5. 複数候補がある場合は推測せず、対象を確認する
 
 案件固有の状態ファイルとFigmaファイルは対象リポジトリに残す。グローバルSkillへコピーしない。
@@ -125,13 +125,15 @@ docs/design-intake/
 
 Figmaを読み書きするときは、インストール済みFigmaプラグインを使う。
 
-1. `figma-use` を読み、Figma接続と対象ファイルへのアクセスを確認する
-2. Variables、styles、components、libraryを作成・変更するときは `figma-generate-library` も読む
-3. Figma componentsとコードを接続するときは `figma-code-connect` も読む
-4. 取得したmetadataまたはscreenshotで対象nodeを確認してから変更する
-5. 変更後にmetadataまたはscreenshotを再取得して検証する
+1. `figma-use` を読み、Figma接続を確認する。既存ファイルを使う場合はURLまたはfile keyと、その対象ファイルへのアクセスを確認する
+2. Figmaファイル自体が未作成の場合は、利用可能な正式機能がファイルの新規作成に対応するか、作成先とその作成権限、本人によるファイル作成操作の承認を確認する。Figmaを使う希望だけを作成操作の承認へ広げない
+3. 上記を確認できた場合だけ、確認済みの正式機能で新規ファイルを作成し、返された実際のURL / file keyを案件の記録へ残す。作成機能がない・対応を確認できない場合は未対応として具体的な不足を返し、架空のfile keyや未実装の能力で続行しない
+4. 新規作成後も対象ファイルへのアクセスとmetadataまたはscreenshotを確認してから、foundationsや画面の作成へ進む
+5. Variables、styles、components、libraryを作成・変更するときは `figma-generate-library` も読む
+6. Figma componentsとコードを接続するときは `figma-code-connect` も読む
+7. 取得したmetadataまたはscreenshotで対象nodeを確認してから変更し、変更後に再取得して検証する
 
-接続・権限・対象ファイルを確認できない場合は停止する。Figmaを更新していないのに「更新済み」と報告しない。
+接続・権限・対象ファイルを確認できない場合は停止する。ファイル未作成時は、作成前の対象ファイル確認を上記の正式機能・作成先・作成権限・本人の承認確認に置き換え、作成後の対象確認は省略しない。確認のために認証・権限を勝手に変更しない。Figmaを作成・更新していないのに「作成済み」「更新済み」と報告しない。
 
 ## 正本の分担
 

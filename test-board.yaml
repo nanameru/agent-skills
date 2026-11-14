@@ -48,4 +48,4 @@ cases:
     source: [figma-design-source, managed-skills.json, restore-skills.sh]
     test_file: figma-design-source/README.md
     issues: [15]
-    notes: 最終コミットでの確認は未実施。
+    notes: "1bd175cの限定確認は成功。自動レビュー指摘に基づくファイル未作成時の文書分岐を追記したため、この差分の固定版確認は未実施。実Figma操作・実復元・外部作成能力の確認は対象外。"
