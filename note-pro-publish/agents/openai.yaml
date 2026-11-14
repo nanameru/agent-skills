@@ -1,0 +1,14 @@
+interface:
+  display_name: "Note Pro Publish"
+  short_description: "Zoom録画ソースのProプラン限定 + 単発2000円のnote記事を作成・公開"
+  default_prompt: "Use $note-pro-publish to create a polished Japanese note article from a Zoom recording or Zoom-derived material with the shared article workflow, generate a 1280:670 eyecatch and supporting media, publish it as AI Play Guild Pro-plan limited with one-off 2000 yen access when explicitly approved, then create an unpublished duplicate preview and deliver that duplicate preview to Discord."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "note-mcp"
+      description: "note.com MCP server for drafts, eyecatch upload, membership plans, previews, paid settings, publishing, and duplicate draft creation"
+      transport: "stdio"
+
+policy:
+  allow_implicit_invocation: true
