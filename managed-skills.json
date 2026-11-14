@@ -58,6 +58,11 @@
       "source": "nanameru/slide-archetype-gen-skill",
       "path": "slide-archetype-gen",
       "external": true
+    },
+    {
+      "name": "figma-design-source",
+      "source": "nanameru/agent-skills",
+      "path": "figma-design-source"
     }
   ],
   "postInstallLinks": [
@@ -112,6 +117,14 @@
     {
       "link": "$HOME/.codex/skills/slide-archetype-gen",
       "target": "$HOME/.agents/skills/slide-archetype-gen"
+    },
+    {
+      "link": "$HOME/.claude/skills/figma-design-source",
+      "target": "$HOME/.agents/skills/figma-design-source"
+    },
+    {
+      "link": "$HOME/.codex/skills/figma-design-source",
+      "target": "$HOME/.agents/skills/figma-design-source"
     }
   ]
 }
