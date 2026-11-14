@@ -119,6 +119,8 @@ When GitHub Issue-driven development is active:
 
 ## E2E With Browser Use Cloud
 
+すべてのE2E実行（成功・失敗・中断・再実行）の録画と保存確認は [E2E録画・保存の共通手順](references/e2e-recording.md) に従う。ローカル・headless/CDP・CI・クラウド・端末の違いで省略しない。`last_run` は最新結果への参照であり、過去の実行証跡を上書き・削除しない。実際のテスト結果と録画／保存の達成状況は分けて報告する。
+
 For Browser Use Cloud E2E and video evidence, read `references/e2e-browseruse-cloud.md`.
 
 Minimum fields for E2E cases:
