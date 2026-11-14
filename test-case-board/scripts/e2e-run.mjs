@@ -8,7 +8,7 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
-import { CDP, checkEndpoint, pageIdentity } from './e2e-native-cdp.mjs';
+import { CDP, checkEndpoint, pageIdentity, sendNativeOperation, nativeInputSatisfied } from './e2e-native-cdp.mjs';
 
 const exec = promisify(execFile);
 const worker = fileURLToPath(new URL('./e2e-worker.mjs', import.meta.url));
@@ -286,9 +286,8 @@ async function main(argv) {
         else if (msg.type === 'cdp-send' && native) {
           if (!currentStep || currentStep !== msg.step || (msg.sessionId !== nativeSession && !(msg.method === 'Target.getTargets' && msg.sessionId === null)) || typeof msg.method !== 'string' || !/^[A-Za-z]+\.[A-Za-z]+$/.test(msg.method) || (/^(Target|Browser)\./.test(msg.method) && msg.method !== 'Target.getTargets') || !msg.params || typeof msg.params !== 'object' || Array.isArray(msg.params) || !Number.isSafeInteger(msg.timeoutMs) || msg.timeoutMs < 1 || msg.timeoutMs > 120000) { protocolError = true; throw new Error('invalid native operation'); }
           append({ type: 'cdp-send', step: currentStep, method: msg.method, params: msg.params, started: new Date().toISOString() });
-          operations++; result.test.nativeCdpOperations++;
-          const value = await cdp.send(msg.method, msg.params, msg.sessionId === null ? undefined : nativeSession, msg.timeoutMs);
-          if (['Input.dispatchTouchEvent', 'Input.dispatchKeyEvent', 'Input.dispatchMouseEvent'].includes(msg.method)) result.test.nativeInputOperations++;
+          operations++;
+          const value = await sendNativeOperation({ cdp, test: result.test, method: msg.method, params: msg.params, sessionId: msg.sessionId === null ? undefined : nativeSession, timeoutMs: msg.timeoutMs });
           return reply(value);
         }
         else if (msg.type === 'command' && !native) {
@@ -329,7 +328,7 @@ async function main(argv) {
     const exit = await workerClosed;
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
     result.test.exitCode = exit.code; result.test.signal = exit.signal;
-    result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && (!native || result.test.nativeInputOperations > 0) && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
+    result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && nativeInputSatisfied(native, result.test) && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
     if (finishMessage?.step && !result.test.failedStep) result.test.failedStep = finishMessage.step;
     if (finishMessage?.error) result.error = finishMessage.error;
     if (!interrupted && (!finishMessage || !operations)) result.error ||= 'runner did not complete the supported contract with browser operations';
@@ -342,7 +341,7 @@ async function main(argv) {
     if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); await boundedWait(workerClosed, 3000); if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }
     if (workerClosed) await boundedWait(workerClosed, 3000);
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
-    if (native && result.test.nativeInputOperations === 0) {
+    if (!nativeInputSatisfied(native, result.test)) {
       const reason = 'no successful native CDP input operations';
       result.error = result.error ? `${result.error}; ${reason}` : reason;
     }

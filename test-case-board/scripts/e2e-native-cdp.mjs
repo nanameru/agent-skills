@@ -38,6 +38,18 @@ export function publicIdentity(identity) {
     contextSetHashes: identity.contexts.map(hash) };
 }
 
+// Shared by the live runner and offline contract checks.
+export async function sendNativeOperation({ cdp, test, method, params, sessionId, timeoutMs }) {
+  test.nativeCdpOperations++;
+  const result = await cdp.send(method, params, sessionId, timeoutMs);
+  if (['Input.dispatchTouchEvent', 'Input.dispatchKeyEvent', 'Input.dispatchMouseEvent'].includes(method)) test.nativeInputOperations++;
+  return result;
+}
+
+export function nativeInputSatisfied(native, test) {
+  return !native || test.nativeInputOperations > 0;
+}
+
 // A minimal protocol transport, not a capture engine. No retries or discovery.
 export class CDP {
   constructor(ws) {
