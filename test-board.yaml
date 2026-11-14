@@ -8,19 +8,33 @@ cases:
     title: 3ファイルの原本照合とprivacy・参照確認
     feature: autonomous-dev source registration
     scenario: 原本全文と許容差分および必須依存を確認する
-    status: doing
+    status: done
     priority: high
     type: manual
     source: [autonomous-dev, managed-skills.json, config/common-agents/README.md]
-    test_file: ""
+    test_file: config/common-agents/README.md
     issues: [51]
+    notes: "AC-01/02/04。READMEの許容差分・依存を基準に原本3ファイルと公開7ファイルを全文確認。一時台本verify-51-v2.pyの全文照合/参照/manifest/restore dry-runと補助privacy検査はexit 0。恒久テストは追加せず、command/環境/失敗履歴/手動判定はevidence参照。実scanの結果ではない。"
+    last_run:
+      revision: 97cd98f0dc08b4984a44197202912fbd9fcf0645
+      at: "2026-11-14T11:09:12Z"
+      provider: SWE-2 Flash high + Sol xhigh manual
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/51#issuecomment-6876402363]
   - id: TC-051-02
     title: 共通AGENTSの限定復元と停止条件
     feature: common agents security selection
     scenario: 一時コピーで未適用・既適用・部分適用・文脈不一致とリンク保全を確認する
-    status: doing
+    status: done
     priority: high
     type: integration
     source: [config/common-agents]
-    test_file: ""
+    test_file: config/common-agents/README.md
     issues: [51]
+    notes: "AC-03/04。test_fileは実行したREADMEのheredocとgit apply手順。一時台本verify-51-v2.pyで未適用/既適用/部分適用/重複/別表現/文脈不一致、他設定とfixtureリンク保全を検証しexit 0。別表記と位置の停止条件は担当が目視確認。原本/実リンクも不変。実機への再適用はしていない。"
+    last_run:
+      revision: 97cd98f0dc08b4984a44197202912fbd9fcf0645
+      at: "2026-11-14T11:09:12Z"
+      provider: SWE-2 Flash high + Sol xhigh manual
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/51#issuecomment-6876402363]
