@@ -38,9 +38,11 @@ before(async () => {
   video = path.join(batch, 'synthetic-input.mp4');
   // Generated locally for media parsing only; it is not a captured browser video.
   await exec('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=96x64:rate=10:duration=2',
-    '-c:v', 'mpeg4', '-pix_fmt', 'yuv420p', '-n', video], { timeout: 30000 });
+    '-c:v', 'mpeg4', '-pix_fmt', 'yuv420p', '-color_range', 'tv', '-color_primaries', 'bt709',
+    '-color_trc', 'bt709', '-colorspace', 'bt709', '-movflags', '+write_colr', '-n', video], { timeout: 30000 });
   videoSize = (await stat(video)).size;
   assert.ok(videoSize > 0);
+  assert.equal((await syntheticProbe(video, 'stream=color_range', '-show_streams')).streams[0].color_range, 'tv');
 });
 
 const owned = () => ({ available: true, tabId: 'fixture-tab', control: { owner: 'agent', ownedByCaller: true },
@@ -446,9 +448,12 @@ async function syntheticFrameMd5(args) {
 test('mock positive source PTS maps a real cut and speed change without normalizing the source', async () => {
   const shifted = path.join(batch, `synthetic-positive-pts-${randomUUID()}.mp4`);
   await exec('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=96x64:rate=10:duration=2',
-    '-c:v', 'mpeg4', '-pix_fmt', 'yuv420p', '-output_ts_offset', '5', '-n', shifted], { timeout: 30000 });
+    '-c:v', 'mpeg4', '-pix_fmt', 'yuv420p', '-color_range', 'tv', '-color_primaries', 'bt709',
+    '-color_trc', 'bt709', '-colorspace', 'bt709', '-movflags', '+write_colr',
+    '-output_ts_offset', '5', '-n', shifted], { timeout: 30000 });
   const probed = await exec('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_frames',
     '-show_entries', 'frame=pts_time', '-of', 'json', shifted], { timeout: 30000 });
+  assert.equal((await syntheticProbe(shifted, 'stream=color_range', '-show_streams')).streams[0].color_range, 'tv');
   const actualPts = JSON.parse(probed.stdout).frames.map((frame) => Number(frame.pts_time));
   assert.ok(actualPts.length >= 10 && actualPts.every(Number.isFinite));
   assert.ok(actualPts[0] > 0 && actualPts[0] >= 4.9, 'synthetic source must really start near 5 seconds');
@@ -481,9 +486,14 @@ test('mock positive source PTS maps a real cut and speed change without normaliz
   assert.equal(mapping.derived.readback.status, 'passed');
   assert.equal(mapping.visualInspection, 'unverified');
 
-  const graph = `[0:v]trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)/2[s0];` +
-    '[s0]concat=n=1:v=1:a=0,tpad=stop_mode=clone:stop_duration=0.3,fps=10,format=yuv420p[out]';
-  const sourcePixels = await syntheticFrameMd5(['-copyts', '-i', source, '-map', '0:v:0']);
+  const normalize = 'scale=in_range=tv:out_range=tv,format=yuv420p';
+  const segmentDuration = (end - start) / 2;
+  const graph = `[0:v]${normalize},trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)/2,` +
+    `fps=fps=10:eof_action=pass,trim=duration=${segmentDuration},setpts=PTS-STARTPTS[s0];` +
+    '[s0]concat=n=1:v=1:a=0,tpad=stop_mode=clone:stop_duration=0.3,' +
+    `fps=fps=10:eof_action=pass,trim=duration=${segmentDuration + 0.3},setpts=PTS-STARTPTS,format=yuv420p[out]`;
+  // These are explicitly normalized pixels, not a claim about raw source bytes.
+  const sourcePixels = await syntheticFrameMd5(['-copyts', '-i', source, '-map', '0:v:0', '-vf', normalize]);
   const filteredPixels = await syntheticFrameMd5(['-copyts', '-i', source, '-filter_complex', graph, '-map', '[out]']);
   const derivedPixels = await syntheticFrameMd5(['-copyts', '-i', derivedFile, '-map', '0:v:0']);
   assert.ok(filteredPixels.length > 0, 'the positive-PTS cut must not be empty');
@@ -511,5 +521,181 @@ test('mock positive source PTS maps a real cut and speed change without normaliz
     assert.ok(Math.abs(match.filterPts - match.derivedPts) <= 0.000001);
   }
   assert.deepEqual(await readFile(shifted), original);
+  assert.deepEqual(await retained(attempt.runDir), preserved);
+});
+
+// ffprobe results below come only from synthetic videos created in the private
+// batch. This helper does not inspect a browser recording.
+async function syntheticProbe(file, entries, show) {
+  const output = await exec('ffprobe', ['-v', 'error', '-select_streams', 'v:0', show,
+    '-show_entries', entries, '-of', 'json', file], { timeout: 30000 });
+  return JSON.parse(output.stdout);
+}
+
+async function syntheticDecodeAll(file) {
+  await exec('ffmpeg', ['-v', 'error', '-xerror', '-i', file, '-map', '0:v:0', '-f', 'null', '-'], { timeout: 30000 });
+}
+
+test('mock full-range sparse VFR cut bounds the derived duration and preserves source PTS', async () => {
+  const input = path.join(batch, `synthetic-full-range-vfr-${randomUUID()}.mp4`);
+  // N=0..18 occupy about 0.6 s; N=19..20 follow after a 30 s gap.
+  // The cut's last retained packet therefore spans the gap. Nothing is captured
+  // from T3 and no real recording is copied into the repository.
+  const pts = "setpts='if(lt(N,19),N/(30*TB),(30+(N-19)/30)/TB)'";
+  await exec('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=96x64:rate=30:duration=0.7',
+    '-vf', pts, '-frames:v', '21', '-c:v', 'libx264', '-preset', 'ultrafast', '-qp', '0', '-bf', '0',
+    '-pix_fmt', 'yuvj420p', '-color_range', 'pc', '-enc_time_base', '1:30000', '-fps_mode', 'passthrough',
+    '-video_track_timescale', '30000', '-output_ts_offset', '5', '-n', input], { timeout: 30000 });
+  const sourceInfo = await syntheticProbe(input, 'stream=codec_name,pix_fmt,color_range', '-show_streams');
+  const inputStream = sourceInfo.streams[0];
+  assert.equal(inputStream.codec_name, 'h264');
+  assert.equal(inputStream.pix_fmt, 'yuvj420p');
+  assert.equal(inputStream.color_range, 'pc', 'fixture must actually be full range');
+  const sourceProbe = await syntheticProbe(input, 'frame=pts_time', '-show_frames');
+  const sourcePts = sourceProbe.frames.map((frame) => Number(frame.pts_time));
+  assert.equal(sourcePts.length, 21);
+  assert.ok(sourcePts.every(Number.isFinite));
+  assert.ok(sourcePts[0] > 0, 'source must retain a positive PTS');
+  const gaps = sourcePts.slice(1).map((value, index) => value - sourcePts[index]);
+  assert.ok(gaps.every((gap) => gap > 0));
+  assert.ok(Math.max(...gaps) > 20, 'fixture must have a long VFR gap');
+  const start = sourcePts[0] + 0.001;
+  const end = start + 0.6;
+  const selected = sourcePts.filter((value) => value >= start && value < end);
+  assert.ok(selected.length >= 10 && selected.length < sourcePts.length);
+  const sourcePacketData = await syntheticProbe(input, 'packet=pts_time,duration_time', '-show_packets');
+  const selectedPackets = sourcePacketData.packets.map((packet) => ({ pts: Number(packet.pts_time), duration: Number(packet.duration_time) }))
+    .filter((packet) => packet.pts >= start && packet.pts < end);
+  assert.ok(selectedPackets.length > 0);
+  const lastSelectedPacket = selectedPackets.at(-1);
+  assert.ok(Math.abs(lastSelectedPacket.pts - selected.at(-1)) < 0.00001);
+  assert.ok(lastSelectedPacket.duration > 10, 'cut must contain a terminal packet spanning the long gap');
+  await syntheticDecodeAll(input);
+
+  const original = await readFile(input);
+  const entries = receipts({ stopPath: input });
+  entries.find((entry) => entry.kind === 'stop').structuredContent.sizeBytes = original.length;
+  const attempt = await runEntries(entries);
+  assert.equal(attempt.ok, true);
+  assertResultV1(attempt.result);
+  const source = path.join(attempt.runDir, 'recording.mp4');
+  const frames = await json(attempt.runDir, 'source-frames.json');
+  assert.deepEqual(frames.frames.map((frame) => frame.pts), sourcePts);
+  assert.equal(frames.sha256, sha(original));
+  assert.equal(attempt.result.recording.readback.sha256, sha(original));
+  assert.equal(sha(await readFile(source)), sha(original));
+  assert.equal(attempt.result.recording.readback.status, 'passed');
+  const preserved = await retained(attempt.runDir);
+  const edit = { segments: [{ start, end, speed: 2 }], freezeSeconds: 0.5, outputFps: 30 };
+  const output = await derive(attempt.runDir, edit);
+  assert.equal(output.status, 'generated', output.error);
+  const mapping = JSON.parse(await readFile(output.sidecar, 'utf8'));
+  assert.equal(mapping.status, 'generated');
+  assert.equal(mapping.source.sha256, sha(original));
+  assert.equal(mapping.colorNormalization.sourcePixelFormat, 'yuvj420p');
+  assert.equal(mapping.colorNormalization.sourceColorRange, 'pc');
+  assert.equal(mapping.colorNormalization.inputRange, 'pc');
+  assert.match(mapping.colorNormalization.rangeBasis, /yuvj/);
+  assert.equal(mapping.colorNormalization.outputPixelFormat, 'yuv420p');
+  assert.equal(mapping.colorNormalization.outputColorRange, 'tv');
+  assert.equal(mapping.timeline.durationCheck, 'passed');
+  assert.deepEqual(mapping.timeline.verifiedBoundaries, []);
+  assert.equal(mapping.visualInspection, 'unverified');
+  assert.equal(attempt.result.steps[0].frameMapping.seekable, false);
+
+  const derivedFile = path.join(attempt.runDir, mapping.derived.file);
+  const derivedBytes = await readFile(derivedFile);
+  assert.notEqual(mapping.derived.file, 'recording.mp4');
+  assert.equal(mapping.derived.sha256, sha(derivedBytes));
+  assert.equal(mapping.derived.readback.sha256, sha(derivedBytes));
+  assert.equal(mapping.derived.readback.status, 'passed');
+  await syntheticDecodeAll(source);
+  await syntheticDecodeAll(derivedFile);
+  const derivedProbe = await syntheticProbe(derivedFile, 'frame=pts_time', '-show_frames');
+  const derivedPts = derivedProbe.frames.map((frame) => Number(frame.pts_time));
+  const derivedFrames = await json(attempt.runDir, mapping.derived.readback.frames);
+  assert.ok(derivedPts.length > 0 && derivedPts.every(Number.isFinite));
+  assert.deepEqual(derivedFrames.frames.map((frame) => frame.pts), derivedPts);
+  assert.equal(derivedFrames.sha256, sha(derivedBytes));
+  assert.ok(derivedPts.every((value, index) => !index || value >= derivedPts[index - 1]));
+  const durationProbe = await syntheticProbe(derivedFile, 'format=duration', '-show_format');
+  const actualDuration = Number(durationProbe.format.duration);
+  const plannedDuration = (end - start) / 2 + edit.freezeSeconds;
+  // One fps rounding allowance per segment plus two output boundaries.
+  const fpsTolerance = (edit.segments.length + 2) / edit.outputFps;
+  assert.ok(Number.isFinite(actualDuration));
+  assert.ok(Math.abs(actualDuration - plannedDuration) <= fpsTolerance,
+    `derived duration ${actualDuration} is outside ${plannedDuration} ± ${fpsTolerance}`);
+  assert.equal(mapping.timeline.plannedDuration, plannedDuration);
+  assert.equal(mapping.timeline.tolerance, fpsTolerance);
+  assert.equal(mapping.timeline.observed.duration, actualDuration);
+  const derivedPackets = (await syntheticProbe(derivedFile, 'packet=pts_time,duration_time', '-show_packets')).packets;
+  assert.ok(derivedPackets.length > 0);
+  assert.ok(derivedPackets.every((packet) => Number.isFinite(Number(packet.duration_time)) &&
+    Number(packet.duration_time) > 0 && Number(packet.duration_time) <= 2 / edit.outputFps),
+  'the long source packet must not become a long output packet');
+
+  // Match membership is checked against actual frame indices and PTS. Range
+  // conversion means a normalized MD5 must never be described as raw-pixel equality.
+  assert.ok(Array.isArray(mapping.verifiedMapping));
+  assert.equal(mapping.mappingStatus, 'partially-verified');
+  assert.equal(mapping.verificationError, null);
+  assert.ok(mapping.verifiedMapping.length > 0);
+  assert.equal(new Set(mapping.verifiedMapping.map((match) => match.sourceFrame)).size, mapping.verifiedMapping.length);
+  assert.equal(new Set(mapping.verifiedMapping.map((match) => match.derivedFrame)).size, mapping.verifiedMapping.length);
+  const normalizedSource = await syntheticFrameMd5(['-copyts', '-i', source, '-map', '0:v:0',
+    '-vf', 'scale=in_range=pc:out_range=tv,format=yuv420p']);
+  const outputPixels = await syntheticFrameMd5(['-i', derivedFile, '-map', '0:v:0']);
+  const sourceCounts = new Map();
+  for (const frame of normalizedSource) sourceCounts.set(frame.hash, (sourceCounts.get(frame.hash) || 0) + 1);
+  const outputCounts = new Map();
+  for (const frame of outputPixels) outputCounts.set(frame.hash, (outputCounts.get(frame.hash) || 0) + 1);
+  assert.equal(outputPixels.length, derivedPts.length);
+  assert.ok([...outputCounts.values()].some((count) => count > 1), 'freeze must yield repeated output pixels');
+  for (const match of mapping.verifiedMapping) {
+    assert.ok(match.sourcePts >= start && match.sourcePts < end);
+    assert.equal(match.sourcePts, sourcePts[match.sourceFrame]);
+    assert.equal(match.derivedPts, derivedPts[match.derivedFrame]);
+    assert.ok(Math.abs(match.filterPts - match.derivedPts) <= 0.000001);
+    assert.match(match.pixelMd5, /^[a-f0-9]{32}$/);
+    assert.equal(match.pixelMd5, normalizedSource[match.sourceFrame].hash);
+    assert.equal(match.pixelMd5, outputPixels[match.derivedFrame].hash);
+    assert.equal(sourceCounts.get(match.pixelMd5), 1, 'ambiguous source pixels remain unverified');
+    assert.equal(outputCounts.get(outputPixels[match.derivedFrame].hash), 1, 'freeze duplicates remain unverified');
+  }
+  assert.deepEqual(await readFile(input), original);
+  assert.deepEqual(await retained(attempt.runDir), preserved);
+});
+
+test('mock source with unknown range can render but cannot verify source frame correspondence', async () => {
+  const input = path.join(batch, `synthetic-unknown-range-${randomUUID()}.mp4`);
+  await exec('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=96x64:rate=10:duration=2',
+    '-c:v', 'mpeg4', '-pix_fmt', 'yuv420p', '-color_range', 'unknown', '-n', input], { timeout: 30000 });
+  const stream = (await syntheticProbe(input, 'stream=pix_fmt,color_range', '-show_streams')).streams[0];
+  assert.equal(stream.pix_fmt, 'yuv420p');
+  assert.ok(!stream.color_range || stream.color_range === 'unknown', 'fixture must have an unknown range');
+  const original = await readFile(input);
+  const entries = receipts({ stopPath: input });
+  entries.find((entry) => entry.kind === 'stop').structuredContent.sizeBytes = original.length;
+  const attempt = await runEntries(entries);
+  assert.equal(attempt.ok, true);
+  const preserved = await retained(attempt.runDir);
+  const frames = (await json(attempt.runDir, 'source-frames.json')).frames;
+  const start = frames[1].pts;
+  const end = frames.at(-2).pts;
+  const output = await derive(attempt.runDir, { segments: [{ start, end, speed: 2 }], freezeSeconds: 0, outputFps: 10 });
+  assert.equal(output.status, 'generated', output.error);
+  const mapping = JSON.parse(await readFile(output.sidecar, 'utf8'));
+  assert.equal(mapping.colorNormalization.sourcePixelFormat, 'yuv420p');
+  assert.ok(mapping.colorNormalization.sourceColorRange === null || mapping.colorNormalization.sourceColorRange === 'unknown');
+  assert.equal(mapping.colorNormalization.inputRange, 'tv');
+  assert.match(mapping.colorNormalization.rangeBasis, /assumed.*unverified/);
+  assert.equal(mapping.timeline.durationCheck, 'passed');
+  assert.equal(mapping.mappingStatus, 'unverified');
+  assert.deepEqual(mapping.verifiedMapping, []);
+  assert.match(mapping.verificationError, /range unknown/i);
+  assert.deepEqual(mapping.timeline.verifiedBoundaries, []);
+  assert.equal(mapping.visualInspection, 'unverified');
+  assert.deepEqual(await readFile(input), original);
   assert.deepEqual(await retained(attempt.runDir), preserved);
 });
