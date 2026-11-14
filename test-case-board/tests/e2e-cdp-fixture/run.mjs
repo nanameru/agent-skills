@@ -227,8 +227,10 @@ try {
   fs.writeFileSync(resultPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
   const saved = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
   assert.equal(saved.runId, id, 'result readback failed');
-  console.log(JSON.stringify({ result: resultPath, test: result.test, recording: result.recording,
-    conclusion: result.conclusion, error: result.error, interruption: result.interruption }));
+  console.log(JSON.stringify({ result: `issue54-${id}/result.json`, test: result.test.status,
+    recording: { start: result.recording.start, stop: result.recording.stop, save: result.recording.save,
+      readback: result.recording.readback.status, visualInspection: result.recording.readback.visualInspection },
+    conclusion: result.conclusion, interruption: result.interruption?.reason ?? null }));
   // Report signals observed after result finalization separately and fail the process.
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setTimeout(resolve, 0));
