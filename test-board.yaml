@@ -486,3 +486,71 @@ cases:
     issues: [48]
     command: "node --test test-case-board/tests/timeout-fixture.test.mjs"
     evidence: "test-case-board/references/issue-48-evidence.md"
+  - id: TC-050-CONNECT
+    title: "T3専用タブの操作と録画を既存ケース結果に対応付ける"
+    feature: "T3 preview recording connection"
+    scenario: "AC-01 one case and one recording in the same dedicated tab"
+    expected: "正式previewでREADYからCLICKEDとサーバー受領を確認し、ケース・run・commit・日時・環境・手順・判定からprivate動画を辿る"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts, test-case-board/tests/e2e-fixture/t3-server.mjs]
+    test_file: ""
+    issues: [50]
+  - id: TC-050-FAIL-RETRY
+    title: "T3試行の失敗・中断・再試行を別々に保持する"
+    feature: "T3 preview attempt preservation"
+    scenario: "AC-02 failure interruption and retry"
+    expected: "成功・意図的失敗・扱える中断・再試行を直列に実行し、各runの元結果と録画の保存・読戻し状態を分離して先行証跡を保持する"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts, test-case-board/tests/e2e-fixture/t3-server.mjs]
+    test_file: ""
+    issues: [50]
+  - id: TC-050-EVIDENCE-FAIL
+    title: "テスト成否と録画・保存・読戻しの未達を分けて残す"
+    feature: "T3 preview evidence boundary"
+    scenario: "AC-02 missing recording or unavailable save and readback"
+    expected: "録画欠落や保存・読戻し未達を元のテスト成否と区別し、非対応や救済不能を成功にしない"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts]
+    test_file: ""
+    issues: [50]
+  - id: TC-050-DERIVED
+    title: "原本と短縮動画のハッシュ・時刻対応を検証する"
+    feature: "T3 preview derived video"
+    scenario: "AC-03 source and derived video readback"
+    expected: "原本と派生物のhash・全decode・実frameとPTSを確認し、カット・倍率・静止保持の対応と目視の未確認範囲を保持する"
+    status: todo
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts]
+    test_file: ""
+    issues: [50]
+  - id: TC-050-REGRESSION
+    title: "既存入口とケース台帳の回帰を維持する"
+    feature: "existing test-board regression"
+    scenario: "AC-04 existing unit integration and regression suite"
+    expected: "既存のassertion・exit・skip・待機・操作速度を変更せず、影響する既存33件等の回帰を固定版で確認する"
+    status: todo
+    priority: high
+    type: regression
+    source: [test-case-board/scripts, test-case-board/tests]
+    test_file: ""
+    issues: [50]
+    command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
+  - id: TC-050-FIXTURE
+    title: "T3用localhost fixtureの応答とprivateな受領記録を確認する"
+    feature: "T3 fixture server"
+    scenario: "Node HTTP integration without a browser or recording"
+    expected: "既存HTMLとクリック受領の応答、ID付きprivate記録、異なる試行と同一ID再起動の保持、終了signalを確認する"
+    status: todo
+    priority: high
+    type: integration
+    source: [test-case-board/tests/e2e-fixture/t3-server.mjs, test-case-board/tests/e2e-fixture/index.html]
+    test_file: test-case-board/tests/e2e-fixture/t3-server.test.mjs
+    issues: [50]
+    command: "T3_FIXTURE_TEST_PRIVATE_DIR=/absolute/path/to/existing-private-dir node --test test-case-board/tests/e2e-fixture/t3-server.test.mjs"
