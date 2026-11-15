@@ -705,3 +705,25 @@ cases:
     notes: >-
       native resultとworkerの契約guardを用意。固定00542e2c44de67230cfd8422d006585bd2db61b6でcount guardはSWEがoffline 6/6、exit 0・signalなしを確認。新step guard単体の実行結果はここでは未確認。
       固定439b78c1728ae3487656b27165cef1fa7c6eee44の限定fixture 4runでは、success・assertion・SIGTERM・retryの実worker exit/signalとfailedStepをresult-v1へ記録。詳細とprivate相対参照はTC-054-RUN-EVIDENCEを参照。意図した失敗・中断は成功へ読み替えず、T3 in-process正規化0/1の変更や最終独立Checker合格を意味しない。
+  - id: TC-060-01
+    title: ClaudeとCodexの最新有効usageを境界内から取得する
+    feature: strategic-compact transcript context
+    scenario: 両Codex形式とClaudeの入力・キャッシュ、最新優先、不正記録、tail境界を検証する
+    status: done
+    priority: high
+    type: regression
+    source: [strategic-compact/scripts/lib/transcript-context.js, strategic-compact/scripts/lib/file-tail.js]
+    test_file: strategic-compact/tests/transcript-context.test.js
+    issues: [60]
+    notes: "合成JSONLでCodex入力のキャッシュ重複・累計混入を防ぎ、Claudeの3入力区分、最新優先、不正値、部分行と256 KiB tail境界を確認。node --test strategic-compact/tests/transcript-context.test.js は10件成功。SWE-2 Flashが実行、Issue #60コメント https://github.com/nanameru/agent-skills/issues/60#issuecomment-6894626119 を参照。"
+  - id: TC-060-02
+    title: 隔離したCLIでusageに応じた提案通知を維持する
+    feature: strategic-compact suggestion hook
+    scenario: 両Codex形式とClaudeの通知、同bucket重複抑止、無効化、カウンターを検証する
+    status: done
+    priority: high
+    type: integration
+    source: [strategic-compact/scripts/hooks/suggest-compact.js, strategic-compact/scripts/lib/transcript-context.js]
+    test_file: strategic-compact/tests/suggest-compact.test.js
+    issues: [60]
+    notes: "private一時ディレクトリと合成JSONLを使用し、stdin JSONを実CLIへ渡す。既定閾値で高・低入力、同bucket、Claude、context無効化と既定50回のカウンターを確認。node --test strategic-compact/tests/suggest-compact.test.js は5件成功。SWE-2 Flashが実行、Issue #60コメント https://github.com/nanameru/agent-skills/issues/60#issuecomment-6894626119 を参照。UI・E2E・実圧縮の検証ではない。"

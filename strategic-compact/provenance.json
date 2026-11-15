@@ -1,0 +1,20 @@
+{
+  "source": "https://github.com/affaan-m/ECC",
+  "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+  "files": {
+    "scripts/hooks/suggest-compact.js": "e031a96b7d05b689a457eb4c2c02dd8e1171cd5e68633f30b60a3f0f6ce4471a",
+    "scripts/lib/utils.js": "9cd46ca7d5695a9f8be5afc8da618c29b58e65f4be1411531a64485684592710",
+    "scripts/lib/agent-data-home.js": "afc7d0ebe7b747345063f716c18816d6351e94cc1641303a4568fe70858e5710",
+    "scripts/lib/path-safety.js": "542126cf47247161dd26713a1f33d34af2881db46435ac8ecef76a8be31c062c",
+    "scripts/lib/transcript-context.js": "accb92ed11524a49849f2545e3d8cba12a9e5915087df218c53a93b59c0fce1f",
+    "scripts/lib/file-tail.js": "ba0afacb4d6e289e79afeb1e6fce36422b4b7134e524bbef17f1452da8f89106",
+    "LICENSE": "326146379f01bb137c0a5d3c54770c1aa31076705c8b88a7f6b26a460f6221b2"
+  },
+  "source_modified": true,
+  "codex_support": "Reads Codex event_msg token_count last_token_usage and token_usage_record usage input_tokens; cached input is already included.",
+  "local_modifications": {
+    "scripts/lib/transcript-context.js": "Added Codex usage parsing and validation of Claude context token fields; retained the original source hash above.",
+    "SKILL.md": "Copied installed Skill documentation; clarified Codex input token accounting. The installed documentation source revision was not independently verified."
+  },
+  "installed_skill_baseline_sha256": "1c3be090bffc100e31d185196cff0eb7075a877523cf41c19d781baca65b219f"
+}

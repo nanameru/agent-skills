@@ -8,6 +8,12 @@
       "install": false
     },
     {
+      "name": "strategic-compact",
+      "source": "nanameru/agent-skills",
+      "path": "strategic-compact",
+      "install": false
+    },
+    {
       "name": "github-issue-driven-dev",
       "source": "nanameru/github-issue-driven-dev-skill",
       "path": "github-issue-driven-dev",
