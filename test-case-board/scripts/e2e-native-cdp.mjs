@@ -7,7 +7,7 @@ export const hash = (s) => createHash('sha256').update(s).digest('hex');
 export function navigationURL(value, origin) {
   assert.equal(typeof value, 'string');
   assert.ok(/^https?:\/\//i.test(value) && !/[\s*]/.test(value), 'invalid navigation URL');
-  assert.ok(!/^https?:\/\/[^/]*@/i.test(value), 'credentials are prohibited');
+  assert.ok(!/^https?:\/\/[^/?#]*@/i.test(value), 'credentials are prohibited');
   const u = new URL(value);
   assert.ok(['http:', 'https:'].includes(u.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname));
   assert.ok(!u.username && !u.password && u.origin === origin, 'navigation origin differs');
