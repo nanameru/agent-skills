@@ -698,7 +698,7 @@ cases:
     title: "有限URL宣言と所有・逐次操作を拒否境界まで確認する"
     feature: "native CDP declared navigation guards"
     scenario: "AC-U1/U2/U4 旧固定URL、正規化、要求・commit・URL・所有順序と拒否"
-    status: doing
+    status: done
     priority: high
     type: regression
     source: [test-case-board/scripts/e2e-native-cdp.mjs, test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
@@ -706,7 +706,14 @@ cases:
     issues: [56]
     expected: "opt-inなしの完全一致、有限宣言と未宣言・別origin/port・credentials・query/fragment、reload、失敗時の期待URL不更新、所有不一致と直接CDP迂回・step外/並列/未awaitを拒否する。"
     notes: >-
-      fake CLI/CDPと合成動画による直接影響回帰。実ブラウザ・実録画・実所有検証ではない。未実行。
+      固定5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7 cleanで2026-11-15T10:00:20Z〜10:02:06Z、SWE-2 Flash highが旧固定URL4fileと新URL1fileを一括実行、76/76 pass・exit0・signalなし・skip0。Node24.22.2/Darwin27.2.0 arm64。fake CLI/CDPと合成動画のoffline回帰であり、実ブラウザ・録画・所有の証明ではない。
+      初回1b19a733e12015c3261fe0075120b0ee1ac6a22dは26/27 pass・1fail（path省略query内@の誤拒否）。authority終端1行修正後に同assertとfragment内@・空userinfo拒否もpass、失敗履歴はIssue56 comment6892633854に保持。宣言済みfragment成功の同document commit分岐は未試験（Devin flag、軽微として残す）。
+    last_run:
+      revision: 5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7
+      at: "2026-11-15T10:02:06Z"
+      provider: swe-2-flash-high-offline-fake-cdp
+      result: passed
+      evidence: [issue56-offline-214aa153-f81e-4963-9d7f-585b1c1a9b4e/tap.stdout]
   - id: TC-056-NAVIGATION
     title: "同一profileの宣言済み遷移と試行ごとの標準録画を確認する"
     feature: "native CDP declared navigation and evidence"
@@ -719,4 +726,13 @@ cases:
     issues: [56]
     expected: "旧入力/待機/assertを保持し、同URL reloadと有限query遷移で同profile状態・実Input・readyを確認。全4試行の結果と標準録画/private保存/全decode・実PTS・hash読戻し、実worker終了、過去原本不変を分けて確認し、目視は別判定。"
     notes: >-
-      localhost fixtureのみ。失敗・中断を成功にしない。未実行、録画・保存・読戻し・目視・製品E2E・独立Checkerは未検証。
+      固定5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7 clean、2026-11-15T10:04:36Z〜10:05:11Z、Node24.22.2/Darwin27.2.0 arm64・agent-browser0.43.0・Chrome、localhost fixtureの直列4試行。driver exit0・signalなし。success/retryはentry/worker exit0、undeclaredはentry/worker exit1でundeclared-navigation失敗、SIGTERMはentry exit1・worker exit null/signal SIGTERMでpending-interruption。後2件のtargetContinuityはnot-verified、成功2件はpassed。
+      全試行の標準record start/stop passed、private save verified、全decode/readback passed、video/log SHA256一致。frame数はsuccess/undeclared/SIGTERM/retry順に169/168/168/168、実PTSは0〜5.600/5.567/5.567/5.567秒。各試行nativeInput29件（touch4/key2/mouse23）、CDP86件。同URLreload/query遷移とlocalStorage保持・未宣言のdispatch前拒否をresult/logで確認し、driverは過去#54/#56原本不変を試行後とfinallyで検査。
+      担当Solは各動画の1fps抽出6panel（PTS0〜5秒）と末尾index150〜167の18panel、計96panelを部分目視。fixture、touchcancel trusted、Space保持click、pan移動/復帰、zoom1.284、reload後Waiting表示を確認。URL値・拒否/SIGTERM自体は映像表示から判別せずresult/logで照合。原resultのvisualInspectionはunverifiedを保持。全frame目視・録画継続性・内部capture target・厳密wall-clock/PTS対応・管理役最終独立Checkerは未検証のためdoingを維持。製品E2E0回。
+      private root相対suiteはissue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/、試行UUIDは順に415de2d9-5e14-41ff-968f-ee4683b221a9、db68c34d-9f61-43fb-b094-9baa5fb8bff6、9c2fc18b-1122-4a4e-b4b8-75fe4bfb31e8、48db3443-a077-4faa-aff7-1fb6d5caba83。各TC-056-NAVIGATION-UUID内にresult.json/run.log/recording.webm、目視派生visual-1fps.png/visual-tail.png（原本は無加工）。
+    last_run:
+      revision: 5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7
+      at: "2026-11-15T10:05:11Z"
+      provider: swe-2-flash-high-localhost-native-cdp
+      result: "driver passed; success/retry passed, undeclared failed, SIGTERM interrupted; visual partial"
+      evidence: [issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-415de2d9-5e14-41ff-968f-ee4683b221a9/result.json, issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-db68c34d-9f61-43fb-b094-9baa5fb8bff6/result.json, issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-9c2fc18b-1122-4a4e-b4b8-75fe4bfb31e8/result.json, issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-48db3443-a077-4faa-aff7-1fb6d5caba83/result.json]
