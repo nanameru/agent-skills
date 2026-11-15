@@ -708,13 +708,13 @@ cases:
     notes: >-
       固定5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7 cleanで2026-11-15T10:00:20Z〜10:02:06Z、SWE-2 Flash highが旧固定URL4fileと新URL1fileを一括実行、76/76 pass・exit0・signalなし・skip0。Node24.22.2/Darwin27.2.0 arm64。fake CLI/CDPと合成動画のoffline回帰であり、実ブラウザ・録画・所有の証明ではない。
       初回1b19a733e12015c3261fe0075120b0ee1ac6a22dは26/27 pass・1fail（path省略query内@の誤拒否）。authority終端1行修正後に同assertとfragment内@・空userinfo拒否もpass、失敗履歴はIssue56 comment6892633854に保持。宣言済みfragment成功の同document commit分岐は未試験（Devin flag、軽微として残す）。
-      上記doneとlast_runはv1の履歴。追補v2の分類・実入口とfake CDPによる正負回帰は執筆のみで実行・合否未確認。v1の76/76をv2の結果へ流用しない。
+      上記76/76はv1の履歴（private issue56-offline-214aa153-f81e-4963-9d7f-585b1c1a9b4e/tap.stdout）。追補v2はclean dcb845b75939147a4e2276715a4b5597cd03c8a0で6file直接回帰を1回実行、115/115 pass・exit0/signal null・skip0。UTC 2026-11-15T13:02:43Z〜13:04:28Z、Node24.22.2/Darwin27.2.0 arm64。iframeの親鎖/context一致と再生成許可、帰属不明・異context・新page・所有交換・非iframe集合変更・session/endpoint変更の拒否を追加し旧回帰を保持。fake CLI/CDP・合成動画のoffline結果であり実Chrome/録画の証明ではない。TAP stdout SHA256 81a6d5960d0a280887f39b210aa6d20a4df52f6513e5e76957e0b0f90a8b4da5、private保存と読戻し済み。
     last_run:
-      revision: 5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7
-      at: "2026-11-15T10:02:06Z"
+      revision: dcb845b75939147a4e2276715a4b5597cd03c8a0
+      at: "2026-11-15T13:04:28Z"
       provider: swe-2-flash-high-offline-fake-cdp
       result: passed
-      evidence: [issue56-offline-214aa153-f81e-4963-9d7f-585b1c1a9b4e/tap.stdout]
+      evidence: [issue56-v2-offline-63c91a44-eb09-4311-8e17-b83b847d235d/tap-stdout.txt, issue56-v2-offline-63c91a44-eb09-4311-8e17-b83b847d235d/meta.txt]
   - id: TC-056-NAVIGATION
     title: "同一profileの宣言済み遷移と試行ごとの標準録画を確認する"
     feature: "native CDP declared navigation and evidence"
@@ -731,10 +731,13 @@ cases:
       全試行の標準record start/stop passed、private save verified、全decode/readback passed、video/log SHA256一致。frame数はsuccess/undeclared/SIGTERM/retry順に169/168/168/168、実PTSは0〜5.600/5.567/5.567/5.567秒。各試行nativeInput29件（touch4/key2/mouse23）、CDP86件。同URLreload/query遷移とlocalStorage保持・未宣言のdispatch前拒否をresult/logで確認し、driverは過去#54/#56原本不変を試行後とfinallyで検査。
       担当Solは各動画の1fps抽出6panel（PTS0〜5秒）と末尾index150〜167の18panel、計96panelを部分目視。fixture、touchcancel trusted、Space保持click、pan移動/復帰、zoom1.284、reload後Waiting表示を確認。URL値・拒否/SIGTERM自体は映像表示から判別せずresult/logで照合。原resultのvisualInspectionはunverifiedを保持。全frame目視・録画継続性・内部capture target・厳密wall-clock/PTS対応・管理役最終独立Checkerは未検証のためdoingを維持。製品E2E0回。
       private root相対suiteはissue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/、試行UUIDは順に415de2d9-5e14-41ff-968f-ee4683b221a9、db68c34d-9f61-43fb-b094-9baa5fb8bff6、9c2fc18b-1122-4a4e-b4b8-75fe4bfb31e8、48db3443-a077-4faa-aff7-1fb6d5caba83。各TC-056-NAVIGATION-UUID内にresult.json/run.log/recording.webm、目視派生visual-1fps.png/visual-tail.png（原本は無加工）。
-      上記last_runはv1の履歴。追補v2のiframe付きfixture・録画4試行・正式帰属・target再生成は未実行・未証明。旧製品失敗3原本は環境変数で指定し固定hashを各試行前後とfinallyに照合する計画。製品試験は対象外。
+      上記はv1の履歴でありv2へ流用しない。追補v2はclean dcb845b75939147a4e2276715a4b5597cd03c8a0、UTC 2026-11-15T13:05:16Z〜13:05:58Z、同環境の標準driver --iframeを1suite実行してexit0/signal null。success/retryはentry/worker exit0、undeclaredはentry/worker exit1で意図的拒否、SIGTERMはentry exit1・worker exit null/signal SIGTERM。成功2件のtargetContinuity passed、拒否/中断2件はnot-verifiedを保持。各run nativeInput29件/CDP89件、標準start/stop passed・save verified・全decode/readback passed・video/log hash一致。
+      正式TargetInfoを各run26観測（undeclaredのみ28観測）で照合し、単一所有page・context・所有session・非iframe集合固定とiframe親鎖の全段同contextを確認。reload/query後のiframeは各run計3世代、宣言外要求はdispatch前に拒否。frame数はsuccess/undeclared/SIGTERM/retry順に172/174/174/173、実PTSは0〜5.700/5.767/5.767/5.733秒。旧製品失敗3原本と過去#54/#56原本hashは各試行前後/finallyで不変、担当も旧失敗3原本を読取再計算し一致。
+      v2部分目視はprivate派生visual-sampled.pngの各run1fps 6panelと末尾index156〜最終frame（success171/undeclared173/SIGTERM173/retry172）、計93panel。fixture・iframe表示、touchcancel trusted・Space保持click・zoom1.284、reload後Waitingと末尾Pan Releasedを確認。URL値・拒否/SIGTERM自体・iframeのtarget帰属は映像だけで証明せずresult/logで照合。原resultのvisualInspection/captureTargetIdentityはunverifiedのまま、全frame目視・全期間coverage/連続性・内部capture target・厳密wall-clock/PTS対応は未証明。v2の管理役最終独立Checker/受入待ちでdoingを維持。製品E2E0回。
+      v2 private root相対suiteはissue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/、新規UUIDはsuccess894695ea-8cb8-4390-a13b-8852a9348b49、undeclared d749f5b2-4f6d-4bdb-ab43-d3280e2064aa、SIGTERM58902eb8-9f61-4225-b445-2530334fd7c0、retry3b33f70f-08d5-4d77-b11d-dfa3e67ee578。各TC-056-NAVIGATION-UUID内のresult.json/run.log/recording.webmと派生画像を保持。旧失敗の結果は訂正しない。
     last_run:
-      revision: 5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7
-      at: "2026-11-15T10:05:11Z"
+      revision: dcb845b75939147a4e2276715a4b5597cd03c8a0
+      at: "2026-11-15T13:05:58Z"
       provider: swe-2-flash-high-localhost-native-cdp
       result: "driver passed; success/retry passed, undeclared failed, SIGTERM interrupted; visual partial"
-      evidence: [issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-415de2d9-5e14-41ff-968f-ee4683b221a9/result.json, issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-db68c34d-9f61-43fb-b094-9baa5fb8bff6/result.json, issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-9c2fc18b-1122-4a4e-b4b8-75fe4bfb31e8/result.json, issue56-62275b35-9016-460f-8a97-bc7b5dd8ad0a/TC-056-NAVIGATION-48db3443-a077-4faa-aff7-1fb6d5caba83/result.json]
+      evidence: [issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-894695ea-8cb8-4390-a13b-8852a9348b49/result.json, issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-d749f5b2-4f6d-4bdb-ab43-d3280e2064aa/result.json, issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-58902eb8-9f61-4225-b445-2530334fd7c0/result.json, issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-3b33f70f-08d5-4d77-b11d-dfa3e67ee578/result.json]
