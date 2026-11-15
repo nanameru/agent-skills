@@ -694,3 +694,29 @@ cases:
     notes: >-
       native resultとworkerの契約guardを用意。固定00542e2c44de67230cfd8422d006585bd2db61b6でcount guardはSWEがoffline 6/6、exit 0・signalなしを確認。新step guard単体の実行結果はここでは未確認。
       固定439b78c1728ae3487656b27165cef1fa7c6eee44の限定fixture 4runでは、success・assertion・SIGTERM・retryの実worker exit/signalとfailedStepをresult-v1へ記録。詳細とprivate相対参照はTC-054-RUN-EVIDENCEを参照。意図した失敗・中断は成功へ読み替えず、T3 in-process正規化0/1の変更や最終独立Checker合格を意味しない。
+  - id: TC-056-NAVIGATION-GUARDS
+    title: "有限URL宣言と所有・逐次操作を拒否境界まで確認する"
+    feature: "native CDP declared navigation guards"
+    scenario: "AC-U1/U2/U4 旧固定URL、正規化、要求・commit・URL・所有順序と拒否"
+    status: doing
+    priority: high
+    type: regression
+    source: [test-case-board/scripts/e2e-native-cdp.mjs, test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-native-navigation.test.mjs
+    issues: [56]
+    expected: "opt-inなしの完全一致、有限宣言と未宣言・別origin/port・credentials・query/fragment、reload、失敗時の期待URL不更新、所有不一致と直接CDP迂回・step外/並列/未awaitを拒否する。"
+    notes: >-
+      fake CLI/CDPと合成動画による直接影響回帰。実ブラウザ・実録画・実所有検証ではない。未実行。
+  - id: TC-056-NAVIGATION
+    title: "同一profileの宣言済み遷移と試行ごとの標準録画を確認する"
+    feature: "native CDP declared navigation and evidence"
+    scenario: "AC-U1/U2/U3/U4 成功・未宣言拒否・SIGTERM・別UUID retry"
+    status: doing
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-runner.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs]
+    test_file: test-case-board/tests/e2e-native-cdp-fixture/navigation-runner.mjs
+    issues: [56]
+    expected: "旧入力/待機/assertを保持し、同URL reloadと有限query遷移で同profile状態・実Input・readyを確認。全4試行の結果と標準録画/private保存/全decode・実PTS・hash読戻し、実worker終了、過去原本不変を分けて確認し、目視は別判定。"
+    notes: >-
+      localhost fixtureのみ。失敗・中断を成功にしない。未実行、録画・保存・読戻し・目視・製品E2E・独立Checkerは未検証。
