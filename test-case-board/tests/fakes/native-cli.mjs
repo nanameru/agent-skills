@@ -13,6 +13,10 @@ if (cmd[0] === '--profile') {
   const changed = process.env.TB_MOCK_FAULT === 'endpoint' && n === Number(process.env.TB_MOCK_AT);
   const browserChanged = process.env.TB_MOCK_FAULT === 'browser' && n === Number(process.env.TB_MOCK_AT);
   console.log(JSON.stringify({ success: true, data: { cdpUrl: `ws://127.0.0.1:${changed ? 9223 : 9222}/devtools/browser/${browserChanged ? 'other' : 'fake'}` } }));
+} else if (cmd[0] === 'tab' && process.env.TB_MOCK_FAULT === 'page-swap' &&
+  // The entrypoint obtains the initial endpoint once before observation 1.
+  Number(fs.readFileSync('fake-cdp-count', 'utf8')) === Number(process.env.TB_MOCK_AT) + 1) {
+  console.log(JSON.stringify({ success: true, data: { tabs: [{ active: true, targetId: 'replacement-page' }] } }));
 } else {
   await import('./agent-browser.mjs');
 }

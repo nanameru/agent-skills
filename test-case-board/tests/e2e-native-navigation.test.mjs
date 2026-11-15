@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { navigationURL } from '../scripts/e2e-native-cdp.mjs';
+import { classifyNativeTargets, navigationURL } from '../scripts/e2e-native-cdp.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const cli = path.join(repo, 'test-case-board/bin/test-board');
@@ -26,12 +26,13 @@ assert.ok(root !== repo && !root.startsWith(repo + path.sep));
 const batch = path.join(root, `fake-native56-${randomUUID()}`);
 await mkdir(batch, { mode: 0o700 });
 
-async function invoke({ scenario = 'normal', fault = '', at = 0, destination = next, declarations = [initial, next] } = {}) {
+async function invoke({ scenario = 'normal', fault = '', at = 0, destination = next, declarations = [initial, next], iframe = false } = {}) {
   const trace = path.join(batch, `trace-${randomUUID()}`);
   const names = ['PATH', 'HOME', 'USER', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'TZ', 'SYSTEMROOT', 'WINDIR'];
   const env = Object.fromEntries(names.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]]));
   Object.assign(env, { NODE_OPTIONS: `--import=${preload}`, TB_56_MOCK: '1', TB_MOCK_TRACE: trace,
-    TB_MOCK_SCENARIO: scenario, TB_MOCK_FAULT: fault, TB_MOCK_AT: String(at), TB_MOCK_INITIAL: initial, TB_MOCK_NEXT: destination });
+    TB_MOCK_SCENARIO: scenario, TB_MOCK_FAULT: fault, TB_MOCK_AT: String(at), TB_MOCK_INITIAL: initial, TB_MOCK_NEXT: destination,
+    TB_MOCK_IFRAME: iframe ? '1' : '0' });
   const args = ['e2e', '--provider', 'native-cdp', '--case', 'TC-056-MOCK', '--runner', runner, '--browser', browser,
     '--chrome', process.execPath, '--url', initial, '--evidence-dir', batch, '--data-kind', 'fixture', '--issue', '56',
     '--environment', 'offline fake CDP and synthetic video', '--timeout-ms', '30000',
@@ -113,6 +114,110 @@ test('same URL reload and query navigation commit before URL and ownership obser
   assert.deepEqual(phases.slice(0, 4), ['initial-target', 'before-record-start', 'after-record-start', 'step-before']);
   assert.deepEqual(phases.slice(4, 8), ['navigation-before', 'navigation-after', 'navigation-before', 'navigation-after']);
 });
+
+test('only an explicit, same-context iframe parent chain to the owned page is exempt', () => {
+  const page = { type: 'page', targetId: 'page', browserContextId: 'context' };
+  const parent = { type: 'iframe', targetId: 'parent', parentId: 'page', browserContextId: 'context' };
+  const child = { type: 'iframe', targetId: 'child', parentId: 'parent', browserContextId: 'context' };
+  const worker = { type: 'service_worker', targetId: 'worker', browserContextId: 'context' };
+  const classify = (infos, owned = page) => classifyNativeTargets({ targetInfos: infos }, owned);
+  const result = classify([child, worker, page, parent]);
+  assert.deepEqual(result.fixedTargets, [['page', 'page', 'context'], ['worker', 'service_worker', 'context']]);
+  assert.deepEqual(result.ownedIframes.map((i) => i.targetId).sort(), ['child', 'parent']);
+  assert.deepEqual(result.ownedIframes.find((i) => i.targetId === 'child').chain.map((i) => i.targetId), ['child', 'parent', 'page']);
+  assert.deepEqual(result.unprovenIframes, []);
+  const changed = classify([page, worker, { ...parent, targetId: 'new-parent' }, { ...child, targetId: 'new-child', parentId: 'new-parent' }]);
+  assert.deepEqual(changed.fixedTargets, result.fixedTargets);
+  assert.equal(changed.ownedIframes.length, 2);
+  for (const [label, infos, owned] of [
+    ['page context absent', [{ ...page, browserContextId: undefined }, parent, child], { ...page, browserContextId: undefined }],
+    ['owned page context differs', [{ ...page, browserContextId: 'other' }, parent, child], page],
+    ['child context absent', [page, parent, { ...child, browserContextId: undefined }], page],
+    ['child context empty', [page, parent, { ...child, browserContextId: '' }], page],
+    ['intermediate context absent', [page, { ...parent, browserContextId: undefined }, child], page],
+    ['child context differs', [page, parent, { ...child, browserContextId: 'other' }], page],
+    ['intermediate context differs', [page, { ...parent, browserContextId: 'other' }, child], page],
+    ['missing parent ID', [page, parent, { ...child, parentId: undefined }], page],
+    ['parentFrameId is not parentId', [page, parent, { ...child, parentId: undefined, parentFrameId: 'parent' }], page],
+    ['openerId is not parentId', [page, parent, { ...child, parentId: undefined, openerId: 'parent' }], page],
+    ['unknown parent ID', [page, parent, { ...child, parentId: 'unknown' }], page],
+    ['owned page unavailable', [parent, child], page],
+    ['cycle', [page, { ...parent, parentId: 'child' }, child], page],
+    ['non-iframe intermediate', [page, worker, { ...child, parentId: 'worker' }], page],
+  ]) {
+    const classified = classify(infos, owned);
+    assert.ok(classified.unprovenIframes.some((i) => i.targetId === 'child'), label);
+    assert.ok(!classified.ownedIframes.some((i) => i.targetId === 'child'), label);
+  }
+  for (const infos of [[page, parent, { ...child, targetId: '' }], [page, parent, { ...child, targetId: 'parent' }]]) {
+    assert.throws(() => classify(infos), /invalid or duplicate target ID/);
+  }
+});
+
+test('fake CDP entrypoint permits only proven iframe regeneration and updates the URL after both guards', async () => {
+  const out = await invoke({ iframe: true });
+  assert.equal(out.exit.code, 0); assert.equal(out.result.test.status, 'passed');
+  assert.deepEqual(out.result.steps[0].navigations.map((n) => [n.requestedURL, n.observedURL, n.status]), [[initial, initial, 'passed'], [next, next, 'passed']]);
+  const classified = out.log.filter((e) => e.type === 'native-target-classification');
+  assert.ok(classified.length >= 9);
+  assert.ok(classified.every((e) => e.ownedIframes.length === 2 && e.unprovenIframes.length === 0));
+  assert.deepEqual(classified.find((e) => e.phase === 'navigation-before').ownedIframes.map((i) => i.targetId), ['frame-0', 'nested-0']);
+  assert.deepEqual(classified.filter((e) => e.phase === 'navigation-after').map((e) => e.ownedIframes[0].targetId), ['frame-1', 'frame-2']);
+  assert.ok(out.log.some((e) => e.type === 'native-observation' && e.phase === 'step-after' && e.targets.targetInfos.find((t) => t.type === 'page')?.url === next));
+});
+
+const ownershipFaults = [
+  ['iframe-parent-missing', /native iframe ownership or context unproven/],
+  ['iframe-parent-unknown', /native iframe ownership or context unproven/],
+  ['iframe-context-missing', /native iframe ownership or context unproven/],
+  ['iframe-context-different', /native iframe ownership or context unproven/],
+  ['iframe-cycle', /native iframe ownership or context unproven/],
+  ['iframe-intermediate-worker', /native iframe ownership or context unproven/],
+  ['new-page', /CDP must report one page target/],
+  ['page-swap', /native target set changed/],
+  ['unknown-target', /native iframe ownership or context unproven/],
+  ['unknown-type', /native target set changed/],
+  ['non-iframe-changed', /native target set changed/],
+  ['non-iframe-removed', /native target set changed/],
+  ['non-iframe-context', /native target set changed/],
+  ['iframe-becomes-worker', /native target set changed/],
+  ['session', /native owned session changed/],
+  ['context', null],
+  // Endpoint faults count the initial endpoint lookup as well as observations.
+  ['endpoint', /native endpoint changed/],
+  ['browser', /native endpoint changed/],
+];
+for (const [fault, expectedError] of ownershipFaults) {
+  test(`fake CDP entrypoint refuses ${fault} after navigation and retains the previous expected URL`, async () => {
+    const at = ['endpoint', 'browser'].includes(fault) ? 9 : 8;
+    const out = await invoke({ scenario: 'second-failure-caught', iframe: true, fault, at });
+    assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+    const step = out.result.steps[0];
+    assert.deepEqual(step.navigations.map((n) => n.status), ['passed', 'failed']);
+    assert.equal(step.navigations[1].requestedURL, next);
+    if (expectedError) assert.match(step.navigations[1].error, expectedError);
+    else assert.ok(step.navigations[1].error);
+    if (fault === 'context') assert.ok(out.log.some((entry) => entry.type === 'native-observation' && entry.phase === 'navigation-after' && entry.contexts.browserContextIds[0] === 'other'));
+    assert.equal(out.calls.filter((call) => call === 'dispatch').length, 2);
+    assert.equal(step.status, 'failed');
+    assert.match(step.error, /active target must be the fixture/);
+    assert.notEqual(out.result.recording.targetContinuity, 'passed');
+  });
+}
+
+for (const [fault, expectedError] of ownershipFaults) {
+  test(`fake CDP entrypoint refuses ${fault} before dispatch`, async () => {
+    const at = ['endpoint', 'browser'].includes(fault) ? 6 : 5;
+    const out = await invoke({ scenario: 'failure-caught', iframe: true, fault, at });
+    assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+    assert.equal(out.calls.includes('dispatch'), false);
+    assert.equal(out.result.steps[0].navigations[0].status, 'failed');
+    if (expectedError) assert.match(out.result.steps[0].navigations[0].error, expectedError);
+    else assert.ok(out.result.steps[0].navigations[0].error);
+    if (fault === 'context') assert.ok(out.log.some((entry) => entry.type === 'native-observation' && entry.phase === 'navigation-before' && entry.contexts.browserContextIds[0] === 'other'));
+    assert.equal(out.result.steps[0].status, 'passed', 'old URL remains valid at the next boundary');
+  });
+}
 
 test('caught undeclared request fails overall without dispatch or updating the expected URL', async () => {
   const out = await invoke({ scenario: 'undeclared-caught' });

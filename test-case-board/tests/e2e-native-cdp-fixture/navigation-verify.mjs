@@ -3,6 +3,77 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 const sha = /^[a-f0-9]{64}$/;
 const originalSteps = ['fixture-ready', 'native-touch-end', 'native-touch-cancel', 'native-space-click', 'native-roundtrip-pan', 'native-ctrl-wheel'];
 
+// Independently check the official raw Target.getTargets snapshots in the
+// existing private log. DOM presence and the product's classification alone
+// are not evidence that an iframe target was recreated or owned.
+export function verifyIframeObservations(entries) {
+  const observations = entries.filter((e) => e.type === 'native-observation');
+  const classifications = entries.filter((e) => e.type === 'native-target-classification');
+  assert.ok(observations.length > 0 && observations.length === classifications.length, 'missing target observations/classifications');
+  let ownedId, contextId, contextSet, fixed;
+  for (let index = 0; index < observations.length; index++) {
+    const observation = observations[index], classification = classifications[index];
+    assert.equal(classification.phase, observation.phase); assert.equal(classification.step, observation.step);
+    const infos = observation.targets?.targetInfos;
+    assert.ok(Array.isArray(infos));
+    const byId = new Map();
+    for (const info of infos) {
+      assert.ok(typeof info.targetId === 'string' && info.targetId && !byId.has(info.targetId), 'invalid target ID');
+      byId.set(info.targetId, info);
+    }
+    const pages = infos.filter((info) => info.type === 'page');
+    assert.equal(pages.length, 1, 'expected exactly one page');
+    const page = pages[0];
+    assert.ok(typeof page.browserContextId === 'string' && page.browserContextId, 'page context was not explicitly observed');
+    ownedId ??= page.targetId; contextId ??= page.browserContextId;
+    assert.equal(page.targetId, ownedId); assert.equal(page.browserContextId, contextId);
+    assert.equal(observation.tabs?.tabs?.length, 1);
+    assert.equal(observation.tabs.tabs[0].active, true); assert.equal(observation.tabs.tabs[0].targetId, ownedId);
+    assert.ok(Array.isArray(observation.contexts?.browserContextIds));
+    assert.ok(observation.contexts.browserContextIds.length <= 1 && (!observation.contexts.browserContextIds.length || observation.contexts.browserContextIds[0] === contextId));
+    contextSet ??= [...observation.contexts.browserContextIds].sort();
+    assert.deepEqual([...observation.contexts.browserContextIds].sort(), contextSet, 'browser context set changed');
+    if (observation.phase !== 'initial-target') {
+      assert.equal(observation.sessionTarget?.targetId, ownedId);
+      assert.equal(observation.sessionTarget?.browserContextId, contextId);
+      assert.equal(observation.sessionTarget?.url, page.url);
+    }
+    const stable = infos.filter((info) => info.type !== 'iframe')
+      .map((info) => [info.targetId, info.type, info.browserContextId ?? 'default'])
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    fixed ??= stable;
+    assert.deepEqual(stable, fixed, 'non-iframe target set changed');
+    assert.deepEqual(classification.fixedTargets, stable);
+    assert.deepEqual(classification.unprovenIframes, []);
+    const frames = infos.filter((info) => info.type === 'iframe');
+    for (const frame of frames) {
+      let current = frame;
+      const seen = new Set();
+      for (;;) {
+        assert.ok(!seen.has(current.targetId), 'iframe parent cycle'); seen.add(current.targetId);
+        assert.equal(current.browserContextId, contextId, 'iframe chain context missing or different');
+        if (current.targetId === ownedId) { assert.equal(current.type, 'page'); break; }
+        assert.equal(current.type, 'iframe', 'non-iframe ancestor');
+        assert.ok(typeof current.parentId === 'string' && current.parentId, 'iframe parent missing');
+        current = byId.get(current.parentId);
+        assert.ok(current, 'iframe parent unavailable');
+      }
+    }
+    assert.deepEqual(classification.ownedIframes.map((frame) => frame.targetId).sort(), frames.map((frame) => frame.targetId).sort());
+  }
+  for (const step of ['same-url-reload', 'declared-query-navigation']) {
+    const before = observations.filter((e) => e.step === step && e.phase === 'navigation-before');
+    const after = observations.filter((e) => e.step === step && e.phase === 'step-after');
+    assert.equal(before.length, 1); assert.equal(after.length, 1);
+    assert.ok(entries.indexOf(before[0]) < entries.indexOf(after[0]));
+    const previous = before[0].targets.targetInfos.filter((i) => i.type === 'iframe').map((i) => i.targetId);
+    const current = after[0].targets.targetInfos.filter((i) => i.type === 'iframe').map((i) => i.targetId);
+    assert.ok(previous.length && current.length, 'real iframe target absent at navigation boundary');
+    assert.ok(previous.every((id) => !current.includes(id)), 'previous iframe target still present or not recreated');
+  }
+  return true;
+}
+
 // Result-v1 source validation only; neither synthetic results nor decode prove visual content.
 export function verifyNavigationResult(result, { scenario, commit, exit, initial, next, denied }) {
   assert.equal(result.schema, 'test-board-e2e-result-v1'); assert.match(result.runId, uuid);

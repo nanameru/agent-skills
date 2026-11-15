@@ -16,6 +16,10 @@ export async function run({ step, cdp, page }) {
     } else if (scenario === 'failure-caught') {
       try { await page.navigate(next); } catch {}
       await input();
+    } else if (scenario === 'second-failure-caught') {
+      await page.navigate(initial);
+      try { await page.navigate(next); } catch {}
+      await input();
     } else if (scenario === 'undeclared-caught') {
       try { await page.navigate(`${initial}&undeclared=1`); } catch {}
       await input();

@@ -9,13 +9,13 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { verifyNavigationResult } from './navigation-verify.mjs';
+import { verifyIframeObservations, verifyNavigationResult } from './navigation-verify.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../../..');
 const entry = path.join(repo, 'test-case-board/bin/test-board');
 const runner = path.join(here, 'navigation-runner.mjs');
-const usage = 'Usage: node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs --commit FULL_SHA --browser AGENT_BROWSER_EXECUTABLE --chrome APPROVED_CHROME_EXECUTABLE\n';
+const usage = 'Usage: node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs --commit FULL_SHA --browser AGENT_BROWSER_EXECUTABLE --chrome APPROVED_CHROME_EXECUTABLE [--iframe]\n';
 let suiteRef = null;
 
 async function hashFile(file) {
@@ -53,6 +53,8 @@ async function privateLog(file, text) {
 async function main() {
   if (process.argv.length === 3 && process.argv[2] === '--help') { process.stdout.write(usage); return; }
   const args = process.argv.slice(2), opts = {};
+  const iframeMode = args.at(-1) === '--iframe';
+  if (iframeMode) args.pop();
   assert.equal(args.length, 6, usage);
   for (let i = 0; i < args.length; i += 2) {
     assert.ok(['--commit', '--browser', '--chrome'].includes(args[i]) && !opts[args[i]] && args[i + 1], usage);
@@ -74,18 +76,40 @@ async function main() {
     if (item.isDirectory() && /^issue(?:54|56)-[0-9a-f-]{36}$/i.test(item.name)) await retainedFiles(path.join(evidence, item.name), oldFiles);
   }
   const preserved = await snapshot(oldFiles);
+  if (iframeMode) {
+    // The caller supplies the private original directory. Never write to it or
+    // print its path/content; known hashes are checked before every attempt and
+    // in finally, in addition to the existing #54/#56 evidence snapshots.
+    const supplied = process.env.TB_56_PRODUCT_FAILURE_DIR;
+    assert.ok(supplied && path.isAbsolute(supplied), 'private product-failure directory required');
+    const original = await realpath(supplied);
+    const expected = {
+      'result.json': '23e32cac2c01f4bc316f721ad923471157c4bab046eb824d58a99d90918a06b1',
+      'run.log': '8f2ec83ca2790d7b86e80e3650d5e5f508c2558f73ac293beaa107e9633e84dd',
+      'recording.webm': 'd57627c10c6a3ae145f58829929e0bc566972d3cf4f93a3e61b31aba08aff326',
+    };
+    for (const [name, digest] of Object.entries(expected)) {
+      const file = path.join(original, name);
+      await privateFile(file); assert.equal(await hashFile(file), digest, 'original product evidence hash mismatch');
+      preserved.set(file, digest);
+    }
+  }
   process.umask(0o077);
   const suiteName = `issue56-${randomUUID()}`;
   const suite = path.join(evidence, suiteName);
   await mkdir(suite, { mode: 0o700 });
   suiteRef = suiteName;
   const html = await readFile(path.join(here, 'index.html'));
+  // Constant, inert srcdoc and an opaque sandbox create a candidate child
+  // target without changing the original page, input sequence, or timing.
+  // Whether Chrome exposes it as a TargetInfo iframe is checked, never assumed.
+  const iframeHtml = Buffer.from(html.toString('utf8').replace('</main>', '<iframe title="Isolated fixture frame" tabindex="-1" sandbox srcdoc="&lt;!doctype html&gt;&lt;html lang=\'en\'&gt;&lt;head&gt;&lt;title&gt;Isolated fixture frame&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;p&gt;Isolated local fixture&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></main>'));
   const script = await readFile(path.join(here, 'fixture.mjs'));
   let active = null;
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     if (!active || (url.pathname !== '/fixture.mjs' && url.searchParams.get('run') !== active.id)) { res.writeHead(404).end(); return; }
-    if (url.pathname === '/') res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(html);
+    if (url.pathname === '/') res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(iframeMode ? iframeHtml : html);
     else if (url.pathname === '/fixture.mjs') res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' }).end(script);
     else if (url.pathname === '/pending' && active.scenario === 'sigterm') {
       active.pendingSeen = true;
@@ -100,6 +124,7 @@ async function main() {
   try {
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
     for (const scenario of ['success', 'undeclared', 'sigterm', 'retry']) {
+      await unchanged(preserved);
       const id = randomUUID();
       const caseId = 'TC-056-NAVIGATION';
       const url = `http://127.0.0.1:${server.address().port}/?run=${id}`;
@@ -112,6 +137,7 @@ async function main() {
       const env = Object.fromEntries(names.filter((name) => process.env[name] !== undefined).map((name) => [name, process.env[name]]));
       env.TB_NATIVE_SCENARIO = 'success'; env.TB_56_SCENARIO = scenario;
       env.TB_56_INITIAL_URL = url; env.TB_56_QUERY_URL = next; env.TB_56_DENIED_URL = denied;
+      if (iframeMode) env.TB_56_IFRAME = '1';
       const child = spawn(entry, cliArgs, { cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'] });
       active = { id, scenario, child, pendingSeen: false, signalSent: false };
       let stdout = '', stderr = '';
@@ -146,13 +172,16 @@ async function main() {
       const logEntries = (await readFile(log, 'utf8')).split('\n').flatMap((line) => {
         try { return [JSON.parse(line)]; } catch { return []; }
       });
+      if (iframeMode) verifyIframeObservations(logEntries);
+      const observations = logEntries.filter((item) => item.type === 'native-observation');
       if (scenario === 'sigterm') {
-        const observations = logEntries.filter((item) => item.type === 'native-observation');
         assert.deepEqual(observations.slice(0, 3).map((item) => item.phase), ['initial-target', 'before-record-start', 'after-record-start']);
         const last = observations.at(-1);
         const pending = result.steps.find((item) => item.id === 'pending-interruption');
         assert.equal(last?.phase, 'step-before');
         assert.ok(Number.isFinite(Date.parse(last.time)) && Date.parse(last.time) <= Date.parse(pending.startedAt));
+      } else if (iframeMode) {
+        assert.equal(observations.at(-1)?.phase, 'after-worker', 'final ownership observation missing');
       }
       const entries = logEntries.filter((item) => item.type === 'cdp-send');
       // Page.navigate is recorded as a navigation entry rather than cdp-send.
@@ -162,7 +191,6 @@ async function main() {
         ['same-url-reload', 'passed'], ['declared-query-navigation', 'passed'],
         ...(scenario === 'undeclared' ? [['undeclared-navigation', 'failed']] : []),
       ]);
-      const observations = logEntries.filter((item) => item.type === 'native-observation');
       assert.deepEqual(observations.slice(0, 3).map((item) => item.phase), ['initial-target', 'before-record-start', 'after-record-start']);
       for (const id of ['same-url-reload', 'declared-query-navigation']) {
         const phases = observations.filter((item) => item.step === id).map((item) => item.phase);
