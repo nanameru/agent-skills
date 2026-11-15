@@ -44,6 +44,46 @@ export function pageIdentity(tabs, targets, contexts, fixtureURL) {
     contexts: [...contexts.browserContextIds].sort() };
 }
 
+// Only a complete TargetInfo parent chain in one explicitly identified context
+// can exempt an iframe from the otherwise fixed target set.
+export function classifyNativeTargets(targets, page) {
+  const infos = targets.targetInfos;
+  assert.ok(Array.isArray(infos), 'invalid target list');
+  const byId = new Map();
+  for (const target of infos) {
+    assert.ok(typeof target.targetId === 'string' && target.targetId && !byId.has(target.targetId), 'invalid or duplicate target ID');
+    byId.set(target.targetId, target);
+  }
+  const fixedTargets = [], ownedIframes = [], unprovenIframes = [];
+  for (const target of infos) {
+    if (target.type !== 'iframe') {
+      fixedTargets.push([target.targetId, target.type, target.browserContextId ?? 'default']);
+      continue;
+    }
+    const chain = [], seen = new Set();
+    let current = target, reason = null;
+    const context = page.browserContextId;
+    if (typeof context !== 'string' || !context) reason = 'owned page context missing';
+    while (!reason) {
+      if (seen.has(current.targetId)) { reason = 'parent cycle'; break; }
+      seen.add(current.targetId);
+      chain.push({ targetId: current.targetId, type: current.type, browserContextId: current.browserContextId ?? null, parentId: current.parentId ?? null });
+      if (current.browserContextId !== context) { reason = 'context missing or differs'; break; }
+      if (current.targetId === page.targetId) {
+        if (current.type !== 'page') reason = 'owned target is not a page';
+        break;
+      }
+      if (current.type !== 'iframe') { reason = 'non-iframe in parent chain'; break; }
+      if (typeof current.parentId !== 'string' || !current.parentId) { reason = 'parent missing'; break; }
+      current = byId.get(current.parentId);
+      if (!current) { reason = 'parent target unavailable'; break; }
+    }
+    (reason ? unprovenIframes : ownedIframes).push({ targetId: target.targetId, chain, ...(reason ? { reason } : {}) });
+  }
+  fixedTargets.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  return { fixedTargets, ownedIframes, unprovenIframes };
+}
+
 export function publicIdentity(identity) {
   return { targetHash: hash(identity.targetId), contextHash: hash(identity.contextId),
     contextSetHashes: identity.contexts.map(hash) };

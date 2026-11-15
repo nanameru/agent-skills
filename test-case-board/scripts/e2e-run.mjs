@@ -8,7 +8,7 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
-import { CDP, checkEndpoint, pageIdentity, navigationURL, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
+import { CDP, checkEndpoint, pageIdentity, classifyNativeTargets, navigationURL, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
 
 const exec = promisify(execFile);
 const worker = fileURLToPath(new URL('./e2e-worker.mjs', import.meta.url));
@@ -251,12 +251,16 @@ async function main(argv) {
       await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
       const observedURL = targets.targetInfos.find((target) => target.type === 'page')?.url;
       const found = pageIdentity(tabs, targets, contexts, expected ?? observedURL);
-      const targetSet = targets.targetInfos.map((t) => [t.targetId, t.type, t.browserContextId ?? 'default']).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-      if (nativeTargets && JSON.stringify(targetSet) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
-      nativeTargets ||= targetSet;
+      const page = targets.targetInfos.find((target) => target.targetId === found.targetId);
+      const classification = classifyNativeTargets(targets, page);
+      await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-target-classification', phase, step: currentStep, ...classification }) + '\n', (err) => err ? reject(err) : resolve()));
+      await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
+      if (classification.unprovenIframes.length) throw new Error('native iframe ownership or context unproven');
+      if (nativeTargets && JSON.stringify(classification.fixedTargets) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
       if (nativeIdentity && (found.targetId !== nativeIdentity.targetId || found.contextId !== nativeIdentity.contextId || JSON.stringify(found.contexts) !== JSON.stringify(nativeIdentity.contexts))) throw new Error('native target or context changed');
-      nativeIdentity ||= found;
       if (nativeSession && (!sessionTarget || sessionTarget.targetId !== found.targetId || (sessionTarget.browserContextId ?? 'default') !== found.contextId || sessionTarget.url !== observedURL)) throw new Error('native owned session changed');
+      nativeTargets ||= classification.fixedTargets;
+      nativeIdentity ||= found;
       return { ...found, url: observedURL };
     } catch (error) { protocolError = true; throw error; } finally { observer.close(); }
   }
