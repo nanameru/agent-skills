@@ -118,3 +118,7 @@ A loop setup is complete only when:
 - One manual dry run has produced either a Draft PR or a clear blocked report.
 - Gates and evidence are recorded.
 - Schedule/automation has conservative limits and can be disabled.
+
+## Shared PR procedure
+
+Use [autonomous-dev の共通PR工程](../autonomous-dev/SKILL.md#共通pr工程呼出意図と終了条件) for PR intent aliases, proof, review and monitoring. This does not relax the parent requirements gate, one-Issue/one-Draft limit, maker/checker separation, evidence or hard stops. Scheduled runs stop at Draft or blocked.

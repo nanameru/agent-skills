@@ -34,3 +34,11 @@
 - 長いログや E2E の録画をどこに置くか（Issue には結果の概要と安全な参照だけ）。
 - 開発用の統合先ブランチへの自動 merge を使うか（今は merge はすべて本人の承認）。
 - Codex の GPT が利用の上限に当たっている間も、同じ Codex ハーネスの `shared/deepseek-v4.1-flash` は子として起動でき、共通ルールも読み込んだ（2026-11-12。コマンドを1つ実行させただけで、検証や実装の質は未確認）。
+
+## 2026-11-15: tstack統合の出典
+
+Issue #57 の承認範囲で上流 tstack `11e37a74d0a6868c121cd0910ab2b3bd9873b92a` の9種を共通PR工程の呼出意図として整理。上流由来・調整・非採用の索引は [tstack-coverage.md](references/tstack-coverage.md)、ライセンスは [tstack-LICENSE.txt](references/tstack-LICENSE.txt)。原版pr-waitの実運用はこの記録だけでは検証済みにならない。
+
+## 2026-11-15: 待機手順の更新
+
+上の2026-11-12の10〜15秒pollingは当時の記録であり現行手順ではない。現行は [共通PR工程](SKILL.md#共通pr工程呼出意図と終了条件) の親watcherと通知待ち。

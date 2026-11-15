@@ -107,3 +107,5 @@ When the loop struggles:
 - update child Skills if the behavior is domain-specific
 - update `test-board.yaml` if coverage is missing
 - update schedule limits if cost or noise is too high
+
+For PR proof, review, monitoring and handoff use [autonomous-dev の共通PR工程](../../autonomous-dev/SKILL.md#共通pr工程呼出意図と終了条件). The bounded loop still stops at Draft or blocked; it does not itself merge.

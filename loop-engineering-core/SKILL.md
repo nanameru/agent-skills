@@ -135,3 +135,7 @@ Do not merge or deploy.
 ## Flow Summary
 
 For the user-facing development flow, read `references/development-flow.md`.
+
+## Shared PR procedure
+
+For PR intent aliases, proof, optional review and monitoring, refer to [autonomous-dev の共通PR工程](../autonomous-dev/SKILL.md#共通pr工程呼出意図と終了条件). This core still governs the requirements gate, one Issue/at most one Draft per run, maker/checker separation and hard stops. A scheduled loop stops at Draft or blocked; any later authorized dev integration is a separate parent-manager decision, not an automatic loop action.
