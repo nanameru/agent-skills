@@ -3,6 +3,17 @@ import { createHash } from 'node:crypto';
 
 export const hash = (s) => createHash('sha256').update(s).digest('hex');
 
+// Declarations are absolute URLs, never patterns or origin-wide grants.
+export function navigationURL(value, origin) {
+  assert.equal(typeof value, 'string');
+  assert.ok(/^https?:\/\//i.test(value) && !/[\s*]/.test(value), 'invalid navigation URL');
+  assert.ok(!/^https?:\/\/[^/]*@/i.test(value), 'credentials are prohibited');
+  const u = new URL(value);
+  assert.ok(['http:', 'https:'].includes(u.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname));
+  assert.ok(!u.username && !u.password && u.origin === origin, 'navigation origin differs');
+  return u.href;
+}
+
 // Only the endpoint returned by this run's agent-browser get cdp-url is used.
 export function checkEndpoint(value) {
   const u = new URL(value);

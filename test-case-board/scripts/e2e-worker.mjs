@@ -79,6 +79,11 @@ try {
       handlers.get(method).add(fn); return () => handlers.get(method)?.delete(fn);
     } };
     const page = { cdp, sessionId,
+      navigate(url) {
+        if (!currentStep || inFlight || typeof url !== 'string') { violation = true; throw new Error('navigation requires a sequential active step and URL'); }
+        inFlight = true;
+        return tracked(request('navigate', { step: currentStep, url }).finally(() => { inFlight = false; }));
+      },
       evaluate(expression, opts = {}) { if (opts.sessionId && opts.sessionId !== sessionId) { violation = true; throw new Error('session switch prohibited'); } return cdp.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, ...opts, sessionId: undefined }, sessionId); },
       evalValue(expression, opts = {}) { return tracked((async () => { const r = await this.evaluate(expression, opts); if (r.exceptionDetails) throw new Error(`eval failed: ${r.exceptionDetails.text} ${r.exceptionDetails.exception?.description || ''}`); return r.result?.value; })()); },
       sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); },
