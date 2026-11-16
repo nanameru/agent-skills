@@ -156,3 +156,7 @@ Common sources of duplicate context:
 - [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) — Token optimization section
 - Memory persistence hooks — For state that survives compaction
 - `continuous-learning` skill — Extracts patterns before session ends
+
+## Optional T3 queue bridge
+
+When the separately reviewed T3 hook registration is installed, `queue-compact.js` uses the same context threshold and interval at a main-session Stop to queue a standalone `/compact` for the current T3 thread. It does not ask the model to adopt a suggestion. The existing PreToolUse reminders and Wiki hooks remain separate. The bridge records a claim before sending, distinguishes acceptance from observed compaction, and retains unknown or failed outcomes without automatically retrying. Native compaction observation, cooldown, and run matching suppress duplicate hook requests; external operations after enqueue cannot be cancelled by this bridge. Missing context, unsupported hooks, missing T3 identity/CLI, unsafe state, and unconfirmed outcomes fail closed. See the bundle README and registration fragments for the exact contract and the separately authorized installation and live-validation steps. Metadata or this hook is not a substitute for an actual Wiki work summary.
