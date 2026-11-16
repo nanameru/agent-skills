@@ -738,3 +738,47 @@ cases:
     test_file: strategic-compact/tests/suggest-compact.test.js
     issues: [60]
     notes: "隔離HOME・一時ディレクトリと合成JSONLを使用。両状態ファイルの保存先とPOSIX権限、リンクの拒否と合成参照先の保全を確認する。Windowsではファイルのハードリンクをテストする。"
+  - id: TC-062-01
+    title: 圧縮予約の入力と既存閾値を隔離検証する
+    feature: strategic-compact queue hook
+    scenario: Claudeと両Codex usage、context window、無効化、入力不足と単独予約を確認する
+    status: todo
+    priority: high
+    type: integration
+    source: [strategic-compact/scripts/hooks/queue-compact.js, strategic-compact/scripts/lib/transcript-context.js]
+    test_file: strategic-compact/tests/queue-compact.test.js
+    issues: [62]
+    notes: "合成transcript・隔離HOME・合成thread ID・偽CLIで実Node子processを呼ぶ。元のTC-060-01/02も回帰対象。未実行。native hookや実圧縮の確認ではない。"
+  - id: TC-062-02
+    title: 並行予約と不明な受領を再送しない
+    feature: strategic-compact queue hook
+    scenario: 原子的claim、偽CLI barrier、競合native event、lock不正、timeoutと不正receiptを確認する
+    status: todo
+    priority: high
+    type: integration
+    source: [strategic-compact/scripts/hooks/queue-compact.js]
+    test_file: strategic-compact/tests/queue-compact.test.js
+    issues: [62]
+    notes: "CLI受付をcompletedと扱わず、不明・失敗の自動再送を禁止する。barrierは実CLIに接続しない。未実行。"
+  - id: TC-062-03
+    title: native圧縮の観測と予約runを区別する
+    feature: strategic-compact queue hook
+    scenario: session・harness・run・triggerの一致、失敗、cooldown、次のepochでの再予約を確認する
+    status: todo
+    priority: high
+    type: integration
+    source: [strategic-compact/scripts/hooks/queue-compact.js, strategic-compact/scripts/lib/transcript-context.js]
+    test_file: strategic-compact/tests/queue-compact.test.js
+    issues: [62]
+    notes: "合成時刻とshow/receipt fixtureを使用。同sessionの再通知抑止と新session同bucketの再通知を区別し、仕様との差はredのまま残す。未実行。native eventとT3 runの実際の対応付けはAC6で未検証。"
+  - id: TC-062-04
+    title: 両ハーネスの登録断片とpayload契約を確認する
+    feature: strategic-compact registration
+    scenario: 公式schemaに基づく各payloadとWikiを含む既存hookの足し込みを確認する
+    status: todo
+    priority: high
+    type: unit
+    source: [strategic-compact/registration/claude.json, strategic-compact/registration/codex.json]
+    test_file: strategic-compact/tests/queue-compact.test.js
+    issues: [62]
+    notes: "Codex schemaはopenai/codex 710bee73a89385aaf2afb41d885edf82473d941f、Claudeは公式hooks reference（版固定なし）。合成マージでありinstalledのtrust・環境伝播・native実行は未検証。"
