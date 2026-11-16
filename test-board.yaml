@@ -697,14 +697,14 @@ cases:
   - id: TC-056-NAVIGATION-GUARDS
     title: "有限URL宣言と所有・逐次操作を拒否境界まで確認する"
     feature: "native CDP declared navigation guards"
-    scenario: "AC-U1/U2/U4 旧固定URL、正規化、要求・commit・URL・所有順序とiframe追補v2の拒否"
-    status: done
+    scenario: "AC-U1/U2/U4 旧固定URL、正規化、要求・commit・URL・所有順序とiframe追補v2の拒否、初期extension worker追補v3とstep開始拒否の回帰"
+    status: doing
     priority: high
     type: regression
-    source: [test-case-board/scripts/e2e-native-cdp.mjs, test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs, test-case-board/tests/fakes/native-preload.mjs, test-case-board/tests/fakes/native-navigation-runner.mjs, test-case-board/tests/fakes/native-cli.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.test.mjs]
+    source: [test-case-board/scripts/e2e-native-cdp.mjs, test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs, test-case-board/tests/fakes/native-preload.mjs, test-case-board/tests/fakes/native-navigation-runner.mjs, test-case-board/tests/fakes/native-cli.mjs, test-case-board/tests/e2e-worker-step-start.test.mjs, test-case-board/tests/fakes/worker-step-start-runner.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.test.mjs]
     test_file: test-case-board/tests/e2e-native-navigation.test.mjs
     issues: [56]
-    expected: "opt-inなしの完全一致、有限宣言と未宣言・別origin/port・credentials・query/fragment、reload、失敗時の期待URL不更新、所有不一致と直接CDP迂回・step外/並列/未awaitを拒否する。追補v2では明示contextが全段一致する所有pageへのiframe親鎖だけ再生成を許し、親・context欠落、循環、未知、異context、途中別type、新page、所有交換、非iframe集合変更を拒否する。"
+    expected: "opt-inなしの完全一致、有限宣言と未宣言・別origin/port・credentials・query/fragment、reload、失敗時の期待URL不更新、所有不一致と直接CDP迂回・step外/並列/未awaitを拒否する。追補v2では明示contextが全段一致する所有pageへのiframe親鎖だけ再生成を許し、親・context欠落、循環、未知、異context、途中別type、新page、所有交換、非iframe集合変更を拒否する。追補v3では起動時に正規extension script URL・ID・type・明示same contextを持ち、同observerのTarget.getTargetInfoと由来属性が一致するworkerの消失だけを許す。情報取得失敗・欠落・不一致、非候補の消失、新規・再生成・同ID再出現、URL/type/context/parent変更、未知target、所有page・endpoint/session変更を拒否し、title/attached変化は許す。step-start拒否ではcallback/CDPとstep-endを行わずcleanupし、nativeは捕捉後の操作やpassを拒んで最初のfailedStepと原因を保持する。"
     notes: >-
       固定5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7 cleanで2026-11-15T10:00:20Z〜10:02:06Z、SWE-2 Flash highが旧固定URL4fileと新URL1fileを一括実行、76/76 pass・exit0・signalなし・skip0。Node24.22.2/Darwin27.2.0 arm64。fake CLI/CDPと合成動画のoffline回帰であり、実ブラウザ・録画・所有の証明ではない。
       初回1b19a733e12015c3261fe0075120b0ee1ac6a22dは26/27 pass・1fail（path省略query内@の誤拒否）。authority終端1行修正後に同assertとfragment内@・空userinfo拒否もpass、失敗履歴はIssue56 comment6892633854に保持。宣言済みfragment成功の同document commit分岐は未試験（Devin flag、軽微として残す）。
@@ -718,14 +718,14 @@ cases:
   - id: TC-056-NAVIGATION
     title: "同一profileの宣言済み遷移と試行ごとの標準録画を確認する"
     feature: "native CDP declared navigation and evidence"
-    scenario: "AC-U1/U2/U3/U4 iframe再生成を含む成功・未宣言拒否・SIGTERM・別UUID retry"
+    scenario: "AC-U1/U2/U3/U4 iframe再生成と初期extension worker消失を含む成功・未宣言拒否・SIGTERM・別UUID retry"
     status: doing
     priority: high
     type: e2e
-    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-runner.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.mjs]
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-runner.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.mjs, test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.test.mjs]
     test_file: test-case-board/tests/e2e-native-cdp-fixture/navigation-runner.mjs
     issues: [56]
-    expected: "旧入力/待機/assertを保持し、同URL reloadと有限query遷移で同profile状態・実Input・readyと正式TargetInfo親鎖/contextに基づくiframe targetの消失・再生成を確認。全4試行の結果と標準録画/private保存/全decode・実PTS・hash読戻し、実worker終了、過去原本不変を分けて確認し、目視は別判定。帰属が証明不能なら停止。"
+    expected: "旧入力/待機/assertを保持し、同URL reloadと有限query遷移で同profile状態・実Input・readyと正式TargetInfo親鎖/contextに基づくiframe targetの消失・再生成を確認。追補v3は明示opt-inで、初期extension workerが1件以上存在し正式情報と由来が一致したうえで、同page/context/sessionを維持した自然消失を生観測と初期確認から独立検査する。新規・再出現・由来変更を拒否し、候補なし、期限内に消失せず、または帰属が証明不能なら残り試行を開始せず停止する。別UUIDの直列4試行について標準result-v1と録画/private保存/全decode・実PTS・hash読戻し、実worker exit/signal、各試行前後/finallyの#22/#24と過去#54/#56原本不変を分けて確認し、目視は別判定とする。"
     notes: >-
       固定5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7 clean、2026-11-15T10:04:36Z〜10:05:11Z、Node24.22.2/Darwin27.2.0 arm64・agent-browser0.43.0・Chrome、localhost fixtureの直列4試行。driver exit0・signalなし。success/retryはentry/worker exit0、undeclaredはentry/worker exit1でundeclared-navigation失敗、SIGTERMはentry exit1・worker exit null/signal SIGTERMでpending-interruption。後2件のtargetContinuityはnot-verified、成功2件はpassed。
       全試行の標準record start/stop passed、private save verified、全decode/readback passed、video/log SHA256一致。frame数はsuccess/undeclared/SIGTERM/retry順に169/168/168/168、実PTSは0〜5.600/5.567/5.567/5.567秒。各試行nativeInput29件（touch4/key2/mouse23）、CDP86件。同URLreload/query遷移とlocalStorage保持・未宣言のdispatch前拒否をresult/logで確認し、driverは過去#54/#56原本不変を試行後とfinallyで検査。
