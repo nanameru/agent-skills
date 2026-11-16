@@ -742,43 +742,67 @@ cases:
     title: 圧縮予約の入力と既存閾値を隔離検証する
     feature: strategic-compact queue hook
     scenario: Claudeと両Codex usage、context window、無効化、入力不足と単独予約を確認する
-    status: todo
+    status: done
     priority: high
     type: integration
     source: [strategic-compact/scripts/hooks/queue-compact.js, strategic-compact/scripts/lib/transcript-context.js]
     test_file: strategic-compact/tests/queue-compact.test.js
     issues: [62]
-    notes: "合成transcript・隔離HOME・合成thread ID・偽CLIで実Node子processを呼ぶ。元のTC-060-01/02も回帰対象。未実行。native hookや実圧縮の確認ではない。"
+    notes: "合成transcript・隔離HOME・合成thread ID・偽CLIでClaude/両Codex usage、既存閾値と無通知条件を確認。TC-060も同一suiteで回帰。Node v24.22.2のAPI-only隔離回帰（3ファイル合計55/55、失敗・skip・cancel・todo 0、exit 0）。台帳更新commitではなくlast_run.revisionが実行SHA。画面操作なしのため録画非該当。AC5 installed・AC6 native/live未実施・未合格、最終異社Checker未了。初回5a33f71の7失敗はIssue #62履歴参照。"
+    last_run:
+      revision: e86600c4502ababe1ae41545d4b96a2403760709
+      at: "2026-11-16T06:30:45.468767Z"
+      provider: Devin SWE-2 Flash high
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/62#issuecomment-6909259654]
   - id: TC-062-02
     title: 並行予約と不明な受領を再送しない
     feature: strategic-compact queue hook
     scenario: 原子的claim、偽CLI barrier、競合native event、lock不正、timeoutと不正receiptを確認する
-    status: todo
+    status: done
     priority: high
     type: integration
     source: [strategic-compact/scripts/hooks/queue-compact.js]
     test_file: strategic-compact/tests/queue-compact.test.js
     issues: [62]
-    notes: "CLI受付をcompletedと扱わず、不明・失敗の自動再送を禁止する。barrierは実CLIに接続しない。未実行。"
+    notes: "隔離偽CLIのbarrierで並行claim、native競合、不明・失敗・timeoutと不正receiptの再送抑止を確認。Node v24.22.2のAPI-only隔離回帰（3ファイル合計55/55、失敗・skip・cancel・todo 0、exit 0）。台帳更新commitではなくlast_run.revisionが実行SHA。画面操作なしのため録画非該当。AC5 installed・AC6 native/live未実施・未合格、最終異社Checker未了。初回5a33f71の7失敗はIssue #62履歴参照。"
+    last_run:
+      revision: e86600c4502ababe1ae41545d4b96a2403760709
+      at: "2026-11-16T06:30:45.468767Z"
+      provider: Devin SWE-2 Flash high
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/62#issuecomment-6909259654]
   - id: TC-062-03
     title: native圧縮の観測と予約runを区別する
     feature: strategic-compact queue hook
     scenario: session・harness・run・triggerの一致、失敗、cooldown、次のepochでの再予約を確認する
-    status: todo
+    status: done
     priority: high
     type: integration
     source: [strategic-compact/scripts/hooks/queue-compact.js, strategic-compact/scripts/lib/transcript-context.js]
     test_file: strategic-compact/tests/queue-compact.test.js
     issues: [62]
-    notes: "合成時刻とshow/receipt fixtureを使用。同sessionの再通知抑止と新session同bucketの再通知を区別し、仕様との差はredのまま残す。未実行。native eventとT3 runの実際の対応付けはAC6で未検証。"
+    notes: "合成nativeイベント・時刻・show/receiptでsession・harness・runの帰属、cooldown、session別bucketと未解決latchを確認。実nativeとT3 runの対応付けは未検証。Node v24.22.2のAPI-only隔離回帰（3ファイル合計55/55、失敗・skip・cancel・todo 0、exit 0）。台帳更新commitではなくlast_run.revisionが実行SHA。画面操作なしのため録画非該当。AC5 installed・AC6 native/live未実施・未合格、最終異社Checker未了。初回5a33f71の7失敗はIssue #62履歴参照。"
+    last_run:
+      revision: e86600c4502ababe1ae41545d4b96a2403760709
+      at: "2026-11-16T06:30:45.468767Z"
+      provider: Devin SWE-2 Flash high
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/62#issuecomment-6909259654]
   - id: TC-062-04
     title: 両ハーネスの登録断片とpayload契約を確認する
     feature: strategic-compact registration
     scenario: 公式schemaに基づく各payloadとWikiを含む既存hookの足し込みを確認する
-    status: todo
+    status: done
     priority: high
     type: unit
     source: [strategic-compact/registration/claude.json, strategic-compact/registration/codex.json]
     test_file: strategic-compact/tests/queue-compact.test.js
     issues: [62]
-    notes: "Codex schemaはopenai/codex 710bee73a89385aaf2afb41d885edf82473d941f、Claudeは公式hooks reference（版固定なし）。合成マージでありinstalledのtrust・環境伝播・native実行は未検証。"
+    notes: "Codex schemaはopenai/codex 710bee73a89385aaf2afb41d885edf82473d941f、Claudeは公式hooks reference（版固定なし）に基づく合成payloadと、既存Wiki hookを保持する登録断片の合成マージを確認。installed trust・環境伝播は未検証。Node v24.22.2のAPI-only隔離回帰（3ファイル合計55/55、失敗・skip・cancel・todo 0、exit 0）。台帳更新commitではなくlast_run.revisionが実行SHA。画面操作なしのため録画非該当。AC5 installed・AC6 native/live未実施・未合格、最終異社Checker未了。初回5a33f71の7失敗はIssue #62履歴参照。"
+    last_run:
+      revision: e86600c4502ababe1ae41545d4b96a2403760709
+      at: "2026-11-16T06:30:45.468767Z"
+      provider: Devin SWE-2 Flash high
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/62#issuecomment-6909259654]
