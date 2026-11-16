@@ -709,12 +709,14 @@ cases:
       固定5c9d0daa86a1ab97447d0db4ee01b9888b4c3fb7 cleanで2026-11-15T10:00:20Z〜10:02:06Z、SWE-2 Flash highが旧固定URL4fileと新URL1fileを一括実行、76/76 pass・exit0・signalなし・skip0。Node24.22.2/Darwin27.2.0 arm64。fake CLI/CDPと合成動画のoffline回帰であり、実ブラウザ・録画・所有の証明ではない。
       初回1b19a733e12015c3261fe0075120b0ee1ac6a22dは26/27 pass・1fail（path省略query内@の誤拒否）。authority終端1行修正後に同assertとfragment内@・空userinfo拒否もpass、失敗履歴はIssue56 comment6892633854に保持。宣言済みfragment成功の同document commit分岐は未試験（Devin flag、軽微として残す）。
       上記76/76はv1の履歴（private issue56-offline-214aa153-f81e-4963-9d7f-585b1c1a9b4e/tap.stdout）。追補v2はclean dcb845b75939147a4e2276715a4b5597cd03c8a0で6file直接回帰を1回実行、115/115 pass・exit0/signal null・skip0。UTC 2026-11-15T13:02:43Z〜13:04:28Z、Node24.22.2/Darwin27.2.0 arm64。iframeの親鎖/context一致と再生成許可、帰属不明・異context・新page・所有交換・非iframe集合変更・session/endpoint変更の拒否を追加し旧回帰を保持。fake CLI/CDP・合成動画のoffline結果であり実Chrome/録画の証明ではない。TAP stdout SHA256 81a6d5960d0a280887f39b210aa6d20a4df52f6513e5e76957e0b0f90a8b4da5、private保存と読戻し済み。
+      旧v2 last_runは終了2026-11-15T13:04:28Z、provider swe-2-flash-high-offline-fake-cdp、result passed、evidenceはissue56-v2-offline-63c91a44-eb09-4311-8e17-b83b847d235d/tap-stdout.txtと同meta.txt。
+      追補v3は固定0a38712a4ac3ae1edd1416c1dcf64c9dbd614fca、UTC 2026-11-16T10:28:39Z〜10:30:04Zに直接影響5fileを1回実行、128/128 pass・exit0/signal null・skip0。Node24.22.2/Darwin27.2.0 arm64、fake CLI/CDPと実worker IPCによるoffline回帰で録画非該当。先行IPC旧worker負対照6 pass/4 fail、修正版33f3eb1で10/10 passは各1回の履歴で、今回の128件にもIPCを含む。stdout SHA256 b752d04002c2a4202ed338e9ad87083b8dd9e950218122a0b1552fcac8edacd0。管理役の最終Checker/受入などは未了でdoingを維持（詳細はTC-056-NAVIGATION）。
     last_run:
-      revision: dcb845b75939147a4e2276715a4b5597cd03c8a0
-      at: "2026-11-15T13:04:28Z"
-      provider: swe-2-flash-high-offline-fake-cdp
+      revision: 0a38712a4ac3ae1edd1416c1dcf64c9dbd614fca
+      at: "2026-11-16T10:30:04Z"
+      provider: node24-offline-fake-cdp-worker-ipc
       result: passed
-      evidence: [issue56-v2-offline-63c91a44-eb09-4311-8e17-b83b847d235d/tap-stdout.txt, issue56-v2-offline-63c91a44-eb09-4311-8e17-b83b847d235d/meta.txt]
+      evidence: [issue56-v3-offline-66ea1979-5677-41c6-be4f-441cd4ac7dd8/stdout.txt, issue56-v3-offline-66ea1979-5677-41c6-be4f-441cd4ac7dd8/exit.txt, issue56-v3-offline-66ea1979-5677-41c6-be4f-441cd4ac7dd8/meta.txt]
   - id: TC-056-NAVIGATION
     title: "同一profileの宣言済み遷移と試行ごとの標準録画を確認する"
     feature: "native CDP declared navigation and evidence"
@@ -735,9 +737,14 @@ cases:
       正式TargetInfoを各run26観測（undeclaredのみ28観測）で照合し、単一所有page・context・所有session・非iframe集合固定とiframe親鎖の全段同contextを確認。reload/query後のiframeは各run計3世代、宣言外要求はdispatch前に拒否。frame数はsuccess/undeclared/SIGTERM/retry順に172/174/174/173、実PTSは0〜5.700/5.767/5.767/5.733秒。旧製品失敗3原本と過去#54/#56原本hashは各試行前後/finallyで不変、担当も旧失敗3原本を読取再計算し一致。
       v2部分目視はprivate派生visual-sampled.pngの各run1fps 6panelと末尾index156〜最終frame（success171/undeclared173/SIGTERM173/retry172）、計93panel。fixture・iframe表示、touchcancel trusted・Space保持click・zoom1.284、reload後Waitingと末尾Pan Releasedを確認。URL値・拒否/SIGTERM自体・iframeのtarget帰属は映像だけで証明せずresult/logで照合。原resultのvisualInspection/captureTargetIdentityはunverifiedのまま、全frame目視・全期間coverage/連続性・内部capture target・厳密wall-clock/PTS対応は未証明。v2の管理役最終独立Checker/受入待ちでdoingを維持。製品E2E0回。
       v2 private root相対suiteはissue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/、新規UUIDはsuccess894695ea-8cb8-4390-a13b-8852a9348b49、undeclared d749f5b2-4f6d-4bdb-ab43-d3280e2064aa、SIGTERM58902eb8-9f61-4225-b445-2530334fd7c0、retry3b33f70f-08d5-4d77-b11d-dfa3e67ee578。各TC-056-NAVIGATION-UUID内のresult.json/run.log/recording.webmと派生画像を保持。旧失敗の結果は訂正しない。
+      旧v2 last_runは終了2026-11-15T13:05:58Z、provider swe-2-flash-high-localhost-native-cdp、resultはdriver passed、success/retry passed、undeclared failed、SIGTERM interrupted、visual partial。evidenceは上記各UUIDのresult.json。
+      追補v3は固定0a38712a4ac3ae1edd1416c1dcf64c9dbd614fca、UTC 2026-11-16T10:39:14Z〜10:41:43Zに標準navigation-driver --worker-v3を1suite実行しdriver exit0/signal null。Chrome157.0.8103.80、agent-browser0.43.0、ffmpeg/ffprobe9.0.2。直列4試行はsuccess/retry entry・worker exit0、undeclared entry・worker exit1でfailedStep undeclared-navigation（dispatch前拒否）、SIGTERM entry exit1・worker exit null/signal SIGTERMでpending-interruption。
+      各試行のrecord start/stop passed、save verified、全decode/readback passed、video/logは記録済みSHA256と一致。success/undeclared/SIGTERM/retry順にframes 1025/1047/1007/1051、PTS 0〜34.133/34.867/33.533/35.000秒、VP8 1280x634。nativeInputは各29件、CDPは消失poll回数差で203/206/201/207件。生native-observationと初期確認で正式初期3workerのgetTargetInfo一致後の許可消失、固定page/context/sessionとiframe3世代の同context親鎖を確認し、所有不一致なし。#22/#24固定6原本は各試行前後/finallyで不変、snapshot24fileも不変。旧#54/#56原本はdriver前後/finallyで不変。製品E2E0回。
+      担当Solが全4本の全期間1fpsと末尾4秒4fpsの派生8sheetのみ部分目視しsampled pass。input表示・iframe・reload後Waitingを確認し、拒否/SIGTERMとURLはlog照合。全frame・連続性・内部capture target・wallclockとPTSの対応は未証明で、原resultのvisualInspection/captureTargetIdentityはunverifiedのまま。目視記録はprivate相対issue56-v3-fixture-c2625bd2-a7ff-4d5d-b2ea-5e1560d255aa/visual-readback/inspection.md、SHA256 f521a733545d5b3de6d8e878e7160d65f8dcb88e3d338a6a2016ce106363529b。
+      Devin本文は現版正式UIの読取障害で未取得でありcheck SUCCESSを解決扱いしない。担当Sonnet 2件はblocker0/should0、recheck0/2を維持。管理役の最終Checker/受入が残るためdoingを維持。
     last_run:
-      revision: dcb845b75939147a4e2276715a4b5597cd03c8a0
-      at: "2026-11-15T13:05:58Z"
-      provider: swe-2-flash-high-localhost-native-cdp
-      result: "driver passed; success/retry passed, undeclared failed, SIGTERM interrupted; visual partial"
-      evidence: [issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-894695ea-8cb8-4390-a13b-8852a9348b49/result.json, issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-d749f5b2-4f6d-4bdb-ab43-d3280e2064aa/result.json, issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-58902eb8-9f61-4225-b445-2530334fd7c0/result.json, issue56-3ee6a943-83eb-4dfc-bef7-335eb222752f/TC-056-NAVIGATION-3b33f70f-08d5-4d77-b11d-dfa3e67ee578/result.json]
+      revision: 0a38712a4ac3ae1edd1416c1dcf64c9dbd614fca
+      at: "2026-11-16T10:41:43Z"
+      provider: standard-localhost-native-cdp-worker-v3
+      result: "driver passed; success/retry passed, undeclared failed, SIGTERM interrupted; visual sampled"
+      evidence: [issue56-eb7e7c50-9422-45e8-9a3e-7b5264f83168/TC-056-NAVIGATION-0cbfad56-1c47-448d-9acd-8728ec5b7a42/result.json, issue56-eb7e7c50-9422-45e8-9a3e-7b5264f83168/TC-056-NAVIGATION-ae868b75-9e55-4d26-987a-82a9c8e10fab/result.json, issue56-eb7e7c50-9422-45e8-9a3e-7b5264f83168/TC-056-NAVIGATION-255ab3ac-b981-44b9-893e-7ae57428550e/result.json, issue56-eb7e7c50-9422-45e8-9a3e-7b5264f83168/TC-056-NAVIGATION-7b535b58-fb60-41c6-a2fc-ecef5096ec39/result.json]
