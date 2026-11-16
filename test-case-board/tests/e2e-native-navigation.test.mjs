@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { classifyNativeTargets, navigationURL } from '../scripts/e2e-native-cdp.mjs';
+import { classifyNativeTargets, navigationURL, extensionWorkerCandidate, workerProvenance } from '../scripts/e2e-native-cdp.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const cli = path.join(repo, 'test-case-board/bin/test-board');
@@ -26,13 +26,13 @@ assert.ok(root !== repo && !root.startsWith(repo + path.sep));
 const batch = path.join(root, `fake-native56-${randomUUID()}`);
 await mkdir(batch, { mode: 0o700 });
 
-async function invoke({ scenario = 'normal', fault = '', at = 0, destination = next, declarations = [initial, next], iframe = false } = {}) {
+async function invoke({ scenario = 'normal', fault = '', at = 0, destination = next, declarations = [initial, next], iframe = false, worker = '', workerGoneAt = 0 } = {}) {
   const trace = path.join(batch, `trace-${randomUUID()}`);
   const names = ['PATH', 'HOME', 'USER', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'TZ', 'SYSTEMROOT', 'WINDIR'];
   const env = Object.fromEntries(names.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]]));
   Object.assign(env, { NODE_OPTIONS: `--import=${preload}`, TB_56_MOCK: '1', TB_MOCK_TRACE: trace,
     TB_MOCK_SCENARIO: scenario, TB_MOCK_FAULT: fault, TB_MOCK_AT: String(at), TB_MOCK_INITIAL: initial, TB_MOCK_NEXT: destination,
-    TB_MOCK_IFRAME: iframe ? '1' : '0' });
+    TB_MOCK_IFRAME: iframe ? '1' : '0', TB_MOCK_WORKER: worker, TB_MOCK_WORKER_GONE_AT: String(workerGoneAt) });
   const args = ['e2e', '--provider', 'native-cdp', '--case', 'TC-056-MOCK', '--runner', runner, '--browser', browser,
     '--chrome', process.execPath, '--url', initial, '--evidence-dir', batch, '--data-kind', 'fixture', '--issue', '56',
     '--environment', 'offline fake CDP and synthetic video', '--timeout-ms', '30000',
@@ -177,9 +177,9 @@ const ownershipFaults = [
   ['page-swap', /native target set changed/],
   ['unknown-target', /native iframe ownership or context unproven/],
   ['unknown-type', /native target set changed/],
-  ['non-iframe-changed', /native target set changed/],
+  ['non-iframe-changed', /service worker provenance changed/],
   ['non-iframe-removed', /native target set changed/],
-  ['non-iframe-context', /native target set changed/],
+  ['non-iframe-context', /service worker provenance changed/],
   ['iframe-becomes-worker', /native target set changed/],
   ['session', /native owned session changed/],
   ['context', null],
@@ -261,3 +261,147 @@ for (const scenario of ['outside', 'parallel', 'unawaited', 'direct-Page.navigat
     if (scenario.startsWith('direct-')) assert.equal(out.calls.includes('dispatch'), false);
   });
 }
+
+test('extension worker candidate requires a canonical script URL and explicit same context', () => {
+  const page = { targetId: 'page', type: 'page', browserContextId: 'ctx' };
+  const worker = { targetId: 'worker', type: 'service_worker', url: `chrome-extension://${'a'.repeat(32)}/background.js`, browserContextId: 'ctx' };
+  assert.equal(extensionWorkerCandidate(worker, page), true);
+  for (const changed of [
+    { type: 'shared_worker' }, { type: 'worker' }, { url: 'https://example.test/sw.js' },
+    { url: `chrome-extension://${'z'.repeat(32)}/background.js` },
+    { url: `chrome-extension://${'a'.repeat(31)}/background.js` },
+    { url: `chrome-extension://${'a'.repeat(32)}/` },
+    { url: `chrome-extension://${'a'.repeat(32)}/background.js?query` },
+    { url: `chrome-extension://${'a'.repeat(32)}/background.js#fragment` },
+    { url: `chrome-extension://${'a'.repeat(32)}/a/../background.js` },
+    { browserContextId: undefined }, { browserContextId: '' }, { browserContextId: 'other' },
+  ]) assert.equal(extensionWorkerCandidate({ ...worker, ...changed }, page), false, JSON.stringify(changed));
+  assert.equal(extensionWorkerCandidate(worker, { ...page, browserContextId: undefined }), false);
+  assert.equal(extensionWorkerCandidate(worker, { ...page, browserContextId: '' }), false);
+  assert.deepEqual(workerProvenance({ ...worker, title: 'one', attached: false }), workerProvenance({ ...worker, title: 'two', attached: true }));
+  for (const key of ['targetId', 'type', 'url', 'browserContextId', 'parentId', 'openerId', 'openerFrameId', 'parentFrameId', 'subtype']) {
+    assert.notDeepEqual(workerProvenance(worker), workerProvenance({ ...worker, [key]: 'changed' }), key);
+  }
+});
+
+test('fake entrypoint confirms an initial extension worker and permits only its disappearance', async () => {
+  const out = await invoke({ scenario: 'legacy', worker: 'extension', fault: 'worker-disappear', at: 4 });
+  assert.deepEqual(out.exit, { code: 0, signal: null });
+  assert.equal(out.result.test.status, 'passed');
+  assert.equal(out.calls.filter((s) => s === 'confirm:extension-worker').length, 1);
+  assert.ok(out.calls.indexOf('confirm:extension-worker') < out.calls.indexOf('observe:2'));
+  const observations = out.log.filter((e) => e.type === 'native-observation');
+  assert.ok(observations[0].targets.targetInfos.some((t) => t.targetId === 'extension-worker'));
+  assert.ok(!observations.find((e) => e.phase === 'step-before').targets.targetInfos.some((t) => t.targetId === 'extension-worker'));
+  const initialState = out.log.find((e) => e.type === 'native-target-classification' && e.phase === 'initial-target').extensionWorkers;
+  assert.deepEqual(initialState.baseline, ['extension-worker']);
+  assert.equal(initialState.confirmations[0].status, 'matched');
+  assert.equal(initialState.confirmations[0].targetInfo.url, `chrome-extension://${'a'.repeat(32)}/background.js`);
+  assert.ok(out.log.some((e) => e.type === 'native-target-classification' && e.phase === 'step-before' && e.extensionWorkers.allowedDisappeared.includes('extension-worker')));
+  assert.ok(out.log.filter((e) => e.type === 'native-observation').every((e) => e.targets.targetInfos.filter((t) => t.type === 'page').length === 1 && e.tabs.tabs[0].targetId === 'fake-target'));
+});
+
+test('volatile worker title and attached changes are allowed', async () => {
+  const out = await invoke({ scenario: 'legacy', worker: 'extension', fault: 'worker-volatile', at: 4 });
+  assert.equal(out.exit.code, 0); assert.equal(out.result.test.status, 'passed');
+  assert.equal(out.calls.filter((s) => s === 'confirm:extension-worker').length, 1);
+});
+
+for (const fault of ['worker-confirm-error', 'worker-confirm-missing', 'worker-confirm-mismatch', 'worker-confirm-missing-field', 'worker-confirm-parent', 'worker-confirm-id']) {
+  test(`initial formal worker confirmation rejects ${fault}`, async () => {
+    const out = await invoke({ scenario: 'legacy', worker: 'extension', fault });
+    assert.equal(out.exit.code, 1); assert.notEqual(out.result.test.status, 'passed');
+    assert.equal(out.calls.filter((s) => s === 'confirm:extension-worker').length, 1);
+    assert.equal(out.calls.includes('input'), false);
+    assert.match(out.result.error, /Target\.getTargetInfo failure|TargetInfo mismatch/);
+  });
+}
+
+for (const fault of ['worker-url', 'worker-parent']) {
+  test(`a known non-extension worker also rejects ${fault}`, async () => {
+    const out = await invoke({ scenario: 'legacy', worker: 'non-extension', fault, at: 4 });
+    assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+    assert.match(out.result.error, /service worker provenance changed/);
+    assert.equal(out.calls.some((s) => s.startsWith('confirm:')), false);
+    assert.equal(out.calls.includes('input'), false);
+  });
+}
+
+for (const worker of ['non-extension', 'bad-id', 'no-context', 'other-context', 'other-type']) {
+  test(`unproven ${worker} target disappearance is rejected`, async () => {
+    const out = await invoke({ scenario: 'legacy', worker, fault: 'worker-disappear', at: 4 });
+    assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+    assert.match(out.result.error, /native target set changed/);
+    assert.equal(out.calls.some((s) => s.startsWith('confirm:')), false);
+    assert.equal(out.calls.includes('input'), false);
+  });
+}
+
+for (const worker of ['missing-id', 'empty-id']) {
+  test(`initial worker with ${worker} is rejected before confirmation`, async () => {
+    const out = await invoke({ scenario: 'legacy', worker });
+    assert.equal(out.exit.code, 1); assert.notEqual(out.result.test.status, 'passed');
+    assert.match(out.result.error, /invalid or duplicate target ID/);
+    assert.equal(out.calls.some((s) => s.startsWith('confirm:')), false);
+    assert.equal(out.calls.includes('input'), false);
+  });
+}
+
+for (const [fault, reason] of [
+  ['worker-url', /service worker provenance changed/], ['worker-type', /service worker provenance changed/],
+  ['worker-context', /service worker provenance changed/], ['worker-parent', /service worker provenance changed/],
+  ['worker-new', /native target set changed/], ['worker-replacement', /native target set changed/],
+  ['worker-late', /native target set changed/], ['worker-reappear', /extension worker reappeared/],
+]) {
+  test(`fake entrypoint rejects ${fault}`, async () => {
+    const out = await invoke({ scenario: 'legacy', worker: 'extension', fault, at: 4 });
+    assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+    assert.match(out.result.error, reason);
+    if (fault !== 'worker-reappear') assert.equal(out.calls.includes('input'), false);
+    if (fault === 'worker-late') assert.equal(out.calls.some((s) => s.startsWith('confirm:')), false);
+    else assert.equal(out.calls.filter((s) => s === 'confirm:extension-worker').length, 1);
+    assert.notEqual(out.result.recording.targetContinuity, 'passed');
+  });
+}
+
+for (const [fault, reason, iframe] of [
+  ['page-swap', /native target set changed|native target or context changed/, false],
+  ['session', /native owned session changed/, false],
+  ['new-page', /CDP must report one page target/, true],
+  ['unknown-type', /native target set changed/, true],
+]) {
+  test(`a permitted worker disappearance cannot hide ${fault}`, async () => {
+    const out = await invoke({ scenario: 'legacy', worker: 'extension', workerGoneAt: 4, fault, at: 4, iframe });
+    assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+    assert.match(out.result.error, reason);
+    const before = out.log.find((entry) => entry.type === 'native-observation' && entry.phase === 'step-before');
+    assert.ok(before && !before.targets.targetInfos.some((item) => item.targetId === 'extension-worker'));
+    assert.equal(out.calls.includes('input'), false);
+    assert.notEqual(out.result.recording.targetContinuity, 'passed');
+  });
+}
+
+test('actual parent retains the first step-before rejection when the runner catches it and throws a later error', async () => {
+  const out = await invoke({ scenario: 'start-caught', worker: 'extension', fault: 'worker-url', at: 4 });
+  assert.equal(out.exit.code, 1); assert.equal(out.result.test.status, 'failed');
+  assert.equal(out.result.test.failedStep, 'rejected-step');
+  assert.match(out.result.error, /^service worker provenance changed(?:;|$)/);
+  assert.doesNotMatch(out.result.error, /synthetic later error|invalid or nested step/);
+  assert.deepEqual(out.result.steps, []);
+  assert.equal(out.calls.includes('input'), false);
+  assert.equal(out.log.filter((e) => e.type === 'native-observation' && e.phase === 'step-before').length, 1);
+});
+
+test('parent preserves step-before failure even if a later worker report names a different error and step', async () => {
+  const out = await invoke({ scenario: 'start-caught-parent', worker: 'extension', fault: 'worker-url', at: 4 });
+  assert.deepEqual(out.exit, { code: 1, signal: null });
+  assert.equal(out.result.test.status, 'failed');
+  assert.equal(out.result.test.exitCode, 1); assert.equal(out.result.test.signal, null);
+  assert.equal(out.result.test.failedStep, 'rejected-step');
+  assert.match(out.result.error, /^service worker provenance changed(?:;|$)/);
+  assert.doesNotMatch(out.result.error, /synthetic later error|invalid or nested step/);
+  assert.deepEqual(out.result.steps, []);
+  assert.equal(out.calls.includes('input'), false);
+  assert.ok(out.log.some((entry) => entry.type === 'fixture-parent-finished-ack'), 'parent did not acknowledge the contradictory finished report');
+  assert.notEqual(out.result.recording.targetContinuity, 'passed');
+});

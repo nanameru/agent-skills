@@ -4,6 +4,34 @@ export async function run({ step, cdp, page }) {
   const scenario = process.env.TB_MOCK_SCENARIO;
   const initial = process.env.TB_MOCK_INITIAL, next = process.env.TB_MOCK_NEXT;
   const input = () => cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 }, page.sessionId);
+  if (scenario === 'start-caught') {
+    try { await step('rejected-step', async () => { await input(); }); } catch {}
+    try { await step('later-step', async () => { await input(); }); }
+    catch { throw new Error('synthetic later error'); }
+    return;
+  }
+  if (scenario === 'start-caught-parent') {
+    try { await step('rejected-step', async () => { await input(); }); } catch {}
+    // Exercise the parent independently of the real worker's first-failure
+    // latch: send a deliberately contradictory later report through its IPC.
+    await new Promise((resolve, reject) => {
+      const id = 999999;
+      const onMessage = (message) => {
+        if (message?.type !== 'reply' || message.id !== id) return;
+        process.off('message', onMessage);
+        if (message.error) reject(new Error(message.error));
+        else if (message.value !== true) reject(new Error('parent did not acknowledge the finished report'));
+        else resolve();
+      };
+      process.on('message', onMessage);
+      process.send({ type: 'finished', id, status: 'failed', step: 'later-step', error: 'synthetic later error' }, (error) => {
+        if (error) { process.off('message', onMessage); reject(error); }
+      });
+    });
+    await new Promise((resolve) => process.stdout.write('{"type":"fixture-parent-finished-ack"}\n', resolve));
+    // Prevent the worker from replacing this injected report with its own.
+    process.exit(1);
+  }
   if (scenario === 'outside') { try { page.navigate(initial); } catch {} }
   await step('mock-step', async () => {
     if (scenario === 'legacy') { await input(); return; }

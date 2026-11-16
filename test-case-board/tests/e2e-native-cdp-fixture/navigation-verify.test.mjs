@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { classifyNativeTargets } from '../../scripts/e2e-native-cdp.mjs';
-import { verifyIframeObservations } from './navigation-verify.mjs';
+import { verifyIframeObservations, verifyWorkerObservations } from './navigation-verify.mjs';
 
 test('iframe proof requires official parent/context observations and distinct boundary target IDs', () => {
   const makeObservation = (phase, step, frameId) => {
@@ -33,5 +33,36 @@ test('iframe proof requires official parent/context observations and distinct bo
   ]) {
     const copy = structuredClone(log); mutate(copy);
     assert.throws(() => verifyIframeObservations(copy), label);
+  }
+});
+
+test('worker proof uses initial raw enumeration and formal confirmations, then observes disappearance with an unchanged owner', () => {
+  const page = { targetId: 'page', type: 'page', browserContextId: 'context', url: 'http://127.0.0.1:3010/' };
+  const worker = { targetId: 'worker', type: 'service_worker', browserContextId: 'context', url: `chrome-extension://${'a'.repeat(32)}/background.js` };
+  const observation = (phase, step, present = true) => ({ type: 'native-observation', phase, step,
+    tabs: { tabs: [{ active: true, targetId: 'page' }] }, contexts: { browserContextIds: ['context'] },
+    sessionTarget: phase === 'initial-target' ? null : { ...page },
+    targets: { targetInfos: present ? [{ ...page }, { ...worker }] : [{ ...page }] } });
+  const classification = { type: 'native-target-classification', phase: 'initial-target', step: null,
+    extensionWorkers: { baseline: ['worker'], confirmations: [{ targetId: 'worker', status: 'matched', targetInfo: { ...worker } }] } };
+  const log = [observation('initial-target', null), classification, observation('step-before', null),
+    observation('step-after', 'initial-worker-disappearance', false), observation('after-worker', null, false)];
+  assert.deepEqual(verifyWorkerObservations(log), { candidateIds: ['worker'] });
+  for (const [label, mutate] of [
+    ['no initial worker', (copy) => { copy[0].targets.targetInfos.pop(); }],
+    ['no confirmation', (copy) => { copy[1].extensionWorkers.confirmations = []; }],
+    ['confirmation pending', (copy) => { copy[1].extensionWorkers.confirmations[0].status = 'pending'; }],
+    ['confirmation mismatch', (copy) => { copy[1].extensionWorkers.confirmations[0].targetInfo.parentId = 'different'; }],
+    ['worker already gone before step', (copy) => { copy[2].targets.targetInfos.pop(); }],
+    ['no disappearance', (copy) => { copy[3].targets.targetInfos.push({ ...worker }); copy[4].targets.targetInfos.push({ ...worker }); }],
+    ['same id reappears', (copy) => { copy[4].targets.targetInfos.push({ ...worker }); }],
+    ['new worker', (copy) => { copy[4].targets.targetInfos.push({ ...worker, targetId: 'new-worker' }); }],
+    ['worker URL changed', (copy) => { copy[2].targets.targetInfos[1].url += '?changed'; }],
+    ['owner changed', (copy) => { copy[3].targets.targetInfos[0].targetId = 'other'; }],
+    ['session target changed', (copy) => { copy[3].sessionTarget.targetId = 'other'; }],
+    ['context set changed', (copy) => { copy[3].contexts.browserContextIds = ['other']; }],
+  ]) {
+    const copy = structuredClone(log); mutate(copy);
+    assert.throws(() => verifyWorkerObservations(copy), label);
   }
 });

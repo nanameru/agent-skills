@@ -1,6 +1,7 @@
 // Issue 56 fixture: the original #54 native input/assertion sequence is reused unchanged.
 import assert from 'node:assert/strict';
 import { run as originalRun } from './runner.mjs';
+import { extensionWorkerCandidate, workerProvenance } from '../../scripts/e2e-native-cdp.mjs';
 export const contractVersion = 'test-board-native-cdp-v1';
 
 export async function run(api) {
@@ -12,6 +13,7 @@ export async function run(api) {
   const next = process.env.TB_56_QUERY_URL;
   const denied = process.env.TB_56_DENIED_URL;
   const iframeMode = process.env.TB_56_IFRAME === '1';
+  const workerMode = process.env.TB_56_WORKER_V3 === '1';
   let previousFrames = null, ownedPage = null, ownedContext = null;
   async function waitForRecreatedIframe() {
     const started = Date.now();
@@ -45,6 +47,36 @@ export async function run(api) {
       await page.sleep(100);
     }
   }
+  if (workerMode) await step('initial-worker-disappearance', async () => {
+    const initialInfos = (await cdp.send('Target.getTargets')).targetInfos;
+    const pages = initialInfos.filter((item) => item.type === 'page');
+    assert.equal(pages.length, 1);
+    const owner = pages[0];
+    assert.ok(owner.targetId && owner.browserContextId && owner.url === initial, 'owned page context unproven');
+    const known = new Map(initialInfos.map((item) => [item.targetId, item]));
+    assert.equal(known.size, initialInfos.length, 'duplicate target ID');
+    const candidates = initialInfos.filter((item) => extensionWorkerCandidate(item, owner));
+    assert.ok(candidates.length, 'initial extension worker not observed');
+    const candidateIds = new Set(candidates.map((item) => item.targetId));
+    const started = Date.now();
+    for (;;) {
+      const infos = (await cdp.send('Target.getTargets')).targetInfos;
+      const current = new Map(infos.map((item) => [item.targetId, item]));
+      assert.equal(current.size, infos.length, 'duplicate target ID');
+      for (const item of infos) {
+        const old = known.get(item.targetId);
+        assert.ok(old, 'unknown target appeared');
+        assert.equal(item.type, old.type); assert.equal(item.browserContextId, old.browserContextId);
+        if (old.type === 'service_worker') assert.deepEqual(workerProvenance(item), workerProvenance(old));
+      }
+      for (const [id, item] of known) if (!candidateIds.has(id)) assert.ok(current.has(id), 'fixed target disappeared');
+      const pageNow = current.get(owner.targetId);
+      assert.equal(pageNow?.type, 'page'); assert.equal(pageNow?.browserContextId, owner.browserContextId); assert.equal(pageNow?.url, initial);
+      if (candidates.some((item) => !current.has(item.targetId))) return;
+      if (Date.now() - started >= 45000) throw new Error('initial extension worker disappearance was not observed');
+      await page.sleep(250);
+    }
+  });
   await originalRun({ ...api, caseId: 'TC-054-NATIVE-INPUT' });
   await step('profile-marker', async () => {
     assert.equal(await page.evalValue('location.href'), initial);

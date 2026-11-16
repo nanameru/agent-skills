@@ -15,7 +15,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../../..');
 const entry = path.join(repo, 'test-case-board/bin/test-board');
 const runner = path.join(here, 'navigation-runner.mjs');
-const usage = 'Usage: node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs --commit FULL_SHA --browser AGENT_BROWSER_EXECUTABLE --chrome APPROVED_CHROME_EXECUTABLE [--iframe]\n';
+const usage = 'Usage: node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs --commit FULL_SHA --browser AGENT_BROWSER_EXECUTABLE --chrome APPROVED_CHROME_EXECUTABLE [--iframe|--worker-v3]\n';
 let suiteRef = null;
 
 async function hashFile(file) {
@@ -45,16 +45,13 @@ async function privateFile(file) {
   const info = await lstat(file);
   assert.ok(info.isFile() && !(info.mode & 0o077), 'artifact is not an owner-only regular file');
 }
-async function privateLog(file, text) {
-  const handle = await open(file, 'wx', 0o600);
-  try { await handle.writeFile(text); await handle.sync(); } finally { await handle.close(); }
-}
-
 async function main() {
   if (process.argv.length === 3 && process.argv[2] === '--help') { process.stdout.write(usage); return; }
   const args = process.argv.slice(2), opts = {};
-  const iframeMode = args.at(-1) === '--iframe';
-  if (iframeMode) args.pop();
+  const workerMode = args.at(-1) === '--worker-v3';
+  if (workerMode) args.pop();
+  const iframeMode = workerMode || args.at(-1) === '--iframe';
+  if (args.at(-1) === '--iframe') args.pop();
   assert.equal(args.length, 6, usage);
   for (let i = 0; i < args.length; i += 2) {
     assert.ok(['--commit', '--browser', '--chrome'].includes(args[i]) && !opts[args[i]] && args[i + 1], usage);
@@ -91,6 +88,21 @@ async function main() {
     for (const [name, digest] of Object.entries(expected)) {
       const file = path.join(original, name);
       await privateFile(file); assert.equal(await hashFile(file), digest, 'original product evidence hash mismatch');
+      preserved.set(file, digest);
+    }
+  }
+  if (workerMode) {
+    const supplied = process.env.TB_56_PRODUCT_FAILURE_24_DIR;
+    assert.ok(supplied && path.isAbsolute(supplied), 'private #24 product-failure directory required');
+    const original = await realpath(supplied);
+    const expected = {
+      'result.json': '8923a4738249255e6dd0c49e02ef7fba8773f0746cf1d5a7492a0d7d62d43bfd',
+      'run.log': '3fda72d641c03e633ccdda74d239d946bdd295a9f15c512c201465a8aca466e0',
+      'recording.webm': 'fa4905f5459d32ed70fff0d6e6fdf0411dae04177cc668bd84899d4fab873d56',
+    };
+    for (const [name, digest] of Object.entries(expected)) {
+      const file = path.join(original, name);
+      await privateFile(file); assert.equal(await hashFile(file), digest, 'original #24 product evidence hash mismatch');
       preserved.set(file, digest);
     }
   }
@@ -138,21 +150,30 @@ async function main() {
       env.TB_NATIVE_SCENARIO = 'success'; env.TB_56_SCENARIO = scenario;
       env.TB_56_INITIAL_URL = url; env.TB_56_QUERY_URL = next; env.TB_56_DENIED_URL = denied;
       if (iframeMode) env.TB_56_IFRAME = '1';
-      const child = spawn(entry, cliArgs, { cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'] });
-      active = { id, scenario, child, pendingSeen: false, signalSent: false };
-      let stdout = '', stderr = '';
-      child.stdout.on('data', (chunk) => { stdout += chunk; });
-      child.stderr.on('data', (chunk) => { stderr += chunk; });
-      const exit = await new Promise((resolve) => {
-        child.once('error', () => resolve({ code: null, signal: null, error: true }));
-        child.once('close', (code, signal) => resolve({ code, signal }));
-      });
-      const facts = active; active = null;
-      const diagnostic = path.join(suite, `entrypoint-${id}.log`);
-      await privateLog(diagnostic, `stdout:\n${stdout}\nstderr:\n${stderr}`);
+      if (workerMode) env.TB_56_WORKER_V3 = '1';
+      // Open owner-only diagnostics before spawn so interrupted runs retain output.
+      const stdoutFile = path.join(suite, `entrypoint-${id}-stdout.log`);
+      const stderrFile = path.join(suite, `entrypoint-${id}-stderr.log`);
+      const stdoutHandle = await open(stdoutFile, 'wx', 0o600);
+      let stderrHandle, exit, facts;
+      try {
+        stderrHandle = await open(stderrFile, 'wx', 0o600);
+        const child = spawn(entry, cliArgs, { cwd: repo, env, stdio: ['ignore', stdoutHandle.fd, stderrHandle.fd] });
+        active = { id, scenario, child, pendingSeen: false, signalSent: false };
+        exit = await new Promise((resolve) => {
+          child.once('error', () => resolve({ code: null, signal: null, error: true }));
+          child.once('close', (code, signal) => resolve({ code, signal }));
+        });
+        facts = active;
+      } finally {
+        active = null;
+        try { await stdoutHandle.sync(); if (stderrHandle) await stderrHandle.sync(); }
+        finally { await stdoutHandle.close(); if (stderrHandle) await stderrHandle.close(); }
+      }
       // Always check older evidence before accepting or retrying this attempt.
       await unchanged(preserved);
       assert.ok(!exit.error, 'entrypoint failed to start');
+      const stdout = await readFile(stdoutFile, 'utf8');
       const output = JSON.parse(stdout.trim().split('\n').filter(Boolean).at(-1));
       assert.match(output.result, /^TC-056-NAVIGATION-[0-9a-f-]{36}\/result\.json$/i);
       const resultPath = await realpath(path.join(suite, output.result));
@@ -162,7 +183,7 @@ async function main() {
       assert.ok(runInfo.isDirectory() && !(runInfo.mode & 0o077), 'run directory is not private');
       await privateFile(resultPath);
       const result = JSON.parse(await readFile(resultPath, 'utf8'));
-      verifyNavigationResult(result, { scenario, commit: opts['--commit'], exit, initial: url, next, denied });
+      verifyNavigationResult(result, { scenario, commit: opts['--commit'], exit, initial: url, next, denied, workerV3: workerMode });
       assert.ok(!seenRuns.has(result.runId), 'run UUID reused'); seenRuns.add(result.runId);
       if (scenario === 'sigterm') { assert.equal(facts.pendingSeen, true); assert.equal(facts.signalSent, true); }
       const video = path.join(runDir, result.artifacts.video), log = path.join(runDir, result.artifacts.log);
@@ -172,7 +193,7 @@ async function main() {
       const logEntries = (await readFile(log, 'utf8')).split('\n').flatMap((line) => {
         try { return [JSON.parse(line)]; } catch { return []; }
       });
-      if (iframeMode) verifyIframeObservations(logEntries);
+      if (iframeMode) verifyIframeObservations(logEntries, { workerV3: workerMode });
       const observations = logEntries.filter((item) => item.type === 'native-observation');
       if (scenario === 'sigterm') {
         assert.deepEqual(observations.slice(0, 3).map((item) => item.phase), ['initial-target', 'before-record-start', 'after-record-start']);
@@ -202,7 +223,7 @@ async function main() {
         assert.equal(inputs.filter((item) => item.method === method).length, count, 'unexpected native Input method count');
       }
       for (const [file, digest] of await snapshot(await retainedFiles(runDir))) preserved.set(file, digest);
-      preserved.set(diagnostic, await hashFile(diagnostic));
+      for (const diagnostic of [stdoutFile, stderrFile]) { await privateFile(diagnostic); preserved.set(diagnostic, await hashFile(diagnostic)); }
       process.stdout.write(JSON.stringify({ scenario, result: `${suiteName}/${output.result}`, exit: exit.code, workerSignal: result.test.signal, test: result.test.status, readback: result.recording.readback.status, visualInspection: 'unverified' }) + '\n');
     }
   } finally {

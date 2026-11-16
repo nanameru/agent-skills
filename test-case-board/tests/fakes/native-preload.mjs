@@ -6,9 +6,15 @@ if (process.env.TB_56_MOCK === '1' && process.argv[1]?.endsWith('/test-board.mjs
   const fault = process.env.TB_MOCK_FAULT || '';
   const at = Number(process.env.TB_MOCK_AT || 0);
   let url = initial, observations = 0, generation = 0, eventHandlers = new Map();
+  const workerMode = process.env.TB_MOCK_WORKER || '';
+  const workerGoneAt = Number(process.env.TB_MOCK_WORKER_GONE_AT || 0);
+  const extensionUrl = `chrome-extension://${'a'.repeat(32)}/background.js`;
+  let observedTargets = [], observedConnection, attachedConnection, connections = 0;
   const trace = (event) => fs.appendFileSync(process.env.TB_MOCK_TRACE, `${event}\n`);
   function target() { return { type: 'page', targetId: 'fake-target', browserContextId: 'fake-context', url }; }
-  CDP.connect = async () => ({
+  CDP.connect = async () => {
+    const connection = ++connections;
+    return {
     on(method, fn) { if (!eventHandlers.has(method)) eventHandlers.set(method, new Set()); eventHandlers.get(method).add(fn); return () => eventHandlers.get(method)?.delete(fn); },
     close() {},
     async send(method, params = {}, sid) {
@@ -42,11 +48,49 @@ if (process.env.TB_56_MOCK === '1' && process.argv[1]?.endsWith('/test-board.mjs
           if (!(observations === at && fault === 'non-iframe-removed')) targetInfos.push(worker);
         }
         if (observations === at && fault === 'target-set') targetInfos.push({ type: 'service_worker', targetId: 'extra' });
+        if (workerMode) {
+          const worker = { targetId: 'extension-worker', type: 'service_worker', url: extensionUrl, browserContextId: 'fake-context', title: 'initial', attached: false };
+          if (workerMode === 'non-extension') worker.url = 'https://example.test/sw.js';
+          if (workerMode === 'bad-id') worker.url = `chrome-extension://${'z'.repeat(32)}/background.js`;
+          if (workerMode === 'no-context') delete worker.browserContextId;
+          if (workerMode === 'other-context') worker.browserContextId = 'other-context';
+          if (workerMode === 'other-type') worker.type = 'shared_worker';
+          if (workerMode === 'missing-id') delete worker.targetId;
+          if (workerMode === 'empty-id') worker.targetId = '';
+          if (observations >= at && at > 0) {
+            if (fault === 'worker-url') worker.url = `chrome-extension://${'a'.repeat(32)}/other.js`;
+            if (fault === 'worker-type') worker.type = 'shared_worker';
+            if (fault === 'worker-context') worker.browserContextId = 'other-context';
+            if (fault === 'worker-parent') worker.parentId = 'other-parent';
+            if (fault === 'worker-volatile') { worker.title = 'changed'; worker.attached = true; }
+            if (fault === 'worker-replacement') worker.targetId = 'replacement-worker';
+            if (fault === 'worker-new') targetInfos.push({ ...worker, targetId: 'new-worker' });
+          }
+          const absent = (workerGoneAt > 0 && observations >= workerGoneAt) || (at > 0 && ((fault === 'worker-disappear' && observations >= at) ||
+            (fault === 'worker-reappear' && observations === at) ||
+            (fault === 'worker-late' && observations < at)));
+          if (!absent) targetInfos.push(worker);
+        }
+        observedTargets = targetInfos; observedConnection = connection;
         return { targetInfos };
       }
       if (method === 'Target.getBrowserContexts') return { browserContextIds: observations === at && fault === 'context' ? ['other'] : ['fake-context'] };
-      if (method === 'Target.attachToTarget') return { sessionId: 'fake-session' };
+      if (method === 'Target.attachToTarget') { attachedConnection = connection; return { sessionId: 'fake-session' }; }
       if (method === 'Target.getTargetInfo') {
+        if (params.targetId !== undefined) {
+          if (sid !== undefined || connection !== observedConnection || connection === attachedConnection) throw new Error('targetId confirmation must use the enumerating browser observer');
+          trace(`confirm:${params.targetId}`);
+          if (fault === 'worker-confirm-error') throw new Error('synthetic Target.getTargetInfo failure');
+          const found = observedTargets.find((item) => item.targetId === params.targetId);
+          if (!found) throw new Error('unknown targetId');
+          if (fault === 'worker-confirm-missing') return {};
+          if (fault === 'worker-confirm-mismatch') return { targetInfo: { ...found, url: `${found.url}?changed` } };
+          if (fault === 'worker-confirm-missing-field') { const { browserContextId, ...rest } = found; return { targetInfo: rest }; }
+          if (fault === 'worker-confirm-parent') return { targetInfo: { ...found, parentId: 'different-parent' } };
+          if (fault === 'worker-confirm-id') return { targetInfo: { ...found, targetId: 'different-worker' } };
+          return { targetInfo: { ...found } };
+        }
+        if (sid !== 'fake-session' || connection !== attachedConnection) throw new Error('owned page probe requires the owned session');
         let page = target();
         if (observations === at && fault === 'session') page = { ...page, targetId: 'other-target' };
         if (observations === at && fault === 'post-url') page = { ...page, url: `${initial}&unexpected=1` };
@@ -68,5 +112,6 @@ if (process.env.TB_56_MOCK === '1' && process.argv[1]?.endsWith('/test-board.mjs
       if (method.startsWith('Input.')) { trace('input'); return {}; }
       throw new Error(`unexpected fake method ${method}`);
     },
-  });
+    };
+  };
 }
