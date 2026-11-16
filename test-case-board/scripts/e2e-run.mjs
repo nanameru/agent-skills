@@ -8,7 +8,7 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
-import { CDP, checkEndpoint, pageIdentity, classifyNativeTargets, navigationURL, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
+import { CDP, checkEndpoint, pageIdentity, classifyNativeTargets, workerProvenance, extensionWorkerCandidate, navigationURL, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
 
 const exec = promisify(execFile);
 const worker = fileURLToPath(new URL('./e2e-worker.mjs', import.meta.url));
@@ -192,7 +192,8 @@ async function main(argv) {
   browserEnv.AGENT_BROWSER_NAMESPACE = `tb-${randomUUID()}`;
   browserEnv.AGENT_BROWSER_CONFIG = path.join(dir, 'browser-config.json');
   const profile = path.join(dir, 'profile');
-  let cdp, endpoint, nativeIdentity, nativeSession, nativeTargets;
+  let cdp, endpoint, nativeIdentity, nativeSession, nativeTargets, extensionWorkers, initialWorkers;
+  const vanishedWorkers = new Set();
   const controller = new AbortController();
   let child, workerClosed, interrupted = null, interruptionAt = null, finalized = false, lateSignal = null, startAttempted = false, browserOpened = false, currentStep = null, operations = 0, protocolError = false, readyResolve, readyReject, readyId, finishMessage = null, killTimer, pendingRequest = null;
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
@@ -253,14 +254,45 @@ async function main(argv) {
       const found = pageIdentity(tabs, targets, contexts, expected ?? observedURL);
       const page = targets.targetInfos.find((target) => target.targetId === found.targetId);
       const classification = classifyNativeTargets(targets, page);
-      await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-target-classification', phase, step: currentStep, ...classification }) + '\n', (err) => err ? reject(err) : resolve()));
-      await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
-      if (classification.unprovenIframes.length) throw new Error('native iframe ownership or context unproven');
-      if (nativeTargets && JSON.stringify(classification.fixedTargets) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
-      if (nativeIdentity && (found.targetId !== nativeIdentity.targetId || found.contextId !== nativeIdentity.contextId || JSON.stringify(found.contexts) !== JSON.stringify(nativeIdentity.contexts))) throw new Error('native target or context changed');
-      if (nativeSession && (!sessionTarget || sessionTarget.targetId !== found.targetId || (sessionTarget.browserContextId ?? 'default') !== found.contextId || sessionTarget.url !== observedURL)) throw new Error('native owned session changed');
-      nativeTargets ||= classification.fixedTargets;
-      nativeIdentity ||= found;
+      const workerState = { confirmations: [], baseline: [], remaining: [], allowedDisappeared: [], rejection: null };
+      try {
+        if (!nativeTargets) {
+          if (phase !== 'initial-target') throw new Error('native initial target baseline missing');
+          extensionWorkers = new Map();
+          initialWorkers = new Map(targets.targetInfos.filter((item) => item.type === 'service_worker').map((item) => [item.targetId, workerProvenance(item)]));
+          for (const target of targets.targetInfos.filter((item) => extensionWorkerCandidate(item, page))) {
+            const confirmation = { targetId: target.targetId, status: 'pending' };
+            workerState.confirmations.push(confirmation);
+            const confirmed = (await observer.send('Target.getTargetInfo', { targetId: target.targetId })).targetInfo;
+            confirmation.targetInfo = confirmed;
+            if (JSON.stringify(workerProvenance(target)) !== JSON.stringify(workerProvenance(confirmed))) throw new Error('extension worker TargetInfo mismatch');
+            confirmation.status = 'matched';
+            extensionWorkers.set(target.targetId, workerProvenance(target));
+          }
+        }
+        workerState.baseline = [...extensionWorkers.keys()];
+        for (const [id, provenance] of initialWorkers) {
+          const target = targets.targetInfos.find((item) => item.targetId === id);
+          if (target && JSON.stringify(workerProvenance(target)) !== JSON.stringify(provenance)) throw new Error('service worker provenance changed');
+        }
+        for (const id of extensionWorkers.keys()) {
+          const target = targets.targetInfos.find((item) => item.targetId === id);
+          if (!target) { workerState.allowedDisappeared.push(id); vanishedWorkers.add(id); continue; }
+          if (vanishedWorkers.has(id)) throw new Error('extension worker reappeared after disappearance');
+          workerState.remaining.push(id);
+        }
+        const fixed = classification.fixedTargets.filter(([id]) => !extensionWorkers.has(id));
+        if (nativeTargets && JSON.stringify(fixed) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
+        if (classification.unprovenIframes.length) throw new Error('native iframe ownership or context unproven');
+        if (nativeIdentity && (found.targetId !== nativeIdentity.targetId || found.contextId !== nativeIdentity.contextId || JSON.stringify(found.contexts) !== JSON.stringify(nativeIdentity.contexts))) throw new Error('native target or context changed');
+        if (nativeSession && (!sessionTarget || sessionTarget.targetId !== found.targetId || (sessionTarget.browserContextId ?? 'default') !== found.contextId || sessionTarget.url !== observedURL)) throw new Error('native owned session changed');
+        nativeTargets ||= fixed;
+        nativeIdentity ||= found;
+      } catch (error) { workerState.rejection = error.message; throw error; }
+      finally {
+        await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-target-classification', phase, step: currentStep, ...classification, extensionWorkers: workerState }) + '\n', (err) => err ? reject(err) : resolve()));
+        await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
+      }
       return { ...found, url: observedURL };
     } catch (error) { protocolError = true; throw error; } finally { observer.close(); }
   }

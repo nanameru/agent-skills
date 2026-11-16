@@ -84,6 +84,20 @@ export function classifyNativeTargets(targets, page) {
   return { fixedTargets, ownedIframes, unprovenIframes };
 }
 
+// These are provenance fields, not volatile presentation fields such as title/attached.
+export function workerProvenance(target) {
+  return ['targetId', 'type', 'url', 'browserContextId', 'parentId', 'openerId', 'openerFrameId', 'parentFrameId', 'subtype']
+    .map((key) => target?.[key] ?? null);
+}
+
+export function extensionWorkerCandidate(target, page) {
+  if (target.type !== 'service_worker' || typeof page.browserContextId !== 'string' || !page.browserContextId || target.browserContextId !== page.browserContextId || typeof target.url !== 'string') return false;
+  // Require a canonical extension script URL, not a runner-supplied declaration.
+  return /^chrome-extension:\/\/[a-p]{32}\/[^?#]+$/.test(target.url) && (() => {
+    try { const url = new URL(target.url); return url.href === target.url && !url.username && !url.password && !url.port; } catch { return false; }
+  })();
+}
+
 export function publicIdentity(identity) {
   return { targetHash: hash(identity.targetId), contextHash: hash(identity.contextId),
     contextSetHashes: identity.contexts.map(hash) };
