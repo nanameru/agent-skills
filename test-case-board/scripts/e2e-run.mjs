@@ -374,7 +374,13 @@ async function main(argv) {
         } else if (msg.type === 'finished') { finishMessage = msg; }
         else throw new Error('unsupported runner message');
         reply(true);
-      } catch (error) { if (native) protocolError = true; reply(null, error.message); }
+      } catch (error) {
+        if (native) {
+          protocolError = true;
+          if (msg.type === 'step-start') { result.test.failedStep ||= msg.step; result.error ||= error.message; }
+        }
+        reply(null, error.message);
+      }
       finally { handling = false; pendingRequest = null; settleRequest(); }
     });
     await ready;
@@ -402,7 +408,7 @@ async function main(argv) {
     result.test.exitCode = exit.code; result.test.signal = exit.signal;
     result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && nativeInputSatisfied(native, result.test) && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
     if (finishMessage?.step && !result.test.failedStep) result.test.failedStep = finishMessage.step;
-    if (finishMessage?.error) result.error = finishMessage.error;
+    if (finishMessage?.error) { if (native) result.error ||= finishMessage.error; else result.error = finishMessage.error; }
     if (!interrupted && (!finishMessage || !operations)) result.error ||= 'runner did not complete the supported contract with browser operations';
     if (native) await observeNative('after-worker'); else await checkTarget();
     if (!protocolError) result.recording.targetContinuity = 'passed';

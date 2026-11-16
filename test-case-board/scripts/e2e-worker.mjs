@@ -18,7 +18,7 @@ function request(type, data) {
     process.send({ type, id, ...data });
   });
 }
-let currentStep = null, failedStep = null;
+let currentStep = null, failedStep = null, firstFailure = null;
 const native = process.argv[4] === 'native-cdp';
 let inFlight = false, violation = false, sessionId;
 const issued = [];
@@ -51,19 +51,24 @@ try {
   const api = {
     caseId: process.argv[3],
     async step(id, fn) {
+      if (native && firstFailure) throw firstFailure.error;
       if (currentStep || typeof id !== 'string' || !id.trim() || typeof fn !== 'function') { if (native) violation = true; throw new Error('invalid or nested step'); }
       currentStep = id;
-      await request('step-start', { step: id });
-      let endAttempted = false;
+      let started = false, endAttempted = false;
       try {
+        await request('step-start', { step: id });
+        started = true;
         const result = await fn();
         if (native && (inFlight || violation || issued.some((call) => !call.consumed))) throw new Error('native operation not awaited or contract violated');
         if (native) endAttempted = true;
         await request('step-end', { step: id, status: 'passed' });
         return result;
       } catch (error) {
-        if (native) failedStep = id;
-        if (!native || !endAttempted) await request('step-end', { step: id, status: 'failed', error: String(error?.message || error) });
+        if (native && !firstFailure) { firstFailure = { error }; failedStep = id; }
+        if (started && (!native || !endAttempted)) {
+          try { await request('step-end', { step: id, status: 'failed', error: String(error?.message || error) }); }
+          catch (endError) { if (!native) throw endError; }
+        }
         throw error;
       } finally { currentStep = null; }
     },
@@ -92,10 +97,12 @@ try {
     Object.assign(api, { cdp, page }); delete api.command;
   }
   await runner.run(api);
+  if (native && firstFailure) throw firstFailure.error;
   if (native && (currentStep || inFlight || violation || issued.some((call) => !call.consumed))) throw new Error('native contract violation');
   await request('finished', { status: 'passed' });
 } catch (error) {
-  try { await request('finished', { status: 'failed', step: native ? (failedStep || currentStep) : currentStep, error: String(error?.message || error) }); } catch {}
+  const failure = native && firstFailure ? firstFailure.error : error;
+  try { await request('finished', { status: 'failed', step: native ? (failedStep || currentStep) : currentStep, error: String(failure?.message || failure) }); } catch {}
   process.exitCode = 1;
 }
 process.disconnect();
