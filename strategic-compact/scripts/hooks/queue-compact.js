@@ -14,6 +14,8 @@ const { readLatestContextTokens, resolveContextWindow, resolveContextThreshold,
 const COOLDOWN_MS = 5 * 60 * 1000;
 const CLI_TIMEOUT_MS = 5000;
 const RUN_FAILURES = new Set(['failed', 'cancelled', 'interrupted', 'rolled_back']);
+const RUN_STATUSES = new Set(['preparing', 'queued', 'starting', 'running', 'waiting',
+  'completed', 'interrupted', 'failed', 'cancelled', 'rolled_back']);
 
 function privateDirectory(dir) {
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -69,7 +71,8 @@ function usageBucket(input) {
 function observeRun(state, thread) {
   const request = state.request;
   if (!request || !request.runId || !thread) return;
-  if (thread.activeRunId === request.runId && ['preparing', 'queued', 'starting', 'running', 'waiting'].includes(thread.status)) {
+  if (thread.activeRunId === request.runId && thread.latestRunId === request.runId &&
+      ['preparing', 'queued', 'starting', 'running', 'waiting'].includes(thread.status)) {
     request.runState = thread.status;
   } else if (thread.latestRunId === request.runId && RUN_FAILURES.has(thread.status)) {
     request.runState = thread.status;
@@ -82,7 +85,7 @@ function observeRun(state, thread) {
 function handle(input, harness, cli, threadId, stateFile, hazardFile) {
   let state;
   try { state = JSON.parse(fs.readFileSync(stateFile, 'utf8')); }
-  catch (err) { if (err.code !== 'ENOENT') throw err; state = { version: 1, native: {}, request: null, lastBucket: -1 }; }
+  catch (err) { if (err.code !== 'ENOENT') throw err; state = { version: 1, native: {}, request: null, lastBucket: -1, buckets: {} }; }
   if (state.version !== 1 || !state.native || typeof state.lastBucket !== 'number') throw Error('invalid state');
   const event = input.hook_event_name;
   const thread = showThread(cli, threadId);
@@ -90,22 +93,26 @@ function handle(input, harness, cli, threadId, stateFile, hazardFile) {
   observeRun(state, thread);
   const activeRequest = state.request && state.request.runId && thread && thread.activeRunId === state.request.runId;
 
-  const sessionKey = crypto.createHash('sha256').update(input.session_id).digest('hex');
+  const sessionKey = crypto.createHash('sha256').update(JSON.stringify([harness, input.session_id])).digest('hex');
+  const ownRequest = activeRequest && state.request.sessionKey === sessionKey && state.request.harness === harness;
   if (event === 'PreCompact') {
-    state.native = { active: true, trigger: input.trigger, sessionKey, startedAt: Date.now() };
-    if (activeRequest && input.trigger === 'manual') state.request.preObserved = true;
+    state.native = { active: true, trigger: input.trigger, sessionKey, harness, startedAt: Date.now() };
+    if (ownRequest && input.trigger === 'manual') state.request.preObserved = true;
     saveState(stateFile, state);
     return;
   }
   if (event === 'PostCompact') {
-    const paired = state.native.active && state.native.trigger === input.trigger && state.native.sessionKey === sessionKey;
+    const paired = state.native.active && state.native.trigger === input.trigger &&
+      state.native.sessionKey === sessionKey && state.native.harness === harness;
     if (!state.native.active || paired) {
       state.native = { active: false, trigger: input.trigger, completedAt: Date.now() };
     }
-    if (paired && activeRequest && input.trigger === 'manual' && state.request.preObserved) {
+    if (paired && ownRequest && input.trigger === 'manual' && state.request.preObserved) {
       state.request.state = 'compact_completed';
       state.request.compactCompletedAt = Date.now();
       state.lastBucket = state.request.bucket;
+      if (!state.buckets) state.buckets = {};
+      state.buckets[sessionKey] = state.request.bucket;
     }
     saveState(stateFile, state);
     return;
@@ -123,15 +130,18 @@ function handle(input, harness, cli, threadId, stateFile, hazardFile) {
         thread.activeRunId === prior.runId || thread.latestRunId !== thread.activeRunId) return;
   }
   const bucket = usageBucket(input);
-  if (bucket < 0 || bucket <= state.lastBucket) return;
+  // Old state without session ownership retains its conservative global bucket.
+  const lastBucket = state.buckets ? (state.buckets[sessionKey] ?? -1) : state.lastBucket;
+  if (bucket < 0 || bucket <= lastBucket) return;
 
   // Persist before the side effect. Any crash, nonzero exit, malformed receipt,
   // or timeout remains latched as unknown; automatic retry is never safe.
-  state.request = { state: 'unknown', runState: 'unknown', bucket, claimedAt: Date.now() };
+  state.request = { state: 'unknown', runState: 'unknown', bucket, sessionKey, harness, claimedAt: Date.now() };
   saveState(stateFile, state);
   const sendResult = cliJson(cli, ['thread', 'send', threadId, '/compact', '--json']);
   const receipt = sendResult.value;
-  if (receipt && receipt.threadId === threadId && typeof receipt.runId === 'string' && receipt.runId &&
+  if (receipt && receipt.threadId === threadId && typeof receipt.runId === 'string' && receipt.runId.trim() &&
+      typeof receipt.messageId === 'string' && receipt.messageId.trim() && RUN_STATUSES.has(receipt.status) &&
       ['queued', 'started'].includes(receipt.delivery)) {
     state.request.state = receipt.delivery === 'queued' ? 'queued' : 'accepted';
     state.request.runId = receipt.runId;
