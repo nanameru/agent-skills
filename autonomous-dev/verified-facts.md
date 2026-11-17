@@ -42,3 +42,11 @@ Issue #57 の承認範囲で上流 tstack `11e37a74d0a6868c121cd0910ab2b3bd9873b
 ## 2026-11-15: 待機手順の更新
 
 上の2026-11-12の10〜15秒pollingは当時の記録であり現行手順ではない。現行は [共通PR工程](SKILL.md#共通pr工程呼出意図と終了条件) の親watcherと通知待ち。
+
+## 既存reviewの正式読取（2026-11-17）
+
+[#56の正式読取記録](https://github.com/nanameru/agent-skills/issues/56#issuecomment-6941120923)と[限定最終受入](https://github.com/nanameru/agent-skills/issues/56#issuecomment-6941270187)を確認。公開PR58の既存reviewを公式agent-browser 0.43.0、専用空HOME/profile/session、`--no-auto-connect` で読んだ記録であり、新reviewや製品E2Eではない。初回openはsocket path長超過でexit 1、非破壊doctorはexit 0、専用短socket directoryで再open、snapshot・flag読取・closeはいずれもexit 0。T3 snapshot側の障害修復は確認していない。
+
+Analysis historyのLatest/Currentの件名は対象series内で一意で、Gitの `f0454dd9a0d7b05892b123733ab36067de5ddac6` と当時のPR headに対応。1 Flag / 0 Bugs / 0 Vulnerabilitiesの本文を読み、既存試験不足として残した後に別会社の最終確認・限定受入を実施した。本文取得自体は受入ではない。
+
+private原本の安全な相対参照は `issue-56/rootfix-57e2fcba-40e4-4f99-a4bd-f57cb1066dcb/`。照合用SHA-256: `01-open.meta.json` `46488cf8d8b78935a6f31746fd508f709fbe81d1cb7fbc22386e24bd9a7f69dc`、`02-doctor.meta.json` `db834931c82ff5eb8922c5ab9f8e9327cc6bdc24e25c07b162f229249ae20245`、`13-history-snapshot.stdout` `ec14a7ce8024ad55202e53c23bf2ca35fedec5bad0ccc5352622bef594624452`、`20-series.stdout` `e164965e153be6485bec3e8737a034f59cad88e50b6ad09184423aab3c048405`、`21-close.meta.json` `7272006b8d9d0e20c562b5a55b9d11e171cda4d953ed94f9e35f44e819d66909`。原本の生snapshotや端末固有情報は公開しない。
