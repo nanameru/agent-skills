@@ -170,3 +170,49 @@
 ### T37 — installed比較と反映の境界
 
 入力: 最終Checker前のsource候補、既存installedの実体とsymlink、3 Skillの今回変更9ファイル。行動: read-onlyで各pathのlinkと実体、installedのbefore hash、source hashを記録し、差分の各hunkを許容privacy差分か個別に照合する。期待: 想定外差分や動作中工程は適用を停止する。Checker・Draft後の安全な区切り、private backup、hash、link保全を確認するまでinstalledへ反映しない。このケースも比較準備でありbackup・実適用の証拠ではない。根拠: IssueのAC-T6。結果: 未実行。
+
+## Issue #64: 既存reviewの読取と引受の文書判断
+
+以下のR01〜R07は仮想入力に対する判断例で、実行手順の正本は [autonomous-dev](../SKILL.md) の「共通PR工程」5と「既存review本文の正式読取」、installedについては同じ文書の「installedへの限定反映」である。上のT01〜T37とその実施結果の正本であるIssue #57は維持し、以下の例の実施結果は [Issue #64](https://github.com/nanameru/agent-skills/issues/64) の検証記録へケースID・対象full SHA・日時・環境・根拠・結果と未確認事項を対応付ける。仮定は実観測ではなく、例の作成や過去の別Issueの結果を今回の合格にしない。実browser・preview・watch・pr-wait・E2E・新review/recheck/scan・有料sessionは検証目的で起動しない。
+
+### R01 — GitHubの不足と正式MCPの状態（AC-R1）
+
+入力: GitHubで全ページのreview・inline・check本文を取得し、checkはSUCCESS。ただし仮想reviewにはGitHubへ非投稿のFlags/Notesがありうる。次の正式MCPは (a) 読取toolが実提供され認証・権限があり本文も取得できる、(b) 説明はあるがtoolは未提供、(c) toolはあるが未認証、(d) 認証済みだが閲覧権限なし、(e) 権限はあるが読取失敗、の5通り。
+
+期待: GitHubとSUCCESSだけで非投稿分を含む全文確認済みとはしない。(a) は許可範囲で正式本文を取得し、(b)〜(e) はそれぞれ未提供・認証・権限・読取成否を分けて記録し、提供済みや取得成功と推測しない。なお不足なら上位手順と許可を確認して次の正式経路を判断し、利用できなければ未確認で停止する。認証や権限の変更、私的APIやcredential抽出を行わない。理由: 共通PR工程5と正式読取のGitHub→実提供MCP→許可されたUIの順序。結果: 未実行。
+
+### R02 — T3のfallbackと専用browser（AC-R1）
+
+入力: 正式MCPでも本文が不足し、T3の共有previewは (a) 操作可能、(b) 上位手順で認められたfallback条件が成立、(c) fallback条件が不成立、の3通り。CLIがPATHにない場合とsocket path長制限の場合も仮定する。別途、本人のbrowser利用許可の有無を区別する。
+
+期待: (a) は共有previewを優先し、(c) は標準 `agent-browser` に切り替えず停止する。(b) でも本人の許可がない場合は使わず、条件と許可が両方成立した場合だけ専用の正式UI読取を選ぶ。上位手順で定めるfallback条件は、対応toolの不在、`preview_open` のunsupported、本人の切替指定、同じ段階でpreviewが2回失敗した場合であり、単に使いたいだけでは成立しない。PATHにCLIがなければ公式固定版（実証は `agent-browser@0.43.0`）の利用可否と現行core手順（`agent-browser skills get core`）を確認する。利用する仮定では専用の空HOME・profile・sessionと `--no-auto-connect` を使い、長さ制限時は非破壊の公式 `doctor` を確認し、必要なら短い専用 `AGENT_BROWSER_SOCKET_DIR` を使い、終了時に専用sessionをcloseする。既存Chromeへ無断接続せず、本文を本人に貼付要求しない。理由: 実行環境の上位browser条件と正式読取の隔離・終了条件。結果: 未実行。
+
+### R03 — 対象版・件数・本文と判定の分離（AC-R2）
+
+入力: 現headは `H1`、画面にLatest/Currentとreview対象が示される。(a) 対象が旧 `H0`、(b) 対象は `H1` だがSHA直表示がなく対象seriesの一意なcommit件名とGitのSHAで対応できる、(c) 同じ件名が複数あり対応が曖昧、(d) 対象は `H1` だが表示件数と取得本文数が不一致、(e) 件数は一致しても本文が欠落、(f) `H1` の全本文・件数・対象を照合済み、の6通り。checkはすべてSUCCESSとする。
+
+期待: (a)(c)(d)(e) は対象または全本文を未確認として停止し、SUCCESSやLatestの表示だけで埋めない。(b) は一意な件名とGit SHAの対応根拠を記録し、件数と全本文も照合してから取得済みとする。(f) も本文取得が済んだ段階であり、指摘ごとの採否・根拠、必要な修正、別会社の独立確認、最終受入はそれぞれ未完なら未完のまま扱う。旧 `H0` の合格を `H1` に流用せず、旧指摘でも現行に当たるものは評価する。理由: 現head・実review対象・本文全件を結び付ける工程と、その後の独立した判断。結果: 未実行。
+
+### R04 — 子返却時のcatch-upと正式通知（AC-R3）
+
+入力: 子が親へ返却した時点で (a) reviewが既に完了し未処理の本文がある、(b) 既存feedbackの処理後に通知対象の結果だけが未完、(c) wake後も同じPRの親watchが維持中、の3通り。子からwatch登録の提案もある。
+
+期待: 親は返却・再開・引継ぎ時にまず一度catch-upし、(a) を未来の通知待ちにせず直ちに処理する。(b) はPR所有の親だけが1 PRにつき1つ正式watchを登録しturnを終える。(c) は重複登録せず、最新head/base/checks・全review本文等を再照合する。子watch・独自pollは禁止し、handoff・blocked・質問前には親がunwatchする。通知や任意のSUCCESSは本文確認や承認の代わりにしない。理由: 共通PR工程5の所有者・通知対象・wake後の継続条件。結果: 未実行。
+
+### R05 — 通知対象外の障害と復旧後の再開（AC-R3）
+
+入力: 完了済みreviewの本文経路が権限不足または読取失敗で止まり、同じ原因で2回失敗。別の仮定ではwatch対象外のイベントが未処理。後に (a) 復旧根拠なし、(b) 対象headと正式経路の復旧根拠が確認済み、の2通りとなり、旧 `H0` の成功結果が提示されるが現headは `H1`。
+
+期待: watchや新review/recheck、無期限retryで停止を迂回せず、blocked前に既存watchをunwatchする。障害owner・対象head・障害証拠・次の正式読取・復旧根拠・最小再開条件を既存Issueのlatestへ残し、復旧前は不明と記す。通知紛失を根拠なく断定しない。(a) は停止を維持し、(b) だけ必要な正式読取を限定再開して現 `H1` の本文と対象を照合する。`H0` の誤った旧結果を採用しない。対象外イベントや本文経路障害はwatchを追加しても解消しない。理由: 同原因2回の停止と、復旧を示す証拠に基づく再開。結果: 未実行。
+
+### R06 — 限定検証と既存登録の保全（AC-R4）
+
+入力: #57の依存baseからの#64候補差分と、既存のT01〜T37、台帳cases・ID・source_roots・過去の証跡、manifest・restore・既存Skill登録。差分には仮の端末固有path・session ID・secretらしい値、汎用 `~`、公開URLを含む例もある。
+
+期待: 承認された5ファイルだけの差分と既存の定義・登録・過去結果の完全保持を照合し、#64追加分を別の実施記録へ対応付ける。固定版でYAML・Markdown参照・frontmatter・限定diffを静的に確認し、判断例の意味とprivacyは文脈も含め読解する。端末固有path・session ID・secretを公開差分へ載せず、汎用 `~` や公開URLだけで漏洩と決めない。静的検査だけで意味やprivacyの合格を推測しない。担当review、最後の別会社Checker、Draft PR・T3全stackリンク・Issue記録全文readbackは実施済みか別々に記録し、未実施を完了としない。理由: AC-R4の固定版検証、保全、privacyと独立確認。結果: 未実行。
+
+### R07 — installedへの限定反映は後工程（AC-R5）
+
+入力: source候補はあるが最終Checker・Draft前で、installedには許容privacy差分、既存の追加節とsymlinkがある。別の仮定では、検証・Draft・最終Checkerを終えた後に意味衝突、想定外hunk、動作中の競合のいずれかが見つかる。
+
+期待: 現段階では無書込apply-checkの可否を検討するまでで、backup・installed実適用・適用後確認は済んだとしない。後の安全な区切りでも、親が承認済み `autonomous-dev` の変更hunkだけを対象に、事前比較、Git外private backup、適用前後hashとsymlink・既存追加節・他設定の保全を確認する。意味衝突・想定外差分・動作中の競合があれば適用部分を停止し、一括上書きや全同期に進まない。理由: AC-R5と共通PR工程のinstalled限定反映。結果: 未実行。
