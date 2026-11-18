@@ -7,6 +7,7 @@ npx skills add nanameru/agent-skills --skill loop-engineering-core -g -y --copy
 npx skills add nanameru/agent-skills --skill test-case-board -g -y --copy
 npx skills add nanameru/agent-skills --skill loop-engineering-dev -g -y --copy
 npx skills add nanameru/agent-skills --skill skills-repo-manager -g -y --copy
+npx skills add nanameru/agent-skills --skill ptcg-postgame-audit -g -y --copy
 npx skills add nanameru/agent-skills --skill chaos-engineer -g -y --copy
 npx skills add nanameru/agent-skills --skill x-search -g -y --copy
 npx skills add nanameru/agent-skills --skill official-case-study-research -g -y --copy
@@ -23,6 +24,8 @@ ln -sfn "$HOME"/.agents/skills/loop-engineering-dev "$HOME"/.claude/skills/loop-
 ln -sfn "$HOME"/.agents/skills/test-case-board/bin/test-board "$HOME"/.local/bin/test-board
 ln -sfn "$HOME"/.agents/skills/test-case-board "$HOME"/.claude/skills/test-case-board
 ln -sfn "$HOME"/.agents/skills/skills-repo-manager "$HOME"/.claude/skills/skills-repo-manager
+ln -sfn "$HOME"/.agents/skills/ptcg-postgame-audit "$HOME"/.claude/skills/ptcg-postgame-audit
+ln -sfn "$HOME"/.agents/skills/ptcg-postgame-audit "$HOME"/.codex/skills/ptcg-postgame-audit
 ln -sfn "$HOME"/.agents/skills/x-search "$HOME"/.claude/skills/x-search
 ln -sfn "$HOME"/.agents/skills/official-case-study-research "$HOME"/.claude/skills/official-case-study-research
 ln -sfn "$HOME"/.agents/skills/official-case-study-research "$HOME"/.codex/skills/official-case-study-research

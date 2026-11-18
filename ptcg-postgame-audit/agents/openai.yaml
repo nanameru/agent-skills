@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTCG Postgame Audit"
+  short_description: "完了したPTCG全試合と全LLM判断を一手ずつ監査する"
+  default_prompt: "Use $ptcg-postgame-audit to audit every completed PTCG game and every LLM decision before the next batch."
