@@ -1,6 +1,6 @@
 ---
 name: autonomous-dev
-description: T3 Code 上の自律開発の進め方。CEO（入口）・リポジトリの管理役（本人と話し、要件・Issue・報告を持つ）・Issue の担当（管理役の下のサブエージェント）の3つの役で、要件を詰める → Issue化 → 並列で開発 → 検証 → 報告 を回す。開発の依頼を受けたとき、管理役・Issue の担当・検証役として起動されたとき、モデルの振り分けを決めるときに使う。Issue を作らないふだんの仕事を子に渡すときも、routing.md の「どんな仕事にも使う決め方」を見る。
+description: full-send/full send、full-stop/full stop、council、sol-loop/sol loop、file-pr、babysit-pr/babysit、takeover、modernize、leaving-pr-comments の共通PR工程の入口。T3 Code 上の自律開発の進め方。CEO（入口）・リポジトリの管理役（本人と話し、要件・Issue・報告を持つ）・Issue の担当（管理役の下のサブエージェント）の3つの役で、要件を詰める → Issue化 → 並列で開発 → 検証 → 報告 を回す。開発の依頼を受けたとき、管理役・Issue の担当・検証役として起動されたとき、モデルの振り分けを決めるときに使う。Issue を作らないふだんの仕事を子に渡すときも、routing.md の「どんな仕事にも使う決め方」を見る。
 ---
 
 # 自律開発（T3 Code・3つの役）
@@ -46,6 +46,34 @@ description: T3 Code 上の自律開発の進め方。CEO（入口）・リポ�
 - 止める条件: 同じ原因で2回失敗、検証役の不合格、時間や費用の上限、環境や権限の不足、対象の衝突。影響する部分だけ止め、ほかは続ける。
 - 既存の変更を勝手に戻さない。履歴の改変や強制終了で問題を隠さない。
 - このスキルの保守: 終わったときに今回使った手順だけ見直し、「修正／変更不要／保留」を結果に書く。本人のはっきりした訂正はすぐ反映する。1回きりの未確認の失敗は一般化しない。承認の条件を自分で外すような書き換えはしない。
+
+## 共通PR工程（呼出意図と終了条件）
+
+`full-send` / `full send`、`full-stop` / `full stop`、`council`、`sol-loop` / `sol loop`、`file-pr`、`babysit-pr` / `babysit`、`takeover`、`modernize`、`leaving-pr-comments` は独立したSkillではなく、この工程への呼出意図。依存と上流の対応は [索引](references/tstack-coverage.md)。requirements gate、承認済Issue、役割・routing、goal-loop、hard stop、E2E録画、Security 2.0条件は引き続き適用する。単語だけで権限を増やさない。Draftが既定で、子はmergeしない。
+
+1. **対象を固定**: Issueの目的・非対象・最新の明示承認と役割を読む。実PRのURL、state、実base・head repository/branch・head SHA・merge-base、作者、全diff、既存reviewを確認する。trackedのstaged/unstagedとuntrackedを含むdirty差分を特定し、他人の変更を保持する。混在を分離できなければ停止。baseや承認をbranch名から推測しない。
+2. **実装と証明**: 目的に必要な最小変更を行い、全diffの変更ごとに直接の証拠を得る。不具合は可能なら同じ手順で再現→修正→再確認し、CI相当の適用可能な検証を行う。実画面・実動作とmockを区別し、必要な実証ができなければ未検証として止める。E2Eは失敗・中断・再実行を含め毎回録画しprivate保存と動画読戻しを行う（`test-case-board/references/e2e-recording.md`）。上流の包括的テスト許可や保護迂回は採用しない。
+3. **任意レビュー**: 既知の指摘・失敗を先に処理し、必要なら下記のCouncilまたはSolを使う。各指摘を実コードと証拠で検証し、妥当な重大事項だけ最小修正、異議には根拠を残す。スコアや多数決はgateの代替ではない。自動reviewの修正後recheckは同一Issue全手法で最大2周。最後に最終SHAを固定し、必要な別会社Checkerが独立確認する。古いSHAの合格を流用しない。
+4. **PR**: full-stopでは作業開始前と各push前にauto-merge/queueを確認し、非mergeを保証できない場合はpush前に停止する。設定を無許可で変更しない。既存PRを照合し、実baseとの差分を再確認。`github-issue-driven-dev` のIssue/PR手続きに従い、最近のmerge済PRと履歴の慣例に合う日本語の `【repo名】` 題名、問題から始まる簡潔な本文、解決・証拠・未検証・作者credit、確認済み公開modelとharness（不明ならharnessのみ）を記す。Draftで作成し、botのためにreadyへ変えない。作成・push・引継ぎ直後の次callでT3の全stack層を `link_pull_request` / `link_pull_requests` にリンクし、失敗は報告する。正式gh/MCP/RESTを利用できる経路として使い、書込結果不明なら重複前に照合、保存後readback。題名・本文・引用・添付のprivacyを確認する。
+5. **待機と判定**: 既存feedbackを先に処理。T3ではPR所有の親だけが1 PRにつき1つ `watch_pull_request` を使い、その後turnを終了して通知を待つ。子watch・独自poll・二重監視は禁止。通知後は最新head、base、required checks（実repoのruleset/保護設定）、全review本文と旧指摘、human changes requested、mergeability、base freshness、queue/auto-mergeを再照合。取得できない本文は未確認。bot SUCCESSや通知は承認ではない。handoff・blocked・質問前に `unwatch_pull_request`。watcherが使えなければ停止して親へ返し、T3外用scriptをT3で呼ばない。rate limitは原因とresetを確認し、backoffし、競合・他者commit・古いPRを再評価する。必要な結果がない限り待つが、advisoryは実repo設定に従う。実在の指摘は修正、誤検知や範囲外は根拠付きで返す。Macroscopeのルールがあれば読む。repo自体の失敗とinfraのflakeを区別する。要対応でない通知には発言せずturnを終え、待機中のフィラーも投稿しない。PRを不要に膨らませない。
+6. **終点**: 最終headと最新の実baseでgateを実施する。実repoのrequired checksがgreen、全review本文を取得し適用される指摘を処置済み、humanの変更要求なし、mergeableでBEHIND/DIRTYなし、前回検証後のbase変更とPR対象の重複なしを確認する。base更新が必要なら実baseを更新し、影響範囲を限定再検証して最終headで再判定する。取得不能や古い結果は未達。全gateが最終SHAで満たされ、実baseが本人の許可済み確認用devなら管理役が取り込める。main、不明base、未承認の操作は本人判断へ。証拠不足・不合格・権限不足は影響部分を停止。full-stopはDraft既定のままopen/unmergedで、検証上ready（Draft解除やmerge許可を意味しない）、実際にhuman approvalだけ待ち、blockedを区別し、親管理役によるdev取込へ移らず本人へ引き渡す。head・証拠・review・残リスクと本人に代わって決めた事項を報告する。質問toolがない／無回答でも承認を増やさずPRをopen/unmergedで残し、最終報告冒頭に未回答事項と停止理由を示す。auto-merge/queueを検出しても無許可で変更せず、非mergeを保証できなければ作業を止める。既にmerge済みなら事実を報告する。常にbranch保護を尊重し、force push、merge、実機・認証・有料試験は呼出名から許可しない。
+
+### 任意のCouncil / Sol
+
+- Councilは能力と予算を確認し、指定時は指定された3社各1名、未指定時は現routing・能力・予算に合う許可済みの3社各1名を選びread-onlyで並列評価。指定先の利用不能や3社不足は報告し無断代替しない（Gemini禁止、Security 2.0条件は別途維持）。評価中は同じ差分を編集しない。届いた指摘は検証し、nonblockingの遅延結果はscoreに含めない。code reviewでは10点満点のscoreを依頼し、各roundのscoreは取得時のみ、欠落は `no score`。指摘の採否を確かめ、scopeを広げない。PRがあれば本文末尾のmodel/harness行の直前にround表、なければ最終報告に記す。無制限反復しない。
+- Solはreviewer 1名とし、そのreviewerは子reviewerを起動しない。全roundで同じbaseとdiffコマンドを固定し、初回はdirty・untrackedを含む全対象差分、以後は変更分と未解決IDを確認する。blockerは意図したケースが不正、shouldはscope内で実際の呼出に影響する不具合、それ以外はnit。blocker/should/nitに安定IDを付け、ID・severity・採否・根拠・SHA・roundを既存Issue/PRへ記録し、usageは取得時のみ。反対意見も証拠を示す。明示APPROVEかつ現在差分にblocker/shouldがなく自分の懸念もなければ終了し、nitsだけなら追加roundを行わない。自己照合は独立合格にしない。重大修正後は共通の最大2 recheckを共有する。2応答で対立が続く場合や予算到達は未合格として双方の根拠と残課題を返す。修正後のrecheckは重大指摘が残る、動作差分が変わった、または現在の差分が承認対象外のときに限る。PRへpushする場合、許可を確かめ、本文のmodel行の前にround数・確認済model・verdictを記す。担当が同じSolなら自己照合と明記し同モデル子を増やさない。異社Checkerの代替ではない。T3で新しいreview/recheckは毎回新しいreview delegate、通知待ちでpollしない。review中は対象差分を編集・pushしない。timeout/error/無応答は未合格であり、再起動するなら停止を確認しledgerを保持する。最終報告はround数・model・変更前後のdiff量・指摘の採否と反対理由・usage（取得不能なら明記）・実pushの有無を含める。
+
+### 引継ぎ・古いPR・コメント
+
+- takeoverは元目標、後の訂正、PR・review・dirtyと作者の寄与を読み、引継ぎを証明とみなさず現headと照合する。元commitを保持し追加修正を分離、作者/co-authorを推測せずcreditを維持しmodel名で置換しない。PRを依頼されたら作成で止めず、共通工程の待機／親への引渡しまで進める。終了時にも元PRの進行を確認し、引き継いだもの・変更・検証・credit・残判断を報告する。置換PR、close、squash時credit操作は別途許可が要る。Wikiは既存のcapture→digest全文読戻し→rehydrate→現Issue/Git照合と親による子要約の不足確認に従い、別状態DBを作らない。
+- modernizeは作業前に関連するoriginのbase/headをfetchし、dirtyな作業ツリーでは既存変更を保持してdisposable worktreeを使う。目的、実baseとmerge-base、周辺設計/API・base側変更・代替PRを調べ、先にMODERNIZE / REWORK / CLOSEを理由付きで判断する。年齢・無競合・過去労力だけでは決めない。REWORKはその再実装の依頼がない限りpush前に停止し、CLOSEはrebaseせず停止する。通常更新を優先し、rebase時は旧新seriesの `git range-diff` と最終diffで不変条件・意図を確かめ、対象を再検証する。拡張・base変更・closeは無許可で行わない。force-with-leaseは個別許可と事前に観測したremote SHAがある場合のみ、そのSHAを指定し、lease失敗時は停止する。
+- コメント、inline、返信は本人loginと確認済公開model名の `> [!NOTE]` / `> 🤖 **<model> responding on behalf of <login>**` を付ける。不明ならharness、帰属を重複させない。PR本文・commit・本人指定原文には機械追加しない。結論・証拠と判断を分け、引用・添付のprivacyを確認し、自分のコメントだけ編集。帰属はNOTE内、本文はその外に置き、横線・署名footer・二重帰属を足さずMarkdownを事前確認する。投稿URLと本文全文をreadbackしてからthreadをresolveする。投稿・resolve自体の許可は別途確認する。
+
+T3外で上位手順が許す場合のみ [pr-wait](scripts/pr-wait) を使える。Python 3と認証済ghが必要。`--until ready|green|any-change` は通知条件でありmerge gateではない。初回baseline、再起動時の重複防止stateと同一PR lockは通知用で、IssueやWikiの正本ではない。別watcherと併用せず、lock所有者を勝手に終了しない。失敗・rate limit・権限不足や未取得のreviewは未確認として扱う。
+
+### installedへの限定反映
+
+配布元の変更をinstalled正本へ反映するのは、Issueで承認されたSkill・ファイル・変更箇所だけ。検証・Draft・最終Checker後の安全な区切りに親担当が行う。適用前に動作中工程、既存symlink、配布元との差分を照合し、Git外private backupと適用前後hashを保存・確認する。既存の追加節をprivacy差分と決めつけず保全し、一括上書きしない。意味衝突・予期しない差分・動作中の競合があれば適用だけ停止する。許容privacy差分と承認変更を区別し、他設定を維持する。全同期・同名Skill追加へ広げない。対象一覧と適用証跡は当該Issueに置く。
 
 ## 書き手の分け方（詳しくは routing.md）
 
@@ -130,9 +158,9 @@ description: T3 Code 上の自律開発の進め方。CEO（入口）・リポ�
 
 ### まとめる前（並列の PR）
 - Issue ごとに worktree と PR を分け、基本は並列のまま進める。
-- 1つ merge されるたびに、残りの PR は最新の main を取り込み、衝突を直し、SWE-2 Flash・high がテストを走らせ直す（文字の衝突が無くても、合わせると動かなくなることがあるため。Devin Review などは取り込み前の食い違いに気づけない）。
+- 1つ merge されるたびに、残りの PR は実際の base の最新を取り込み、衝突を直し、SWE-2 Flash・high がテストを走らせ直す（文字の衝突が無くても、合わせると動かなくなることがあるため。Devin Review などは取り込み前の食い違いに気づけない）。
 - 同じ画面や同じ処理を大きく作り替える Issue 同士だけ、順番にやる。
-- merge の前に、PR の自動チェック（Devin Review、Amazon Q）の完了を待ち、レビュー本文を読む。`gh pr checks <番号>` を10〜15秒おきに見て、終わったら `gh pr view <番号> --json reviews,statusCheckRollup` で読む。指摘が残っていれば merge しない（古い行への指摘も、中身がまだ当てはまるなら未解決として扱う）。
+- merge の前の待機と判定は「共通PR工程」に従う。古い行への指摘も現状に当てはまるなら未解決として扱う。
 - SWE-2 の子は PR を T3 のスレッドにリンクする道具を持たないので、管理役がリンクする。
 - **本番のブランチ（`main`）への merge は本人が決める。** 確認用のブランチ（リポジトリごとに1つ。名前の既定は `dev`）への merge は、テスト・レビュー・必要な独立の検証がすべて通ったら、管理役が自分でしてよい（本人の決定 2026-11-12）。確認用のブランチが無いリポジトリでは、最初に作ってよいかを本人に聞く。
 
@@ -209,7 +237,7 @@ curl -s -H "$H" "$B/findings?scan_id=<scan_id>"                 # 終わった�
 
 - 着手前に自分で確かめる: Issue の番号・URL・OPEN、目的・範囲・対象外・受け入れ条件・確かめ方、最新の承認と止まっている理由。分からない承認は推測で埋めず、管理役へ返す。
 - 既存の実装・スキル・公式の機能を先に調べる。新しい依存や自作は、足りないと確かめたものだけ。
-- 最新の main・作業ブランチ・未コミットの差分を確かめ、自分の worktree とブランチで作業する。ブランチと Issue の対応は Issue に書く（T3 がブランチ名を付け替えることがあるため）。
+- 実際の base・作業ブランチ・未コミットの差分を確かめ、自分の worktree とブランチで作業する。ブランチと Issue の対応は Issue に書く（T3 がブランチ名を付け替えることがあるため）。
 - 画面は Claude / claude-fable-5-2・中 に、それ以外の実装は Codex / gpt-6.1-terra・high（大は max）に、テストを書くのは Terra・max に、走らせるのは SWE-2 Flash・high に、小さな修正・一括作業は SWE-2・max に、短い指示で渡す。Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low にレビューさせ、画面の差分は自分で見る。合否は自分で決める。自分は判断（要件・振り分け・指示・合否・報告）だけをし、コードは小さい直しも書かない: 画面は同じ Issue の Fable・中のスレッドへ（終わっている・ない・会話が長すぎるときは新しい Fable・中の子へ）、画面以外は直し方が決まっていれば SWE-2・max へ、原因や直し方が決まっていなければ Terra・high へ、検証用の fixture・台本は Terra・max へ渡す（管理役が担当を兼ねるときも同じ。途中で別の不具合が見つかったら、それも渡す）。2回不合格なら Fable・高 へ渡し、その旨を Issue に1行残す。
 - テスト: 受け入れ条件に結び付けて、種類（Unit/Integration/E2E/lint・typecheck・build・security）と環境を選ぶ。対象の commit・データの区分（fixture/mock/実データ）・環境・コマンドを固定する。書くのは Terra・max、走らせるのは SWE-2 Flash・high（Codex が上限なら書くのも SWE-2）。どちらも使えなければ自分で走らせ、その旨を Issue に書く。
 - 未実行は「非該当／blocked／未検証」を分けて書く。失敗を skip に変えて成功扱いしない。通すためにテストを弱めない。図や静止画を E2E の証拠にしない。途中でコードを直したら対象の commit を取り直す。iOS の画面操作は Maestro を使う。

@@ -155,3 +155,15 @@ Do not merge or deploy.
 ## Flow Summary
 
 For the user-facing development flow, read `references/development-flow.md`.
+
+## Shared PR procedure
+
+### Dependency preparation
+
+`autonomous-dev` is a separately prepared dependency: its manifest entry stays `install:false`, so `restore-skills.sh` does not install it. Before following the shared procedure, check that the canonical `~/.agents/skills/autonomous-dev/SKILL.md` contains `共通PR工程（呼出意図と終了条件）` and that its required local references are present. A file with the same name from an older version is insufficient.
+
+Preparation belongs to the parent manager, within explicit installation approval: use the reviewed, fixed commit of `nanameru/agent-skills` recorded in the current Issue/PR, and the existing `skills-repo-manager` procedure to prepare the required `autonomous-dev/` files at that canonical location. Compare the installed version first, preserve local additions and symlinks, and back up privately; update only approved files or hunks. A link to this procedure does not authorize installation, automatic restore, or replacement of local settings. Do not assume an unmerged PR is already distributed.
+
+If the dependency is absent, older than the required procedure, has missing references, or cannot be prepared within the approval, mark the affected shared PR procedure blocked and report the missing version/files or approval. Do not infer its gates passed or copy an alternative procedure. Unaffected core requirements and hard stops still apply.
+
+For PR intent aliases, proof, optional review and monitoring, refer to [autonomous-dev の共通PR工程](../autonomous-dev/SKILL.md#共通pr工程呼出意図と終了条件). This core still governs the requirements gate, one Issue/at most one Draft per run, maker/checker separation and hard stops. A scheduled loop stops at Draft or blocked; any later authorized dev integration is a separate parent-manager decision, not an automatic loop action.

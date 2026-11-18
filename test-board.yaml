@@ -645,3 +645,93 @@ cases:
     test_file: "tests/test_issue_goal_loop.py"
     issues: [21]
     notes: "共通契約、開発特化、利用者向けフローの3箇所が同じIssue goal loopを表現することを検証する。"
+  - id: TC-057-01
+    title: 上流9種の機能対応と出典の文書判断
+    feature: tstack integration coverage
+    scenario: AC-T1の上流機能・依存・設定・ライセンス・対応先をT01〜T03で照合する
+    status: done
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/references/tstack-coverage.md, autonomous-dev/references/tstack-LICENSE.txt, autonomous-dev/scripts/pr-wait]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [57]
+    notes: "担当の文書判断の限定結果であり実運用ではない。限定validatorはexit2 failures=0/unverified=17。dirty文書10ファイルと記載revision内の内容同一性をhashで確認した既存結果で、commit後のvalidator再実行ではない。上流pointer等は別照合済み。"
+    last_run:
+      revision: 17388f5beb09ea813e3250f1bca2763595ad63e3
+      at: "2026-11-15T10:31:38Z"
+      provider: Sol xhigh manual + SWE-2 Flash high limited validation
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463]
+  - id: TC-057-02
+    title: 承認範囲と最終版による終了判断
+    feature: tstack authorization boundaries
+    scenario: AC-T2の親子・base・full-stop・review・証跡・SHAをT04〜T14で判断する
+    status: done
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, loop-engineering-core/SKILL.md, loop-engineering-core/references/development-flow.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [57]
+    notes: "担当の文書判断の限定結果であり実運用ではない。限定validatorはexit2 failures=0/unverified=17。dirty文書10ファイルと記載revision内の内容同一性をhashで確認した既存結果で、commit後のvalidator再実行ではない。実mergeやqueue操作を行った結果ではない。"
+    last_run:
+      revision: 17388f5beb09ea813e3250f1bca2763595ad63e3
+      at: "2026-11-15T10:31:38Z"
+      provider: Sol xhigh manual + SWE-2 Flash high limited validation
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463]
+  - id: TC-057-03
+    title: レビュー・引継ぎ・古いPRの文書判断
+    feature: tstack review and takeover
+    scenario: AC-T3の範囲・指摘・再check上限・異社確認・credit・旧PR・WikiをT15〜T26で判断する
+    status: done
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/routing.md, loop-engineering-dev/SKILL.md, loop-engineering-core/references/development-flow.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [57]
+    notes: "担当の文書判断の限定結果であり実運用ではない。限定validatorはexit2 failures=0/unverified=17。dirty文書10ファイルと記載revision内の内容同一性をhashで確認した既存結果で、commit後のvalidator再実行ではない。最終版の別会社Checkerは未実施。"
+    last_run:
+      revision: 17388f5beb09ea813e3250f1bca2763595ad63e3
+      at: "2026-11-15T10:31:38Z"
+      provider: Sol xhigh manual + SWE-2 Flash high limited validation
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463]
+  - id: TC-057-04
+    title: 待機と通知の環境別判断
+    feature: tstack PR monitoring boundaries
+    scenario: AC-T4の親1watcher・子禁止・通知・T3外pr-wait制限をT27〜T29で判断する
+    status: done
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/scripts/pr-wait, loop-engineering-core/references/development-flow.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [57]
+    notes: "担当の文書判断の限定結果であり実運用ではない。限定validatorはexit2 failures=0/unverified=17。dirty文書10ファイルと記載revision内の内容同一性をhashで確認した既存結果で、commit後のvalidator再実行ではない。実watchやpr-waitの実運用は未検証。"
+    last_run:
+      revision: 17388f5beb09ea813e3250f1bca2763595ad63e3
+      at: "2026-11-15T10:31:38Z"
+      provider: Sol xhigh manual + SWE-2 Flash high limited validation
+      result: passed
+      evidence: [https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463]
+  - id: TC-057-05
+    title: 台帳・限定検証・最終版の独立確認
+    feature: tstack verification and review
+    scenario: AC-T5の参照・形式・privacy・既存台帳保持・PR review・最終CheckerをT30〜T36で確認する
+    status: todo
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/references/tstack-coverage.md, autonomous-dev/tests/acceptance-cases.md, loop-engineering-core/SKILL.md, loop-engineering-dev/SKILL.md, test-board.yaml]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [57]
+    notes: "台帳追記後の最終確認、PR自動review、最後の固定SHAへの親の異社Checkerは未完。初回限定検証exit1・anchor FAIL8、その後のexit2 failures=0/unverified=17、およびSonnet再check共有消費1/2は既存履歴のまま保持し、未検証を合格へ読み替えない。根拠: https://github.com/nanameru/agent-skills/issues/57#issuecomment-6892944730 と https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463。"
+  - id: TC-057-06
+    title: installed限定反映の安全な準備と確認
+    feature: tstack installed application
+    scenario: AC-T6の3 Skill変更ファイルの実体・リンク・hash・差分をT37で照合し安全な区切りで限定反映する
+    status: todo
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/routing.md, autonomous-dev/verified-facts.md, autonomous-dev/references/tstack-coverage.md, autonomous-dev/references/tstack-LICENSE.txt, autonomous-dev/scripts/pr-wait, loop-engineering-core/SKILL.md, loop-engineering-core/references/development-flow.md, loop-engineering-dev/SKILL.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [57]
+    notes: "無書込apply-check準備まで。親の最終Checker後のprivate backup、installedへの実適用、適用後hashとリンク保全の確認は未実施。根拠: https://github.com/nanameru/agent-skills/issues/57#issuecomment-6892944730 と https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463。"

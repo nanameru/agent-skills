@@ -179,3 +179,7 @@
 
 - Antigravity: 使わない（本人の指定 2026-11-12）。
 - Gemini 4 Argon: 使わない（本人が再指定するまで）。
+
+## 共通PR工程の任意レビュー
+
+Council・Solの呼出、reviewer数、通知待ち、recheck上限と異社Checkerの関係は [共通PR工程](SKILL.md#共通pr工程呼出意図と終了条件) を正本とする。既存の役割・モデル選択・費用と権限の制約は変えない。
