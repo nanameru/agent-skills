@@ -2,7 +2,7 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
+  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs test-case-board/tests/e2e-native-cdp.test.mjs test-case-board/tests/e2e-native-cdp-count.test.mjs test-case-board/tests/e2e-native-cdp-step.test.mjs"
 source_roots: [test-case-board, autonomous-dev, config/common-agents, figma-design-source, promo-video-remotion]
 cases:
   - id: TC-046-E2E
