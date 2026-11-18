@@ -1,5 +1,7 @@
 # Browser Use Cloud E2E
 
+Optional provider: use this when parallelism or managed browser capability is needed. The existing Devin local Chrome + Playwright workflow is in `e2e-devin-local.md`. Browser Use Cloud is not supported by the common agent-browser entry point until its recording session contract and adapter have been demonstrated.
+
 Use this reference when a test-board case needs browser E2E, cloud execution, recording, or parallel runs.
 
 ## Current Official Baseline
@@ -46,6 +48,8 @@ Do not use it for:
 
 ## Run Artifacts
 
+Follow [E2E recording and preservation](e2e-recording.md) for every run, including failures, interruptions, and retries. Download expiring recordings into approved private storage and verify the saved video before the temporary environment is removed. A recording URL alone is not completed preservation.
+
 For every cloud E2E run, record:
 
 - case ID
@@ -69,7 +73,7 @@ Recommended manifest:
       "endedAt": "2026-06-12T00:01:00.000Z",
       "liveUrl": "",
       "recordingUrl": "",
-      "recordingPath": ".e2e/recordings/TC-120.mp4"
+      "recordingPath": ".e2e/TC-120/<run-id>/recording.mp4"
     }
   ]
 }
