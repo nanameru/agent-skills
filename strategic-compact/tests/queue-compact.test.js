@@ -297,6 +297,35 @@ test('unsupported harness, unsafe payloads and missing identity/CLI never send',
   }
 });
 
+test('Codex Stop resolves its thread without the env ID and accepts warning-prefixed show and send JSON', t => {
+  const f = fixture(t);
+  const directory = path.join(f.home, '.t3', 'userdata', 'logs', 'provider');
+  fs.mkdirSync(directory, { recursive: true });
+  const record = (direction, payload) => `[${new Date(startTime).toISOString()}] NTIVE: ${JSON.stringify({
+    provider: 'codex', protocol: 'codex.app-server', kind: 'protocol', providerSessionId: 'fixture-epoch',
+    event: { stage: 'decoded', direction, payload }
+  })}`;
+  fs.writeFileSync(path.join(directory, 'events.fixture.log'), [
+    record('outgoing', { id: 1, method: 'thread/start', params: {
+      config: { 'shell_environment_policy.set.T3CODE_THREAD_ID': threadId }
+    } }),
+    record('incoming', { id: 1, result: { thread: { id: 'synthetic-session' } } }),
+    record('incoming', { method: 'thread/tokenUsage/updated',
+      params: { threadId: 'synthetic-session', turnId: 'synthetic-turn' } })
+  ].join('\n') + '\n');
+  f.configure({ warn: true });
+
+  f.setThread({ status: 'completed', activeRunId: null });
+  f.run('codex', 'Stop', {}, { noThread: true });
+  assert.equal(f.sends().length, 0);
+  assert.equal(fs.existsSync(f.stateFile), false);
+
+  f.setThread({ status: 'running', activeRunId: 'synthetic-current-run' });
+  f.run('codex', 'Stop', {}, { noThread: true });
+  assertSend(f);
+  assert.equal(f.state().request.state, 'queued');
+});
+
 test('show must identify the same thread before any reservation', t => {
   const f = fixture(t);
   f.setThread({ threadId: '00000000-0000-4000-8000-000000000063' });

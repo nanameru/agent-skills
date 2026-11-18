@@ -806,3 +806,14 @@ cases:
       provider: Devin SWE-2 Flash high
       result: passed
       evidence: [https://github.com/nanameru/agent-skills/issues/62#issuecomment-6909259654]
+  - id: TC-062-05
+    title: CodexのネイティブターンとT3スレッドの照合を確認する
+    feature: strategic-compact queue hook
+    scenario: 環境変数がないときの一意な照合、候補が競合した場合の停止、CLIの警告混在を検証する
+    status: done
+    priority: high
+    type: unit
+    source: [strategic-compact/scripts/lib/t3-compact-context.js, strategic-compact/scripts/hooks/queue-compact.js]
+    test_file: strategic-compact/tests/t3-compact-context.test.js
+    issues: [62]
+    notes: "合成provider logとCLI出力で検証。queue-compact.test.jsでは環境変数なし・警告ありの予約まで隔離fixtureで確認する。"

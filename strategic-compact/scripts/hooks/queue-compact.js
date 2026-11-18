@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { readStdinJson } = require('../lib/utils');
+const { parseCliOutput, resolveThreadId } = require('../lib/t3-compact-context');
 const { readLatestContextTokens, resolveContextWindow, resolveContextThreshold,
   resolveContextInterval, computeContextBucket } = require('../lib/transcript-context');
 
@@ -39,7 +40,7 @@ function cliJson(cli, args) {
     maxBuffer: 2 * 1024 * 1024, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   if (result.error) return { failure: result.error.code === 'ETIMEDOUT' ? 'timeout' : 'launch_error' };
   if (result.status !== 0) return { failure: 'nonzero_exit' };
-  try { return { value: JSON.parse(result.stdout) }; } catch { return { failure: 'invalid_json' }; }
+  try { return { value: parseCliOutput(result.stdout) }; } catch { return { failure: 'invalid_json' }; }
 }
 
 function showThread(cli, threadId) {
@@ -82,13 +83,15 @@ function observeRun(state, thread) {
   }
 }
 
-function handle(input, harness, cli, threadId, stateFile, hazardFile) {
+function handle(input, harness, cli, threadId, stateFile, hazardFile, fromLog) {
+  const event = input.hook_event_name;
+  const thread = showThread(cli, threadId);
+  if (fromLog && (!thread || (event === 'Stop' &&
+      (thread.status !== 'running' || !thread.activeRunId || thread.latestRunId !== thread.activeRunId)))) return;
   let state;
   try { state = JSON.parse(fs.readFileSync(stateFile, 'utf8')); }
   catch (err) { if (err.code !== 'ENOENT') throw err; state = { version: 1, native: {}, request: null, lastBucket: -1, buckets: {} }; }
   if (state.version !== 1 || !state.native || typeof state.lastBucket !== 'number') throw Error('invalid state');
-  const event = input.hook_event_name;
-  const thread = showThread(cli, threadId);
   if (!thread) state.lastReadFailureAt = Date.now();
   observeRun(state, thread);
   const activeRequest = state.request && state.request.runId && thread && thread.activeRunId === state.request.runId;
@@ -159,9 +162,10 @@ async function main() {
   const harness = process.argv[2];
   const input = await readStdinJson({ timeoutMs: 1000 });
   const cli = process.env.T3CODE_CLI_PATH;
-  const threadId = process.env.T3CODE_THREAD_ID;
-  if (!validInput(input, harness) || !cli || !path.isAbsolute(cli) || !threadId ||
-      typeof threadId !== 'string' || !threadId.trim() || threadId !== threadId.trim()) return;
+  if (!validInput(input, harness) || !cli || !path.isAbsolute(cli)) return;
+  const threadId = resolveThreadId(input, harness);
+  if (!threadId) return;
+  const fromLog = process.env.T3CODE_THREAD_ID === undefined;
   const base = path.join(os.homedir(), '.local', 'state', 'strategic-compact');
   privateDirectory(base);
   const key = crypto.createHash('sha256').update(threadId).digest('hex');
@@ -176,7 +180,7 @@ async function main() {
     }
     return;
   }
-  try { handle(input, harness, cli, threadId, stateFile, hazard); }
+  try { handle(input, harness, cli, threadId, stateFile, hazard, fromLog); }
   finally { try { fs.rmdirSync(lock); } catch { /* stale lock stays fail-closed */ } }
 }
 
