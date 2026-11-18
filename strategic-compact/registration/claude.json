@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"$HOME/.agents/hooks/strategic-compact/scripts/hooks/queue-compact.js\" claude", "timeout": 15 }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "node \"$HOME/.agents/hooks/strategic-compact/scripts/hooks/queue-compact.js\" claude", "timeout": 15 }] }],
+    "PostCompact": [{ "hooks": [{ "type": "command", "command": "node \"$HOME/.agents/hooks/strategic-compact/scripts/hooks/queue-compact.js\" claude", "timeout": 15 }] }]
+  }
+}
