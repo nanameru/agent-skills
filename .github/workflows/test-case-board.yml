@@ -26,7 +26,7 @@ jobs:
       - name: Install ffmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y --no-install-recommends ffmpeg
 
       - name: Record environment and prepare private fake directory
         env:
@@ -54,9 +54,20 @@ jobs:
           node --check test-case-board/tests/ledger-cli.test.mjs
           node --check test-case-board/tests/e2e-fixture/runner.mjs
           node --check test-case-board/tests/timeout-fixture.test.mjs
+          node --check test-case-board/tests/e2e-native-cdp.test.mjs
+          node --check test-case-board/tests/e2e-native-cdp-count.test.mjs
+          node --check test-case-board/tests/e2e-native-cdp-step.test.mjs
 
       - name: Check the Issue Goal Loop contract
         run: python3 tests/test_issue_goal_loop.py
 
       - name: Run test-case-board tests
-        run: node --test --test-reporter=tap test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs
+        run: >-
+          node --test --test-reporter=tap
+          test-case-board/scripts/test-board.test.mjs
+          test-case-board/tests/e2e-regression.test.mjs
+          test-case-board/tests/ledger-cli.test.mjs
+          test-case-board/tests/timeout-fixture.test.mjs
+          test-case-board/tests/e2e-native-cdp.test.mjs
+          test-case-board/tests/e2e-native-cdp-count.test.mjs
+          test-case-board/tests/e2e-native-cdp-step.test.mjs

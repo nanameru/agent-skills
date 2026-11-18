@@ -8,10 +8,11 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
+import { CDP, checkEndpoint, pageIdentity, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
 
 const exec = promisify(execFile);
 const worker = fileURLToPath(new URL('./e2e-worker.mjs', import.meta.url));
-const help = `Usage: test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live [--timeout-ms 120000]\nSee test-case-board/references/e2e-entrypoint.md for the v1 runner contract.\n`;
+const help = `Usage: test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live [--timeout-ms 120000]\nNative opt-in: --provider native-cdp --url LOCALHOST_URL --chrome EXECUTABLE (fixture only)\nSee test-case-board/references/e2e-entrypoint.md for the v1 runner contract.\n`;
 const sha = (data) => createHash('sha256').update(data).digest('hex');
 async function hashFile(file) {
   const hash = createHash('sha256');
@@ -148,11 +149,20 @@ async function main(argv) {
   if (argv.includes('--help') || argv.length === 0) { process.stdout.write(help); return 0; }
   const opts = {};
   for (let i = 0; i < argv.length; i += 2) {
-    if (!['--case','--runner','--browser','--evidence-dir','--data-kind','--timeout-ms','--issue','--environment'].includes(argv[i]) || !argv[i+1] || opts[argv[i]]) throw new Error('invalid arguments; see --help');
+    if (!['--case','--runner','--browser','--evidence-dir','--data-kind','--timeout-ms','--issue','--environment','--provider','--url','--chrome'].includes(argv[i]) || !argv[i+1] || opts[argv[i]]) throw new Error('invalid arguments; see --help');
     opts[argv[i]] = argv[i+1];
   }
   for (const key of ['--case','--runner','--browser','--evidence-dir','--data-kind']) if (!opts[key]) throw new Error(`${key} is required`);
   if (!/^[\w.-]+$/.test(opts['--case']) || !['fixture','mock','live'].includes(opts['--data-kind'])) throw new Error('invalid case or data kind');
+  const native = opts['--provider'] === 'native-cdp';
+  if (opts['--provider'] && !native) throw new Error('unsupported provider');
+  if (native) {
+    if (!opts['--url'] || !opts['--chrome'] || opts['--data-kind'] !== 'fixture') throw new Error('native-cdp requires fixture, --url and --chrome');
+    const u = new URL(opts['--url']);
+    if (!['http:', 'https:'].includes(u.protocol) || !['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || u.username || u.password) throw new Error('native-cdp requires a localhost fixture URL');
+    opts['--url'] = u.href;
+    if (!path.isAbsolute(opts['--chrome'])) throw new Error('chrome path must be absolute');
+  } else if (opts['--url'] || opts['--chrome']) throw new Error('native options require native-cdp');
   const timeoutMs = Number(opts['--timeout-ms'] || 120000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 86400000) throw new Error('invalid timeout');
   const browser = path.resolve(opts['--browser']), runner = path.resolve(opts['--runner']);
@@ -169,6 +179,7 @@ async function main(argv) {
   let logError = null;
   log.on('error', (error) => { logError = error; });
   const result = { schema: 'test-board-e2e-result-v1', runId: id, caseId: opts['--case'], issue: opts['--issue'] || null, runner: path.basename(runner), dataKind: opts['--data-kind'], startedAt: new Date().toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, environment: { platform: process.platform, arch: process.arch, node: process.version, description: opts['--environment'] || 'unspecified', agentBrowser: null, captureMethod: 'unobserved' }, git: null, test: { status: 'not-run', exitCode: null, signal: null, failedStep: null }, recording: { start: 'not-attempted', stop: 'not-attempted', save: 'not-verified', targetContinuity: 'not-verified', captureTargetIdentity: 'unverified', readback: { status: 'not-attempted', visualInspection: 'unverified' } }, artifacts: { video: 'recording.webm', log: 'run.log' }, steps: [], error: null };
+  if (native) Object.assign(result.test, { nativeCdpOperations: 0, nativeInputOperations: 0 });
   const session = `tb-${randomUUID()}`;
   const browserEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('AGENT_BROWSER_')));
   if (process.env.AGENT_BROWSER_EXECUTABLE_PATH) browserEnv.AGENT_BROWSER_EXECUTABLE_PATH = path.resolve(process.env.AGENT_BROWSER_EXECUTABLE_PATH);
@@ -176,6 +187,8 @@ async function main(argv) {
   browserEnv.AGENT_BROWSER_SOCKET_DIR = '.';
   browserEnv.AGENT_BROWSER_NAMESPACE = `tb-${randomUUID()}`;
   browserEnv.AGENT_BROWSER_CONFIG = path.join(dir, 'browser-config.json');
+  const profile = path.join(dir, 'profile');
+  let cdp, endpoint, nativeIdentity, nativeSession, nativeTargets;
   const controller = new AbortController();
   let child, workerClosed, interrupted = null, interruptionAt = null, finalized = false, lateSignal = null, startAttempted = false, browserOpened = false, currentStep = null, operations = 0, protocolError = false, readyResolve, readyReject, readyId, finishMessage = null, killTimer, pendingRequest = null;
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
@@ -221,8 +234,26 @@ async function main(argv) {
     targetHash = observed;
     append({ type: 'target-observation', step: currentStep, targetHash: observed, tabCount: 1 });
   }
+  async function observeNative(phase) {
+    const tabs = await browserCommand(['tab']);
+    const observer = await CDP.connect(endpoint);
+    try {
+      const targets = await observer.send('Target.getTargets');
+      const contexts = await observer.send('Target.getBrowserContexts');
+      await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-observation', phase, tabs, targets, contexts }) + '\n', (err) => err ? reject(err) : resolve()));
+      await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
+      const found = pageIdentity(tabs, targets, contexts, opts['--url']);
+      const targetSet = targets.targetInfos.map((t) => [t.targetId, t.type, t.browserContextId ?? 'default']).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+      if (nativeTargets && JSON.stringify(targetSet) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
+      nativeTargets ||= targetSet;
+      if (nativeIdentity && (found.targetId !== nativeIdentity.targetId || found.contextId !== nativeIdentity.contextId || JSON.stringify(found.contexts) !== JSON.stringify(nativeIdentity.contexts))) throw new Error('native target or context changed');
+      nativeIdentity ||= found;
+      return found;
+    } catch (error) { protocolError = true; throw error; } finally { observer.close(); }
+  }
   try {
     await fsp.mkdir(socketDir, { mode: 0o700 });
+    if (native) { await fsp.mkdir(profile, { mode: 0o700 }); await fsp.access(opts['--chrome'], fs.constants.X_OK); }
     await fsp.writeFile(browserEnv.AGENT_BROWSER_CONFIG, '{}\n', { flag: 'wx', mode: 0o600 });
     // agent-browser 0.43.0 appends namespaces/<namespace>/run/<session>.sock
     // to the raw socket directory and rejects Unix socket paths over 103 bytes.
@@ -239,7 +270,7 @@ async function main(argv) {
     const encoders = (await command('ffmpeg', ['-hide_banner','-encoders'])).stdout;
     if (!/\blibvpx\b/.test(encoders)) throw new Error('ffmpeg libvpx encoder unavailable');
     if (interrupted) throw new Error(interrupted);
-    child = spawn(process.execPath, [worker, runner, opts['--case']], { stdio: ['ignore','pipe','pipe','ipc'] });
+    child = spawn(process.execPath, [worker, runner, opts['--case'], ...(native ? ['native-cdp'] : [])], { stdio: ['ignore','pipe','pipe','ipc'] });
     child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });
     workerClosed = new Promise((resolve) => { child.once('error', (err) => { readyReject(err); resolve({ code: null, signal: null }); }); child.once('close', (code, signal) => { result.test.exitCode = code; result.test.signal = signal; readyReject(new Error(finishMessage?.error || 'runner exited before ready')); resolve({ code, signal }); }); });
     let handling = false;
@@ -251,9 +282,26 @@ async function main(argv) {
       pendingRequest = new Promise((resolve) => { settleRequest = resolve; });
       try {
         if (msg.type === 'ready') { if (readyId) throw new Error('duplicate ready'); readyId = msg.id; readyResolve(); return; }
-        if (msg.type === 'step-start') { if (currentStep) { protocolError = true; throw new Error('overlapping step'); } currentStep = msg.step; result.steps.push({ id: msg.step, startedAt: new Date().toISOString(), status: 'running' }); }
-        else if (msg.type === 'step-end') { if (currentStep !== msg.step) { protocolError = true; throw new Error('step mismatch'); } Object.assign(result.steps.at(-1), { status: msg.status, finishedAt: new Date().toISOString(), error: msg.error || null }); if (msg.status === 'failed') result.test.failedStep = msg.step; currentStep = null; }
-        else if (msg.type === 'command') {
+        if (msg.type === 'step-start') { if (native) await observeNative('step-before'); if (currentStep) { protocolError = true; throw new Error('overlapping step'); } currentStep = msg.step; result.steps.push({ id: msg.step, startedAt: new Date().toISOString(), status: 'running' }); }
+        else if (msg.type === 'step-end') {
+          if (currentStep !== msg.step) { protocolError = true; throw new Error('step mismatch'); }
+          if (native) {
+            try { await finishNativeStep({ result, step: msg.step, status: msg.status, error: msg.error, observe: () => observeNative('step-after') }); }
+            finally { currentStep = null; }
+          } else {
+            Object.assign(result.steps.at(-1), { status: msg.status, finishedAt: new Date().toISOString(), error: msg.error || null });
+            if (msg.status === 'failed') result.test.failedStep = msg.step;
+            currentStep = null;
+          }
+        }
+        else if (msg.type === 'cdp-send' && native) {
+          if (!currentStep || currentStep !== msg.step || (msg.sessionId !== nativeSession && !(msg.method === 'Target.getTargets' && msg.sessionId === null)) || typeof msg.method !== 'string' || !/^[A-Za-z]+\.[A-Za-z]+$/.test(msg.method) || (/^(Target|Browser)\./.test(msg.method) && msg.method !== 'Target.getTargets') || !msg.params || typeof msg.params !== 'object' || Array.isArray(msg.params) || !Number.isSafeInteger(msg.timeoutMs) || msg.timeoutMs < 1 || msg.timeoutMs > 120000) { protocolError = true; throw new Error('invalid native operation'); }
+          append({ type: 'cdp-send', step: currentStep, method: msg.method, params: msg.params, started: new Date().toISOString() });
+          operations++;
+          const value = await sendNativeOperation({ cdp, test: result.test, method: msg.method, params: msg.params, sessionId: msg.sessionId === null ? undefined : nativeSession, timeoutMs: msg.timeoutMs });
+          return reply(value);
+        }
+        else if (msg.type === 'command' && !native) {
           if (!currentStep || currentStep !== msg.step) { protocolError = true; throw new Error('unsupported browser command or step'); }
           let validated;
           try { validated = await runnerCommand(msg.args, dir); } catch (error) { protocolError = true; throw error; }
@@ -264,27 +312,38 @@ async function main(argv) {
         } else if (msg.type === 'finished') { finishMessage = msg; }
         else throw new Error('unsupported runner message');
         reply(true);
-      } catch (error) { reply(null, error.message); }
+      } catch (error) { if (native) protocolError = true; reply(null, error.message); }
       finally { handling = false; pendingRequest = null; settleRequest(); }
     });
     await ready;
     browserOpened = true;
-    await browserCommand(['set','viewport','1280','720']);
-    await checkTarget();
+    if (native) {
+      await browserCommand(['--profile', profile, '--executable-path', opts['--chrome'], '--no-webmcp', '--args', 'about:blank', 'open', opts['--url']]);
+      endpoint = checkEndpoint((await browserCommand(['get','cdp-url'])).cdpUrl);
+      await observeNative('before-record-start');
+    } else { await browserCommand(['set','viewport','1280','720']); await checkTarget(); }
     startAttempted = true;
     await browserCommand(['record','start',video]); result.recording.start = 'passed';
-    await checkTarget();
+    if (native) {
+      const afterEndpoint = checkEndpoint((await browserCommand(['get','cdp-url'])).cdpUrl);
+      if (endpoint !== afterEndpoint) { protocolError = true; throw new Error('native endpoint changed'); }
+      await observeNative('after-record-start');
+      cdp = await CDP.connect(endpoint);
+      nativeSession = (await cdp.send('Target.attachToTarget', { targetId: nativeIdentity.targetId, flatten: true })).sessionId;
+      if (!nativeSession) throw new Error('native attach failed');
+      cdp.on('*', (method, params, sid) => { if (sid === nativeSession && child.connected) child.send({ type: 'cdp-event', method, params, sessionId: sid }); });
+    } else await checkTarget();
     // Runner waits for this explicit release before invoking its test.
-    if (child.connected) child.send({ type: 'reply', id: readyId, value: true });
+    if (child.connected) child.send({ type: 'reply', id: readyId, value: native ? { sessionId: nativeSession } : true });
     result.test.status = 'running';
     const exit = await workerClosed;
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
     result.test.exitCode = exit.code; result.test.signal = exit.signal;
-    result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
+    result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && nativeInputSatisfied(native, result.test) && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
     if (finishMessage?.step && !result.test.failedStep) result.test.failedStep = finishMessage.step;
     if (finishMessage?.error) result.error = finishMessage.error;
     if (!interrupted && (!finishMessage || !operations)) result.error ||= 'runner did not complete the supported contract with browser operations';
-    await checkTarget();
+    if (native) await observeNative('after-worker'); else await checkTarget();
     if (!protocolError) result.recording.targetContinuity = 'passed';
   } catch (error) { result.error ||= interrupted || error.message; if (startAttempted && result.recording.start !== 'passed') result.recording.start = 'failed'; if (result.test.status === 'running') result.test.status = 'failed'; }
   finally {
@@ -293,6 +352,11 @@ async function main(argv) {
     if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); await boundedWait(workerClosed, 3000); if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }
     if (workerClosed) await boundedWait(workerClosed, 3000);
     if (pendingRequest) { protocolError = true; controller.abort(); await pendingRequest; }
+    if (!nativeInputSatisfied(native, result.test)) {
+      const reason = 'no successful native CDP input operations';
+      result.error = result.error ? `${result.error}; ${reason}` : reason;
+    }
+    if (cdp) cdp.close();
     if (startAttempted) {
       try { await browserCommand(['record','stop'], true); result.recording.stop = 'passed'; } catch (error) { result.recording.stop = 'failed'; append({ type: 'stop-error', error: error.message }); }
       try { result.recording.readback = await readVideo(video); result.recording.save = 'verified'; } catch (error) { result.recording.readback = { status: 'failed', error: error.message, visualInspection: 'unverified' }; }
@@ -330,7 +394,7 @@ async function main(argv) {
     result.interruption = interrupted ? { reason: interrupted, observedAt: interruptionAt } : null;
     result.finishedAt = new Date().toISOString();
     const evidenceOk = result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified';
-    const allure = attachments && { uuid: id, historyId: sha(opts['--case']), testCaseId: opts['--case'], fullName: opts['--case'], name: opts['--case'], status: interrupted || !evidenceOk ? 'broken' : result.test.status === 'passed' ? 'passed' : result.test.status === 'not-run' ? 'broken' : 'failed', statusDetails: { message: `test=${result.test.status}; interruption=${interrupted || 'none'}; recording start=${result.recording.start}, stop=${result.recording.stop}, target=${result.recording.targetContinuity}, save=${result.recording.save}, readback=${result.recording.readback.status}; log=${result.artifacts.logStatus}` }, start: Date.parse(result.startedAt), stop: Date.parse(result.finishedAt), labels: [{ name: 'framework', value: 'test-board-agent-browser-v1' }], steps: result.steps.map((s) => ({ name: s.id, status: s.status === 'passed' ? 'passed' : 'failed', start: Date.parse(s.startedAt), stop: s.finishedAt ? Date.parse(s.finishedAt) : Date.parse(result.finishedAt) })), attachments };
+    const allure = attachments && { uuid: id, historyId: sha(opts['--case']), testCaseId: opts['--case'], fullName: opts['--case'], name: opts['--case'], status: interrupted || !evidenceOk ? 'broken' : result.test.status === 'passed' ? 'passed' : result.test.status === 'not-run' ? 'broken' : 'failed', statusDetails: { message: `test=${result.test.status}; interruption=${interrupted || 'none'}; recording start=${result.recording.start}, stop=${result.recording.stop}, target=${result.recording.targetContinuity}, save=${result.recording.save}, readback=${result.recording.readback.status}; log=${result.artifacts.logStatus}` }, start: Date.parse(result.startedAt), stop: Date.parse(result.finishedAt), labels: [{ name: 'framework', value: native ? 'test-board-native-cdp-v1' : 'test-board-agent-browser-v1' }], steps: result.steps.map((s) => ({ name: s.id, status: s.status === 'passed' ? 'passed' : 'failed', start: Date.parse(s.startedAt), stop: s.finishedAt ? Date.parse(s.finishedAt) : Date.parse(result.finishedAt) })), attachments };
     finalized = true;
     const resultPath = path.join(dir, 'result.json');
     try {
@@ -345,11 +409,11 @@ async function main(argv) {
       try { fs.writeFileSync(path.join(dir, result.artifacts.allure.result), JSON.stringify(allure, null, 2) + '\n', { flag: 'wx', mode: 0o600 }); }
       catch { console.error('test-board e2e: Allure result write failed'); }
     }
-    process.stdout.write(JSON.stringify({ result: resultPath, test: result.test, recording: result.recording }) + '\n');
+    process.stdout.write(JSON.stringify(native ? { result: `${path.basename(dir)}/result.json`, test: result.test.status, recording: { start: result.recording.start, stop: result.recording.stop, save: result.recording.save, readback: result.recording.readback.status }, interruption: result.interruption?.reason ?? null } : { result: resultPath, test: result.test, recording: result.recording }) + '\n');
     // The first check phase can precede the poll phase that delivers a signal
     // received during synchronous writes. Yield through a subsequent poll too.
     await new Promise((resolve) => setImmediate(() => setImmediate(resolve)));
   }
   return !interrupted && !lateSignal && result.test.status === 'passed' && result.recording.start === 'passed' && result.recording.stop === 'passed' && result.recording.targetContinuity === 'passed' && result.recording.save === 'verified' && result.recording.readback.status === 'passed' && result.artifacts.logStatus === 'verified' ? 0 : 1;
 }
-try { process.exitCode = await main(process.argv.slice(2)); } catch (error) { console.error(`test-board e2e: ${error.message}`); process.exitCode = 1; }
+try { process.exitCode = await main(process.argv.slice(2)); } catch (error) { console.error(process.argv.includes('--provider') && process.argv.includes('native-cdp') ? 'test-board e2e: failed' : `test-board e2e: ${error.message}`); process.exitCode = 1; }

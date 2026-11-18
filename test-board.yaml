@@ -2,7 +2,7 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-  test_command: "python3 tests/test_issue_goal_loop.py && node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
+  test_command: "python3 tests/test_issue_goal_loop.py && node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs test-case-board/tests/e2e-native-cdp.test.mjs test-case-board/tests/e2e-native-cdp-count.test.mjs test-case-board/tests/e2e-native-cdp-step.test.mjs"
 source_roots: [test-case-board, autonomous-dev, config/common-agents, figma-design-source, promo-video-remotion, loop-engineering-core, loop-engineering-dev, tests]
 cases:
   - id: TC-046-E2E
@@ -645,3 +645,63 @@ cases:
     test_file: "tests/test_issue_goal_loop.py"
     issues: [21]
     notes: "共通契約、開発特化、利用者向けフローの3箇所が同じIssue goal loopを表現することを検証する。"
+  - id: TC-054-TARGET-RECORD
+    title: "専用targetと標準録画の両立を限定fixtureで確認する"
+    feature: "native CDP target and standard recording gate"
+    scenario: "AC-1 AC-5 secretなしlocalhost fixtureで標準録画とCDP入力を同一targetへ接続"
+    status: doing
+    priority: high
+    type: e2e
+    source: [test-case-board/tests/e2e-cdp-fixture/run.mjs, test-case-board/tests/e2e-cdp-fixture/protocol.mjs, test-case-board/scripts/e2e-run.mjs]
+    test_file: test-case-board/tests/e2e-cdp-fixture/run.mjs
+    issues: [54]
+    expected: "専用browser・profile・target各1つを排他所有し、正式取得したloopback endpointを使う。標準record開始前後のcontext・target再作成を実測し、開始後のCDP操作と録画が同じ実targetを使うことを逐次操作・新tab禁止の下で確認する。映像も目視で照合し、両立不可なら停止する。"
+    notes: >-
+      初回限定fixture c06fe760521b6e9ae4125efa76acecc55c1b0887、2026-11-14T18:19:53.367Z〜18:19:57.040Z、macOS arm64・Node 24・agent-browser 0.43.0ではprepare exit 0、run exit 1・signalなし。録画前の所有gateでCLI tab 1／CDP page 2となり、worker・入力・録画は未実施。E2E合格ではない。private結果の相対参照: issue54-469061bd-cf2f-409c-831b-85ca4a5a1e24/result.json。履歴: https://github.com/nanameru/agent-skills/issues/54#issuecomment-6882155430。限定再開7f8eba04e22f06b4fe73860a865cd1aa4d750849は同一targetと標準録画の両立を実証し、全74frame decodeのうち5frameのみ目視。履歴: https://github.com/nanameru/agent-skills/issues/54#issuecomment-6882858843。AC-1〜5全体および製品E2Eの合格ではない。
+      固定439b78c1728ae3487656b27165cef1fa7c6eee44の4runではsuccess・assertion・retryのtargetContinuityはpassed、SIGTERMはnot-verified。capture内部targetと録画の連続性、厳密なwall-clockとPTSの対応、最終独立Checkerは未確認。
+  - id: TC-054-NATIVE-INPUT
+    title: "元テストのnative入力とassert・待機・速度を保持する"
+    feature: "native CDP input preservation"
+    scenario: "AC-2 touch Start End Cancel、Space保持、経路付き往復pan、Ctrl+wheel"
+    status: doing
+    priority: high
+    type: e2e
+    source: [test-case-board/tests/e2e-native-cdp-fixture/fixture.mjs, test-case-board/tests/e2e-native-cdp-fixture/index.html, test-case-board/scripts/e2e-worker.mjs]
+    test_file: test-case-board/tests/e2e-native-cdp-fixture/runner.mjs
+    issues: [54]
+    expected: "元テストとread-only比較し、touchStart・touchEnd・touchCancel、Space keyDown中の操作、途中経路を通る往復pan、Ctrl+wheelと元のassert・待機・操作速度を保持したnative入力を限定fixtureで確認する。dispatchEventをnative touchと扱わない。"
+    notes: >-
+      元テストをread-only比較したnative入力のrunnerとlocalhost fixtureを用意。限定7f8のtrusted clickは製品動作の合格を示さない。
+      固定439b78c1728ae3487656b27165cef1fa7c6eee44の各runは成功native Input 26件（touch 4・key 2・mouse 20）。担当Solは16 contact sheets（各runの実frame 39枚、計156のcropped panels）と4 full framesを目視し、trusted touchstart/end/cancel、Space保持click、往復pan、zoom 1.284の表示を確認。
+      success・assertion・SIGTERMはindex 75で80,30を目視、retryは最大66,25までで80,30は未目視。全frame目視や製品E2E合格ではない。目視manifest参照: visual-detail-c04477e9-f77a-49cc-addc-751c8320d87a/manifest.json。
+  - id: TC-054-RUN-EVIDENCE
+    title: "試行別の録画と失敗原本を保全する"
+    feature: "native CDP recording lifecycle"
+    scenario: "AC-3 成功・意図的失敗・扱える中断・retryを別runで保存"
+    status: doing
+    priority: high
+    type: e2e
+    source: [test-case-board/scripts/e2e-run.mjs, test-case-board/references/e2e-recording.md, test-case-board/tests/e2e-native-cdp-fixture/driver.mjs]
+    test_file: test-case-board/tests/e2e-native-cdp-fixture/driver.mjs
+    issues: [54]
+    expected: "成功・意図的失敗・扱える中断・retryを各新runとし、finallyで録画停止、private保存と読戻し、全decode・実decoded-frame PTS・hashを確認する。過去の失敗原本の前後hashが不変であることを確かめ、元の試行を上書きしない。"
+    notes: >-
+      SWE-2 Flash highが固定439b78c1728ae3487656b27165cef1fa7c6eee44 cleanで2026-11-14T20:01:12Z〜20:01:42ZにmacOS Darwin 27.2 arm64・Node 24.22.2・agent-browser 0.43.0・Chromeのlocalhost fixtureを逐次4run。driver exit 0・signal null。
+      successはentry/worker 0/null、assertionはentry 1/null・worker 1/nullでfailedStep intentional-assertion-failure、SIGTERMはentry 1/null・worker exit null/signal SIGTERMでfailedStep pending-interruption、retryはentry/worker 0/null。
+      全runで標準record start/stop passed、save verified、readback passed、全decodeは順に162/162/163/162 frames、実PTSとhashを読戻し。原resultのvisualInspectionはunverifiedのまま。失敗・SIGTERM自体の表示、全frame目視、厳密なwall-clockとPTSの対応、capture内部target・録画継続性は未確認。
+      private root相対suite: issue54-c1ba85c6-4233-4391-a3f8-3abec3635945/。suite内result.jsonのrun dirs（上記順）: TC-054-NATIVE-INPUT-c7c49618-e5dd-4dd3-a211-4f1e74699a56、TC-054-RUN-EVIDENCE-59aeb607-7626-4b26-ba6e-82b41dddf999、TC-054-RUN-EVIDENCE-18e3eec9-dc29-41a4-80dd-1bc34c9f4768、TC-054-RUN-EVIDENCE-f72b2ee6-471b-44e3-90d4-7000b1d802e1。各runのrun.logとrecording.webmも同じdirに保存。
+      親が初回c06失敗・7f8限定proofの原本hashと、4runの元12ファイルの不変を再読戻し。AC全体や製品E2Eの合格ではない。
+  - id: TC-054-RESULT-V1
+    title: "実workerの終了情報を既存result-v1へ対応付ける"
+    feature: "native CDP result contract"
+    scenario: "AC-4 case・commit・日時・環境・stepと実worker exit・signal"
+    status: doing
+    priority: high
+    type: integration
+    source: [test-case-board/scripts/e2e-native-cdp.mjs, test-case-board/scripts/e2e-run.mjs, test-case-board/scripts/e2e-worker.mjs, test-case-board/references/e2e-entrypoint.md]
+    test_file: test-case-board/tests/e2e-native-cdp.test.mjs
+    issues: [54]
+    expected: "case、対象commit、開始・終了日時と環境、step、実worker-processのexit codeとsignalを既存test-board-e2e-result-v1へ対応付けて互換照合し、未起動・未取得を区別する。ケース正本は既存test-board.yamlとする。"
+    notes: >-
+      native resultとworkerの契約guardを用意。固定00542e2c44de67230cfd8422d006585bd2db61b6でcount guardはSWEがoffline 6/6、exit 0・signalなしを確認。新step guard単体の実行結果はここでは未確認。
+      固定439b78c1728ae3487656b27165cef1fa7c6eee44の限定fixture 4runでは、success・assertion・SIGTERM・retryの実worker exit/signalとfailedStepをresult-v1へ記録。詳細とprivate相対参照はTC-054-RUN-EVIDENCEを参照。意図した失敗・中断は成功へ読み替えず、T3 in-process正規化0/1の変更や最終独立Checker合格を意味しない。
