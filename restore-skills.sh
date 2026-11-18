@@ -32,5 +32,7 @@ ln -sfn "$HOME"/.agents/skills/slide-archetype-gen "$HOME"/.claude/skills/slide-
 ln -sfn "$HOME"/.agents/skills/slide-archetype-gen "$HOME"/.codex/skills/slide-archetype-gen
 ln -sfn "$HOME"/.agents/skills/figma-design-source "$HOME"/.claude/skills/figma-design-source
 ln -sfn "$HOME"/.agents/skills/figma-design-source "$HOME"/.codex/skills/figma-design-source
+ln -sfn "$HOME"/.agents/skills/implementation-showcase "$HOME"/.claude/skills/implementation-showcase
+ln -sfn "$HOME"/.agents/skills/implementation-showcase "$HOME"/.codex/skills/implementation-showcase
 
 echo "Done."
