@@ -207,6 +207,22 @@ function waitForFile(file) {
     check();
   });
 }
+function codexProviderLog(f) {
+  const directory = path.join(f.home, '.t3', 'userdata', 'logs', 'provider');
+  fs.mkdirSync(directory, { recursive: true });
+  const file = path.join(directory, 'events.fixture.log');
+  const row = (direction, payload) => `[${new Date(startTime).toISOString()}] NTIVE: ${JSON.stringify({
+    provider: 'codex', protocol: 'codex.app-server', kind: 'protocol', providerSessionId: 'fixture-epoch',
+    event: { stage: 'decoded', direction, payload }
+  })}\n`;
+  const incoming = (payload) => fs.appendFileSync(file, row('incoming', payload));
+  fs.writeFileSync(file, row('outgoing', { id: 1, method: 'thread/start', params: {
+    config: { 'shell_environment_policy.set.T3CODE_THREAD_ID': threadId }
+  } }));
+  incoming({ id: 1, result: { thread: { id: 'synthetic-session' } } });
+  return turnId => incoming({ method: 'thread/tokenUsage/updated', params: { threadId: 'synthetic-session', turnId } });
+}
+
 function assertSend(f) {
   assert.equal(f.sends().length, 1);
   assert.deepEqual(f.sends()[0].argv, ['thread', 'send', threadId, '/compact', '--json']);
@@ -299,20 +315,7 @@ test('unsupported harness, unsafe payloads and missing identity/CLI never send',
 
 test('Codex Stop resolves its thread without the env ID and accepts warning-prefixed show and send JSON', t => {
   const f = fixture(t);
-  const directory = path.join(f.home, '.t3', 'userdata', 'logs', 'provider');
-  fs.mkdirSync(directory, { recursive: true });
-  const record = (direction, payload) => `[${new Date(startTime).toISOString()}] NTIVE: ${JSON.stringify({
-    provider: 'codex', protocol: 'codex.app-server', kind: 'protocol', providerSessionId: 'fixture-epoch',
-    event: { stage: 'decoded', direction, payload }
-  })}`;
-  fs.writeFileSync(path.join(directory, 'events.fixture.log'), [
-    record('outgoing', { id: 1, method: 'thread/start', params: {
-      config: { 'shell_environment_policy.set.T3CODE_THREAD_ID': threadId }
-    } }),
-    record('incoming', { id: 1, result: { thread: { id: 'synthetic-session' } } }),
-    record('incoming', { method: 'thread/tokenUsage/updated',
-      params: { threadId: 'synthetic-session', turnId: 'synthetic-turn' } })
-  ].join('\n') + '\n');
+  codexProviderLog(f)('synthetic-turn');
   f.configure({ warn: true });
 
   f.setThread({ status: 'completed', activeRunId: null });
@@ -324,6 +327,22 @@ test('Codex Stop resolves its thread without the env ID and accepts warning-pref
   f.run('codex', 'Stop', {}, { noThread: true });
   assertSend(f);
   assert.equal(f.state().request.state, 'queued');
+});
+
+test('Codex PreCompact waits for the native turn log to reach disk', async t => {
+  const f = fixture(t);
+  const logTurn = codexProviderLog(f);
+  logTurn('synthetic-turn');
+  f.run('codex', 'Stop', {}, { noThread: true });
+  f.setThread({ activeRunId: requestRun, latestRunId: requestRun, status: 'running' });
+  const compact = { turn_id: 'native-compact-turn' };
+  const pre = f.start('codex', 'PreCompact', compact, { noThread: true });
+  await new Promise(resolve => setTimeout(resolve, 300));
+  logTurn(compact.turn_id);
+  await pre.done;
+  assert.equal(f.state().request.preObserved, true);
+  f.run('codex', 'PostCompact', compact, { noThread: true });
+  assert.equal(f.state().request.state, 'compact_completed');
 });
 
 test('show must identify the same thread before any reservation', t => {

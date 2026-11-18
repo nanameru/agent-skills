@@ -7,6 +7,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
+const { setTimeout: delay } = require('timers/promises');
 const { readStdinJson } = require('../lib/utils');
 const { parseCliOutput, resolveThreadId } = require('../lib/t3-compact-context');
 const { readLatestContextTokens, resolveContextWindow, resolveContextThreshold,
@@ -14,6 +15,7 @@ const { readLatestContextTokens, resolveContextWindow, resolveContextThreshold,
 
 const COOLDOWN_MS = 5 * 60 * 1000;
 const CLI_TIMEOUT_MS = 5000;
+const T3_LOG_BATCH_GRACE_MS = 1100;
 const RUN_FAILURES = new Set(['failed', 'cancelled', 'interrupted', 'rolled_back']);
 const RUN_STATUSES = new Set(['preparing', 'queued', 'starting', 'running', 'waiting',
   'completed', 'interrupted', 'failed', 'cancelled', 'rolled_back']);
@@ -163,9 +165,13 @@ async function main() {
   const input = await readStdinJson({ timeoutMs: 1000 });
   const cli = process.env.T3CODE_CLI_PATH;
   if (!validInput(input, harness) || !cli || !path.isAbsolute(cli)) return;
+  const fromLog = process.env.T3CODE_THREAD_ID === undefined;
+  if (fromLog && harness === 'codex' && input.hook_event_name === 'PreCompact') {
+    // This hook can start before T3's one-second provider log batch publishes the compact turn.
+    await delay(T3_LOG_BATCH_GRACE_MS);
+  }
   const threadId = resolveThreadId(input, harness);
   if (!threadId) return;
-  const fromLog = process.env.T3CODE_THREAD_ID === undefined;
   const base = path.join(os.homedir(), '.local', 'state', 'strategic-compact');
   privateDirectory(base);
   const key = crypto.createHash('sha256').update(threadId).digest('hex');
