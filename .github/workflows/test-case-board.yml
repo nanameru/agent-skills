@@ -1,0 +1,59 @@
+name: test-case-board
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out selected ref commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.2'
+          package-manager-cache: false
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Record environment and prepare private fake directory
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          actual_sha=$(git rev-parse HEAD)
+          printf 'Event: %s\nRef: %s\nExpected SHA: %s\nCheckout SHA: %s\nUTC: %s\nRunner OS: %s\n' "$GITHUB_EVENT_NAME" "$GITHUB_REF" "$EXPECTED_SHA" "$actual_sha" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$RUNNER_OS"
+          test "$actual_sha" = "$EXPECTED_SHA"
+          node --version
+          ffmpeg -version | sed -n '1p'
+          ffprobe -version | sed -n '1p'
+          ffmpeg -hide_banner -encoders | grep -E '^[[:space:]]*V[^[:space:]]*[[:space:]]+libvpx[[:space:]]'
+          umask 077
+          fake_dir=$(mktemp -d "$RUNNER_TEMP/test-case-board-fake.XXXXXXXXXX")
+          chmod 700 "$fake_dir"
+          printf 'TB_FAKE_TEST_DIR=%s\n' "$fake_dir" >> "$GITHUB_ENV"
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check test-case-board/scripts/test-board.mjs
+          node --check test-case-board/scripts/e2e-run.mjs
+          node --check test-case-board/scripts/e2e-worker.mjs
+          node --check test-case-board/scripts/test-board.test.mjs
+          node --check test-case-board/tests/e2e-regression.test.mjs
+          node --check test-case-board/tests/ledger-cli.test.mjs
+          node --check test-case-board/tests/e2e-fixture/runner.mjs
+          node --check test-case-board/tests/timeout-fixture.test.mjs
+
+      - name: Run test-case-board tests
+        run: node --test --test-reporter=tap test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs
