@@ -2,8 +2,8 @@ version: 1
 project:
   name: agent-skills
   repo: nanameru/agent-skills
-  test_command: "node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
-source_roots: [test-case-board, autonomous-dev, config/common-agents, figma-design-source, promo-video-remotion]
+  test_command: "python3 tests/test_issue_goal_loop.py && node --test test-case-board/scripts/test-board.test.mjs test-case-board/tests/e2e-regression.test.mjs test-case-board/tests/ledger-cli.test.mjs test-case-board/tests/timeout-fixture.test.mjs"
+source_roots: [test-case-board, autonomous-dev, config/common-agents, figma-design-source, promo-video-remotion, loop-engineering-core, loop-engineering-dev, tests]
 cases:
   - id: TC-046-E2E
     title: "共通入口でlocalhostの画面操作と録画を対応付ける"
@@ -634,3 +634,14 @@ cases:
     test_file: promo-video-remotion/tests/deliver-no-overwrite.sh
     issues: [29]
     notes: "コマンド: bash promo-video-remotion/tests/deliver-no-overwrite.sh [path-to-deliver.sh]。private一時HOMEと合成ファイルを使いffprobe/GUI/sleep/dateをstub化。旧e024f04の時刻付きファイル上書きを失敗で検出し、修正版の既存2ファイル・納品内容・納品先の一意性・先の納品保全を確認する。実Downloads・実動画・GUIは使わない。固定版での実行結果はIssue #29履歴へ記録する。同時実行は静的確認のみ。"
+  - id: TC-001
+    title: "1 Issueを外側のゴールループとして完成またはblockedまで追跡する"
+    feature: "Issue単位ゴールループ"
+    scenario: "未達成条件を選びworkflowとcheckerを反復して終了条件を判定する"
+    status: done
+    priority: high
+    type: regression
+    source: [loop-engineering-core/SKILL.md, loop-engineering-dev/SKILL.md, loop-engineering-core/references/development-flow.md]
+    test_file: "tests/test_issue_goal_loop.py"
+    issues: [21]
+    notes: "共通契約、開発特化、利用者向けフローの3箇所が同じIssue goal loopを表現することを検証する。"
