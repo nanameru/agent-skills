@@ -68,6 +68,11 @@
       "name": "promo-video-remotion",
       "source": "nanameru/agent-skills",
       "path": "promo-video-remotion"
+    },
+    {
+      "name": "implementation-showcase",
+      "source": "nanameru/agent-skills",
+      "path": "implementation-showcase"
     }
   ],
   "postInstallLinks": [
