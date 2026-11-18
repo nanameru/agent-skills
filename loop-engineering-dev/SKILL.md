@@ -19,6 +19,10 @@ The parent owns shared rules: requirement gate, durable state, maker/checker sep
 
 Follow the parent requirement gate. If the question set becomes large, use both the parent `references/requirements-gate.md` and this Skill's `references/requirements-question-bank.md`.
 
+## Maker/Checker and Verification Record
+
+Keep the Maker and independent Checker separate; a Checker must not approve its own work. Record the Checker verdict as `合格`, `不合格`, or `未検証あり` in the Issue, with a concise PR summary. When a T3 task explicitly assigns the post-PR independent review, defensive checks, and recorded E2E to Devin Bot, the manager delegates implementation, unit verification, and PR creation and hands over the PR URL, full head SHA, verification conditions, and unverified items. Do not duplicate the assigned post-PR checks in T3. Follow the current common instructions for model selection and merge/deploy authorization.
+
 ## Specialized Building Blocks
 
 1. **Work source**: GitHub Issues, CI failures, analytics signals, bug reports, or explicit backlog.
@@ -96,6 +100,8 @@ Minimum per test-board case:
 
 すべてのE2E実行の録画・失敗時の保全・保存後の読戻しは `test-case-board/references/e2e-recording.md` に従う。定期実行や再試行も対象で、成功時だけの削除・最新結果への上書きで過去の証跡を失わない。
 
+For user-facing features that depend on network access or downloads, plan slow-network, blocked/offline external-service, and cancel/resume cases when applicable. For the Devin local Chrome + Playwright workflow, see `test-case-board/references/e2e-devin-local.md`; environment and browser selection follow the current common instructions and task authorization. Browser Use Cloud is optional.
+
 For Browser Use Cloud E2E, load:
 
 ```text
@@ -109,6 +115,16 @@ For Testmail login/auth tests, load:
 ```
 
 Auth tests should include fresh-user login, existing-user login, invalid/expired OTP, authorization denial, admin allowlist/role approval, logout, and session expiry where relevant.
+
+Represent applicable authentication rows and test means using `test-case-board/SKILL.md`; a result using only synthetic local authentication does not verify real authentication.
+
+## Security Verification
+
+When applicable and authorized, compare the PR with its base using Gitleaks, dependency audit (all dependencies and production dependencies), OSV Scanner, Semgrep on changed files, and manual inspection of risky additions such as HTML injection, dynamic execution, message handlers, external URLs, and browser storage. Record pre-existing findings separately and identify dependency paths and runtime exposure for newly introduced high-severity findings. Unavailable or unauthorized checks remain unverified. When Devin security investigation or scanning is requested, the common instructions require the formal Devin Security 2.0 code scan and its separate approval conditions; these checks do not replace it.
+
+## Test Levels and E2E
+
+Unit (`単体`), integration (`結合`), system (`総合`), and acceptance (`受入`) are test levels; E2E is a technique used within system or acceptance testing. Passing E2E alone does not establish performance, security, or acceptance.
 
 ## Loop Prompt Shape
 
