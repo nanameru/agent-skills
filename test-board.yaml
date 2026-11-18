@@ -724,3 +724,58 @@ cases:
     test_file: autonomous-dev/tests/acceptance-cases.md
     issues: [57]
     notes: "無書込apply-check準備まで。親の最終Checker後のprivate backup、installedへの実適用、適用後hashとリンク保全の確認は未実施。根拠: https://github.com/nanameru/agent-skills/issues/57#issuecomment-6892944730 と https://github.com/nanameru/agent-skills/issues/57#issuecomment-6893019463。"
+  - id: TC-064-01
+    title: 既存reviewの正式読取経路とbrowserの判断
+    feature: existing review read paths
+    scenario: AC-R1のGitHub・実提供MCP・T3 fallbackと専用browserをR01〜R02で判断する
+    status: todo
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/verified-facts.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [64]
+    notes: "仮想入力による文書判断。非投稿、提供・認証・権限・読取成否、上位browser条件と隔離を区別する。実browser・previewや新reviewは起動しない。実施結果はIssue #64の記録へ対応付ける。"
+  - id: TC-064-02
+    title: 現headとreview対象・全本文・判断工程の照合
+    feature: review version and content reconciliation
+    scenario: AC-R2の旧SHA・一意な件名・件数と欠落・SUCCESS・後続判断をR03で照合する
+    status: todo
+    priority: high
+    type: regression
+    source: [autonomous-dev/SKILL.md, autonomous-dev/verified-facts.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [64]
+    notes: "仮想入力の文書判断であり、実review本文の取得や独立確認の証拠ではない。実施結果はIssue #64の記録へ対応付ける。"
+  - id: TC-064-03
+    title: 親のcatch-up・通知待ち・障害復旧の判断
+    feature: review handoff and monitoring
+    scenario: AC-R3の完了済み・正式watch・対象外障害・同原因停止と限定再開をR04〜R05で判断する
+    status: todo
+    priority: high
+    type: regression
+    source: [autonomous-dev/SKILL.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [64]
+    notes: "仮想入力の文書判断。親の所有・復旧根拠と対象headを照合し、実watch・pr-wait・新reviewは起動しない。実施結果はIssue #64の記録へ対応付ける。"
+  - id: TC-064-04
+    title: 固定版の限定検証・既存登録とprivacyの保全
+    feature: issue 64 limited verification
+    scenario: AC-R4の構文・参照・意味・限定diff・既存記録・担当reviewと独立確認をR06で照合する
+    status: todo
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/verified-facts.md, autonomous-dev/references/tstack-coverage.md, autonomous-dev/tests/acceptance-cases.md, test-board.yaml]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [64]
+    notes: "判断例と静的確認の計画。担当review、親の最終Checker、Draft・リンク・記録readbackはそれぞれ実施の有無を区別する。結果はIssue #64へ記録する。"
+  - id: TC-064-05
+    title: installedへの限定反映と保全の境界
+    feature: issue 64 installed application
+    scenario: AC-R5の無書込apply-checkと親の後工程・backup・hash・symlink保全をR07で判断する
+    status: todo
+    priority: high
+    type: manual
+    source: [autonomous-dev/SKILL.md, autonomous-dev/verified-facts.md, autonomous-dev/references/tstack-coverage.md]
+    test_file: autonomous-dev/tests/acceptance-cases.md
+    issues: [64]
+    notes: "実適用の証拠ではない。親の最終Checker後のprivate backup、承認hunkの限定適用、適用後hashとsymlink等の確認は未実施。実施結果はIssue #64の記録へ対応付ける。"
