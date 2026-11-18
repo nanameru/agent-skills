@@ -146,7 +146,7 @@ async function main() {
       });
       if (scenario === 'sigterm') {
         const observations = logEntries.filter((item) => item.type === 'native-observation');
-        assert.deepEqual(observations.slice(0, 2).map((item) => item.phase), ['before-record-start', 'after-record-start']);
+        assert.deepEqual(observations.slice(0, 3).map((item) => item.phase), ['initial-target', 'before-record-start', 'after-record-start']);
         const last = observations.at(-1);
         const pending = result.steps.find((item) => item.id === 'pending-interruption');
         assert.equal(last?.phase, 'step-before');

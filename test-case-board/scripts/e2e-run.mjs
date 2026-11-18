@@ -8,11 +8,11 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
-import { CDP, checkEndpoint, pageIdentity, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
+import { CDP, checkEndpoint, pageIdentity, classifyNativeTargets, workerProvenance, extensionWorkerCandidate, navigationURL, sendNativeOperation, nativeInputSatisfied, finishNativeStep } from './e2e-native-cdp.mjs';
 
 const exec = promisify(execFile);
 const worker = fileURLToPath(new URL('./e2e-worker.mjs', import.meta.url));
-const help = `Usage: test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live [--timeout-ms 120000]\nNative opt-in: --provider native-cdp --url LOCALHOST_URL --chrome EXECUTABLE (fixture only)\nSee test-case-board/references/e2e-entrypoint.md for the v1 runner contract.\n`;
+const help = `Usage: test-board e2e --case ID --runner FILE --browser EXECUTABLE --evidence-dir PRIVATE_DIR --data-kind fixture|mock|live [--timeout-ms 120000]\nNative opt-in: --provider native-cdp --url LOCALHOST_URL --chrome EXECUTABLE [--allow-url URL ...] (fixture only)\nSee test-case-board/references/e2e-entrypoint.md for the v1 runner contract.\n`;
 const sha = (data) => createHash('sha256').update(data).digest('hex');
 async function hashFile(file) {
   const hash = createHash('sha256');
@@ -148,7 +148,9 @@ async function runnerCommand(args, dir) {
 async function main(argv) {
   if (argv.includes('--help') || argv.length === 0) { process.stdout.write(help); return 0; }
   const opts = {};
+  const declarations = [];
   for (let i = 0; i < argv.length; i += 2) {
+    if (argv[i] === '--allow-url' && argv[i + 1]) { declarations.push(argv[i + 1]); if (declarations.length > 100) throw new Error('too many declared URLs'); continue; }
     if (!['--case','--runner','--browser','--evidence-dir','--data-kind','--timeout-ms','--issue','--environment','--provider','--url','--chrome'].includes(argv[i]) || !argv[i+1] || opts[argv[i]]) throw new Error('invalid arguments; see --help');
     opts[argv[i]] = argv[i+1];
   }
@@ -162,7 +164,9 @@ async function main(argv) {
     if (!['http:', 'https:'].includes(u.protocol) || !['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || u.username || u.password) throw new Error('native-cdp requires a localhost fixture URL');
     opts['--url'] = u.href;
     if (!path.isAbsolute(opts['--chrome'])) throw new Error('chrome path must be absolute');
-  } else if (opts['--url'] || opts['--chrome']) throw new Error('native options require native-cdp');
+  } else if (opts['--url'] || opts['--chrome'] || declarations.length) throw new Error('native options require native-cdp');
+  const allowedURLs = new Set(native ? declarations.map((url) => navigationURL(url, new URL(opts['--url']).origin)) : []);
+  let expectedURL = opts['--url'];
   const timeoutMs = Number(opts['--timeout-ms'] || 120000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 86400000) throw new Error('invalid timeout');
   const browser = path.resolve(opts['--browser']), runner = path.resolve(opts['--runner']);
@@ -188,7 +192,8 @@ async function main(argv) {
   browserEnv.AGENT_BROWSER_NAMESPACE = `tb-${randomUUID()}`;
   browserEnv.AGENT_BROWSER_CONFIG = path.join(dir, 'browser-config.json');
   const profile = path.join(dir, 'profile');
-  let cdp, endpoint, nativeIdentity, nativeSession, nativeTargets;
+  let cdp, endpoint, nativeIdentity, nativeSession, nativeTargets, extensionWorkers, initialWorkers;
+  const vanishedWorkers = new Set();
   const controller = new AbortController();
   let child, workerClosed, interrupted = null, interruptionAt = null, finalized = false, lateSignal = null, startAttempted = false, browserOpened = false, currentStep = null, operations = 0, protocolError = false, readyResolve, readyReject, readyId, finishMessage = null, killTimer, pendingRequest = null;
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
@@ -234,21 +239,61 @@ async function main(argv) {
     targetHash = observed;
     append({ type: 'target-observation', step: currentStep, targetHash: observed, tabCount: 1 });
   }
-  async function observeNative(phase) {
+  async function observeNative(phase, expected = expectedURL) {
+    const currentEndpoint = checkEndpoint((await browserCommand(['get', 'cdp-url'])).cdpUrl);
+    if (currentEndpoint !== endpoint) { protocolError = true; throw new Error('native endpoint changed'); }
     const tabs = await browserCommand(['tab']);
     const observer = await CDP.connect(endpoint);
     try {
       const targets = await observer.send('Target.getTargets');
       const contexts = await observer.send('Target.getBrowserContexts');
-      await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-observation', phase, tabs, targets, contexts }) + '\n', (err) => err ? reject(err) : resolve()));
+      const sessionTarget = nativeSession ? (await cdp.send('Target.getTargetInfo', {}, nativeSession)).targetInfo : null;
+      await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-observation', phase, step: currentStep, tabs, targets, contexts, sessionTarget }) + '\n', (err) => err ? reject(err) : resolve()));
       await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
-      const found = pageIdentity(tabs, targets, contexts, opts['--url']);
-      const targetSet = targets.targetInfos.map((t) => [t.targetId, t.type, t.browserContextId ?? 'default']).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-      if (nativeTargets && JSON.stringify(targetSet) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
-      nativeTargets ||= targetSet;
-      if (nativeIdentity && (found.targetId !== nativeIdentity.targetId || found.contextId !== nativeIdentity.contextId || JSON.stringify(found.contexts) !== JSON.stringify(nativeIdentity.contexts))) throw new Error('native target or context changed');
-      nativeIdentity ||= found;
-      return found;
+      const observedURL = targets.targetInfos.find((target) => target.type === 'page')?.url;
+      const found = pageIdentity(tabs, targets, contexts, expected ?? observedURL);
+      const page = targets.targetInfos.find((target) => target.targetId === found.targetId);
+      const classification = classifyNativeTargets(targets, page);
+      const workerState = { confirmations: [], baseline: [], remaining: [], allowedDisappeared: [], rejection: null };
+      try {
+        if (!nativeTargets) {
+          if (phase !== 'initial-target') throw new Error('native initial target baseline missing');
+          extensionWorkers = new Map();
+          initialWorkers = new Map(targets.targetInfos.filter((item) => item.type === 'service_worker').map((item) => [item.targetId, workerProvenance(item)]));
+          for (const target of targets.targetInfos.filter((item) => extensionWorkerCandidate(item, page))) {
+            const confirmation = { targetId: target.targetId, status: 'pending' };
+            workerState.confirmations.push(confirmation);
+            const confirmed = (await observer.send('Target.getTargetInfo', { targetId: target.targetId })).targetInfo;
+            confirmation.targetInfo = confirmed;
+            if (JSON.stringify(workerProvenance(target)) !== JSON.stringify(workerProvenance(confirmed))) throw new Error('extension worker TargetInfo mismatch');
+            confirmation.status = 'matched';
+            extensionWorkers.set(target.targetId, workerProvenance(target));
+          }
+        }
+        workerState.baseline = [...extensionWorkers.keys()];
+        for (const [id, provenance] of initialWorkers) {
+          const target = targets.targetInfos.find((item) => item.targetId === id);
+          if (target && JSON.stringify(workerProvenance(target)) !== JSON.stringify(provenance)) throw new Error('service worker provenance changed');
+        }
+        for (const id of extensionWorkers.keys()) {
+          const target = targets.targetInfos.find((item) => item.targetId === id);
+          if (!target) { workerState.allowedDisappeared.push(id); vanishedWorkers.add(id); continue; }
+          if (vanishedWorkers.has(id)) throw new Error('extension worker reappeared after disappearance');
+          workerState.remaining.push(id);
+        }
+        const fixed = classification.fixedTargets.filter(([id]) => !extensionWorkers.has(id));
+        if (nativeTargets && JSON.stringify(fixed) !== JSON.stringify(nativeTargets)) throw new Error('native target set changed');
+        if (classification.unprovenIframes.length) throw new Error('native iframe ownership or context unproven');
+        if (nativeIdentity && (found.targetId !== nativeIdentity.targetId || found.contextId !== nativeIdentity.contextId || JSON.stringify(found.contexts) !== JSON.stringify(nativeIdentity.contexts))) throw new Error('native target or context changed');
+        if (nativeSession && (!sessionTarget || sessionTarget.targetId !== found.targetId || (sessionTarget.browserContextId ?? 'default') !== found.contextId || sessionTarget.url !== observedURL)) throw new Error('native owned session changed');
+        nativeTargets ||= fixed;
+        nativeIdentity ||= found;
+      } catch (error) { workerState.rejection = error.message; throw error; }
+      finally {
+        await new Promise((resolve, reject) => log.write(JSON.stringify({ time: new Date().toISOString(), type: 'native-target-classification', phase, step: currentStep, ...classification, extensionWorkers: workerState }) + '\n', (err) => err ? reject(err) : resolve()));
+        await new Promise((resolve, reject) => fs.fsync(log.fd, (err) => err ? reject(err) : resolve()));
+      }
+      return { ...found, url: observedURL };
     } catch (error) { protocolError = true; throw error; } finally { observer.close(); }
   }
   try {
@@ -296,10 +341,59 @@ async function main(argv) {
         }
         else if (msg.type === 'cdp-send' && native) {
           if (!currentStep || currentStep !== msg.step || (msg.sessionId !== nativeSession && !(msg.method === 'Target.getTargets' && msg.sessionId === null)) || typeof msg.method !== 'string' || !/^[A-Za-z]+\.[A-Za-z]+$/.test(msg.method) || (/^(Target|Browser)\./.test(msg.method) && msg.method !== 'Target.getTargets') || !msg.params || typeof msg.params !== 'object' || Array.isArray(msg.params) || !Number.isSafeInteger(msg.timeoutMs) || msg.timeoutMs < 1 || msg.timeoutMs > 120000) { protocolError = true; throw new Error('invalid native operation'); }
+          if (['Page.navigate', 'Page.reload', 'Page.navigateToHistoryEntry'].includes(msg.method)) throw new Error('use page.navigate for declared navigation');
           append({ type: 'cdp-send', step: currentStep, method: msg.method, params: msg.params, started: new Date().toISOString() });
           operations++;
           const value = await sendNativeOperation({ cdp, test: result.test, method: msg.method, params: msg.params, sessionId: msg.sessionId === null ? undefined : nativeSession, timeoutMs: msg.timeoutMs });
           return reply(value);
+        }
+        else if (msg.type === 'navigate' && native) {
+          if (!currentStep || currentStep !== msg.step) throw new Error('navigation requires an active step');
+          const entry = { requestedURL: typeof msg.url === 'string' ? msg.url : null, observedURL: null, step: currentStep, status: 'failed' };
+          (result.steps.at(-1).navigations ||= []).push(entry);
+          let dispatched = false, postObserved = false;
+          try {
+            const destination = navigationURL(msg.url, new URL(opts['--url']).origin);
+            if (!allowedURLs.has(destination)) throw new Error('navigation URL was not declared');
+            await observeNative('navigation-before');
+            operations++;
+            await cdp.send('Page.enable', {}, nativeSession);
+            const events = [];
+            let wake;
+            const offFrame = cdp.on('Page.frameNavigated', (params, sid) => { if (sid === nativeSession) { events.push({ kind: 'frame', ...params.frame }); wake?.(); } });
+            const offSame = cdp.on('Page.navigatedWithinDocument', (params, sid) => { if (sid === nativeSession) { events.push({ kind: 'same', ...params }); wake?.(); } });
+            try {
+              dispatched = true;
+              const response = await sendNativeOperation({ cdp, test: result.test, method: 'Page.navigate', params: { url: destination }, sessionId: nativeSession, timeoutMs: 30000 });
+              if (response.errorText || response.isDownload) throw new Error(`navigation failed: ${response.errorText || 'download'}`);
+              const until = Date.now() + 10000;
+              const matched = () => events.some((event) => response.loaderId ? event.kind === 'frame' && event.id === response.frameId && event.loaderId === response.loaderId : event.kind === 'same' && event.frameId === response.frameId && event.url === destination);
+              while (!matched()) {
+                const remaining = until - Date.now();
+                if (remaining <= 0) throw new Error('navigation commit was not observed');
+                await new Promise((resolve) => { const timer = setTimeout(() => { wake = null; resolve(); }, remaining); wake = () => { clearTimeout(timer); wake = null; resolve(); }; });
+              }
+            } finally { offFrame(); offSame(); }
+            const deadline = Date.now() + 10000;
+            for (;;) {
+              postObserved = true;
+              const observation = await observeNative('navigation-after', null);
+              entry.observedURL = observation.url;
+              if (observation.url === destination) break;
+              if (observation.url !== expectedURL || Date.now() >= deadline) throw new Error('navigation did not reach declared URL');
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            expectedURL = destination;
+            entry.status = 'passed';
+            append({ type: 'navigation', ...entry });
+            return reply(true);
+          } catch (error) {
+            if (dispatched && !postObserved) {
+              try { entry.observedURL = (await observeNative('navigation-after-failure', null)).url; }
+              catch (observationError) { entry.observationError = String(observationError?.message || observationError); }
+            }
+            entry.error = String(error?.message || error); append({ type: 'navigation', ...entry }); throw error;
+          }
         }
         else if (msg.type === 'command' && !native) {
           if (!currentStep || currentStep !== msg.step) { protocolError = true; throw new Error('unsupported browser command or step'); }
@@ -312,7 +406,13 @@ async function main(argv) {
         } else if (msg.type === 'finished') { finishMessage = msg; }
         else throw new Error('unsupported runner message');
         reply(true);
-      } catch (error) { if (native) protocolError = true; reply(null, error.message); }
+      } catch (error) {
+        if (native) {
+          protocolError = true;
+          if (msg.type === 'step-start') { result.test.failedStep ||= msg.step; result.error ||= error.message; }
+        }
+        reply(null, error.message);
+      }
       finally { handling = false; pendingRequest = null; settleRequest(); }
     });
     await ready;
@@ -320,18 +420,17 @@ async function main(argv) {
     if (native) {
       await browserCommand(['--profile', profile, '--executable-path', opts['--chrome'], '--no-webmcp', '--args', 'about:blank', 'open', opts['--url']]);
       endpoint = checkEndpoint((await browserCommand(['get','cdp-url'])).cdpUrl);
+      await observeNative('initial-target');
+      cdp = await CDP.connect(endpoint);
+      nativeSession = (await cdp.send('Target.attachToTarget', { targetId: nativeIdentity.targetId, flatten: true })).sessionId;
+      if (!nativeSession) throw new Error('native attach failed');
+      cdp.on('*', (method, params, sid) => { if (sid === nativeSession && child.connected) child.send({ type: 'cdp-event', method, params, sessionId: sid }); });
       await observeNative('before-record-start');
     } else { await browserCommand(['set','viewport','1280','720']); await checkTarget(); }
     startAttempted = true;
     await browserCommand(['record','start',video]); result.recording.start = 'passed';
     if (native) {
-      const afterEndpoint = checkEndpoint((await browserCommand(['get','cdp-url'])).cdpUrl);
-      if (endpoint !== afterEndpoint) { protocolError = true; throw new Error('native endpoint changed'); }
       await observeNative('after-record-start');
-      cdp = await CDP.connect(endpoint);
-      nativeSession = (await cdp.send('Target.attachToTarget', { targetId: nativeIdentity.targetId, flatten: true })).sessionId;
-      if (!nativeSession) throw new Error('native attach failed');
-      cdp.on('*', (method, params, sid) => { if (sid === nativeSession && child.connected) child.send({ type: 'cdp-event', method, params, sessionId: sid }); });
     } else await checkTarget();
     // Runner waits for this explicit release before invoking its test.
     if (child.connected) child.send({ type: 'reply', id: readyId, value: native ? { sessionId: nativeSession } : true });
@@ -341,7 +440,7 @@ async function main(argv) {
     result.test.exitCode = exit.code; result.test.signal = exit.signal;
     result.test.status = !interrupted && !protocolError && exit.code === 0 && finishMessage?.status === 'passed' && operations > 0 && nativeInputSatisfied(native, result.test) && result.steps.length > 0 && result.steps.every((s) => s.status === 'passed') ? 'passed' : 'failed';
     if (finishMessage?.step && !result.test.failedStep) result.test.failedStep = finishMessage.step;
-    if (finishMessage?.error) result.error = finishMessage.error;
+    if (finishMessage?.error) { if (native) result.error ||= finishMessage.error; else result.error = finishMessage.error; }
     if (!interrupted && (!finishMessage || !operations)) result.error ||= 'runner did not complete the supported contract with browser operations';
     if (native) await observeNative('after-worker'); else await checkTarget();
     if (!protocolError) result.recording.targetContinuity = 'passed';

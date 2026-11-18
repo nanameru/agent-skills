@@ -49,3 +49,86 @@ The standalone `7f8eba04e22f06b4fe73860a865cd1aa4d750849` base lacks the new cor
 After the core exports `sendNativeOperation` and `nativeInputSatisfied` are integrated, `node --test test-case-board/tests/e2e-native-cdp-count.test.mjs` exercises those actual helpers with a fake CDP peer: attempt and successful Input counts, pending and failed responses, argument forwarding, the native zero-Input gate, and the non-native default. The `Runtime.evaluate` expressions are forwarded to the fake peer and are not executed in a DOM. This test has not been run by the fixture author. It does not itself verify that the common entrypoint is wired to the helpers or exercise a browser, recording, or final result lifecycle; those require separate integration verification.
 
 `node --test test-case-board/tests/e2e-native-cdp-step.test.mjs` checks the actual `finishNativeStep` with fake ownership observations and forks the actual worker with a fake IPC peer that rejects a passed step-end once. It checks failure details, step identity, and duplicate step-end handling; the fixture author has not run it. It does not perform a browser ownership observation or produce E2E or recording evidence.
+
+## Issue #56: declared navigation fixture (not yet executed)
+
+The original #54 page, runner, input sequence, assertions, timings, and evidence are retained. `navigation-runner.mjs` first invokes that runner, then saves a synthetic localStorage marker, reloads the identical declared URL, waits for the fixture and checks the marker, navigates to a second finite query URL, waits and checks it again, and uses real CDP mouse input with a trusted-click assertion. The existing common entrypoint creates the single browser/profile/target, starts and finally stops its standard recording. The fixture server only serves the same secret-free page. No capture helper is added.
+
+After integration, the separately assigned execution operator must fix a clean final commit and run exactly one sequential four-attempt suite:
+
+```sh
+node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs \
+  --commit '<final-full-commit-sha>' \
+  --browser '<absolute-agent-browser-0.43.0-executable>' \
+  --chrome '<absolute-approved-chrome-executable>'
+```
+
+The required existing owner-only, durable private root is `~/.local/share/agent-skills/e2e-evidence`, outside the checkout. Node 22+, Git, agent-browser 0.43.0, Chrome, ffmpeg/libvpx and ffprobe are needed. The driver checks a clean fixed SHA, retains and hashes earlier #54/#56 originals before and after each attempt, creates a private `issue56-<UUID>` directory, and stops immediately on unexpected error or ownership mismatch. No automatic retry occurs. Each common-entrypoint invocation creates a new run UUID:
+
+| Order | Scenario | Entrypoint exit/signal | Worker exit/signal | Expected test state |
+| --- | --- | --- | --- | --- |
+| 1 | success: same URL reload and declared query | 0/null | 0/null | passed |
+| 2 | undeclared URL request | 1/null | 1/null | failed at `undeclared-navigation` |
+| 3 | SIGTERM after recording and native input | 1/null | null/SIGTERM | interrupted at `pending-interruption` |
+| 4 | retry with a different UUID | 0/null | 0/null | passed |
+
+The driver checks the existing result-v1, navigation request/observation and named steps, actual worker exit/signal, standard record start/stop, owner-only files, full decode, actual frame PTS and video/log hash readback, and unchanged earlier evidence. The common result leaves visual inspection `unverified`: an operator must separately inspect actual frames and record the inspected ranges without modifying originals. Test outcome, recording, save, readback, and visual inspection are separate decisions. A passed decode does not prove continuous capture, the recorder's internal target, or product behavior. An unexpected real ownership mismatch is a stop, not a negative test or a reason to retry.
+
+Direct offline regression command (run only by the execution role; `TB_FAKE_TEST_DIR` is an existing owner-only directory outside the checkout):
+
+```sh
+TB_FAKE_TEST_DIR='<private-offline-root>' node --test \
+  test-case-board/tests/e2e-regression.test.mjs \
+  test-case-board/tests/e2e-native-cdp.test.mjs \
+  test-case-board/tests/e2e-native-cdp-count.test.mjs \
+  test-case-board/tests/e2e-native-cdp-step.test.mjs \
+  test-case-board/tests/e2e-native-navigation.test.mjs \
+  test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.test.mjs
+```
+
+The new offline tests execute the actual common entrypoint and worker with a fake CLI and an injected fake CDP peer; their synthetic video is produced by the pre-existing fake CLI. They check request/commit/observation order, expected URL retention on failure, boundary and ownership failures, and contract bypasses. Fake endpoints and observations cannot establish real CDP ownership, browser navigation, capture, or visual evidence. Direct changes to page URL by arbitrary JavaScript and transitory events between discrete observations remain the documented trusted-runner limits. The separate real localhost four-attempt suite is required for those applicable real layers; it is not product E2E.
+
+## Issue #56 iframe amendment v2 (execution pending)
+
+The driver keeps the v1 mode above by default. Its explicit `--iframe` mode serves the same page with an inert sandboxed `srcdoc` iframe and otherwise uses the original #54 runner and navigation steps. A bounded wait for an actual `Target.getTargets` iframe is added inside the existing marker and navigation steps; it does not change the original input, assertions, waits or speeds. The driver separately examines the standard entrypoint's raw, private `native-observation` and classification entries. For both reload and query navigation, an iframe target must be present before and after, the old IDs must be absent afterward, and every iframe's explicit `browserContextId` and `parentId` chain must lead through iframe targets to the fixed owned page. It also checks the non-iframe target set and owned page/session/context observations. A DOM iframe, a mock target, or merely expecting Chrome to isolate `srcdoc` does not satisfy this proof. If Chrome does not expose the needed target or fields, or ownership differs, retain the run and stop before the next trial. Boundary snapshots do not establish what happened between observations.
+
+The execution role must set `TB_56_PRODUCT_FAILURE_DIR` to the separately supplied absolute private directory containing the preserved product failure `result.json`, `run.log`, and `recording.webm`. The driver reads only those originals, checks their fixed SHA-256 values before each trial, after each trial, and in `finally`, as well as the existing #54/#56 evidence checks. Do not put the private path or raw log into the repository or GitHub. After fixing the integrated clean commit, the **single** four-trial command is:
+
+```sh
+TB_56_PRODUCT_FAILURE_DIR='<private-original-directory>' \
+node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs \
+  --commit '<final-full-commit-sha>' \
+  --browser '<absolute-agent-browser-0.43.0-executable>' \
+  --chrome '<absolute-approved-chrome-executable>' --iframe
+```
+
+The order remains success, undeclared refusal, handled SIGTERM, and a new-UUID success retry. Each trial must separately satisfy the existing standard recorder/finally stop, private save, full decode, real PTS, hash/readback and actual worker exit/signal checks. The existing visual-inspection limitation remains: inspect actual frames separately and report the observed range. An unexpected mismatch or unprovable ownership stops the suite; do not continue or diagnose by adding trials. The offline command above retains the existing five files and adds the verifier test; it covers parent-chain failures, iframe regeneration, and fixed-target changes with fake CDP. Neither v1 results nor fake-CDP results prove the v2 real-browser run.
+
+## Issue #56 extension worker amendment v3 (execution pending)
+
+`--worker-v3` explicitly opts into the existing iframe mode and adds one named step before the unchanged original input sequence. It polls the existing browser's official `Target.getTargets` for up to 45 seconds, without installing an extension, opening a tab, or causing worker recreation. A candidate must already exist, have the canonical extension script URL and explicit owned-page context, and disappear between the entrypoint's step boundaries. The private initial observation and separately retrieved `Target.getTargetInfo` confirmation must agree on all provenance fields. The verifier examines those raw observations and confirmation payloads independently of the guard's classification, and requires a fixed page, context and owned session, fixed noncandidate targets, and no new or reappearing worker at each observation. It retains the iframe and 29-input/navigation checks. No candidate, insufficient official information, unexpected target or ownership change, or no disappearance by the deadline stops the suite before another trial. Availability of such a worker in a fresh real profile remains unproven; earlier runs are not v3 evidence.
+
+After review and integration, the separately assigned execution role should fix one clean integration SHA and run this targeted offline selection **once**. The fake root must already be an owner-only directory outside the checkout. These fake/IPC tests do not prove real Chrome, recording, or visual behavior.
+
+```sh
+env -u TB_STEP_TEST_WORKER TB_FAKE_TEST_DIR='<existing-private-offline-root>' \
+node --test --test-reporter=tap \
+  test-case-board/tests/e2e-native-cdp.test.mjs \
+  test-case-board/tests/e2e-native-cdp-step.test.mjs \
+  test-case-board/tests/e2e-worker-step-start.test.mjs \
+  test-case-board/tests/e2e-native-navigation.test.mjs \
+  test-case-board/tests/e2e-native-cdp-fixture/navigation-verify.test.mjs
+```
+
+The same fixed SHA can then be used for at most one separately authorized real four-attempt suite. Set both variables to the existing private original directories; they are read and hashed, never printed or modified. The driver snapshots previous #54/#56 evidence and checks all originals before and after each attempt and in `finally`.
+
+```sh
+TB_56_PRODUCT_FAILURE_DIR='<private-issue-22-original-directory>' \
+TB_56_PRODUCT_FAILURE_24_DIR='<private-issue-24-original-directory>' \
+node test-case-board/tests/e2e-native-cdp-fixture/navigation-driver.mjs \
+  --commit '<final-full-commit-sha>' \
+  --browser '<absolute-agent-browser-0.43.0-executable>' \
+  --chrome '<absolute-approved-chrome-executable>' --worker-v3
+```
+
+The existing four scenarios, new UUIDs, standard recorder, finally stop, private save, full decode, real frame PTS, hashes/readback, actual worker exit/signal, and separate test/recording judgments remain required. The driver opens owner-only stdout/stderr logs before each child starts. It reports visual inspection as `unverified`; a later person must inspect actual frames separately. Do not run the product E2E or interpret this localhost fixture as a product result.
