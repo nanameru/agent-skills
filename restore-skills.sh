@@ -14,6 +14,7 @@ npx skills add nanameru/agent-skills --skill slide-design-guide -g -y --copy
 npx skills add nanameru/slide-archetype-gen-skill --skill slide-archetype-gen -g -y --copy
 npx skills add nanameru/agent-skills --skill figma-design-source -g -y --copy
 npx skills add nanameru/agent-skills --skill promo-video-remotion -g -y --copy
+npx skills add nanameru/agent-skills --skill implementation-showcase -g -y --copy
 
 mkdir -p "$HOME/.local/bin" "$HOME/.claude/skills" "$HOME/.codex/skills"
 ln -sfn "$HOME"/.agents/skills/github-issue-driven-dev "$HOME"/.claude/skills/github-issue-driven-dev
@@ -31,5 +32,7 @@ ln -sfn "$HOME"/.agents/skills/slide-archetype-gen "$HOME"/.claude/skills/slide-
 ln -sfn "$HOME"/.agents/skills/slide-archetype-gen "$HOME"/.codex/skills/slide-archetype-gen
 ln -sfn "$HOME"/.agents/skills/figma-design-source "$HOME"/.claude/skills/figma-design-source
 ln -sfn "$HOME"/.agents/skills/figma-design-source "$HOME"/.codex/skills/figma-design-source
+ln -sfn "$HOME"/.agents/skills/implementation-showcase "$HOME"/.claude/skills/implementation-showcase
+ln -sfn "$HOME"/.agents/skills/implementation-showcase "$HOME"/.codex/skills/implementation-showcase
 
 echo "Done."

@@ -68,6 +68,11 @@
       "name": "promo-video-remotion",
       "source": "nanameru/agent-skills",
       "path": "promo-video-remotion"
+    },
+    {
+      "name": "implementation-showcase",
+      "source": "nanameru/agent-skills",
+      "path": "implementation-showcase"
     }
   ],
   "postInstallLinks": [
@@ -130,6 +135,14 @@
     {
       "link": "$HOME/.codex/skills/figma-design-source",
       "target": "$HOME/.agents/skills/figma-design-source"
+    },
+    {
+      "link": "$HOME/.claude/skills/implementation-showcase",
+      "target": "$HOME/.agents/skills/implementation-showcase"
+    },
+    {
+      "link": "$HOME/.codex/skills/implementation-showcase",
+      "target": "$HOME/.agents/skills/implementation-showcase"
     }
   ]
 }

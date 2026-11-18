@@ -1,4 +1,4 @@
-# 共通 AGENTS の Security 2.0 選択ルール
+# 共通 AGENTS の追加節
 
 `security-2.0-selection.patch` は、共通 AGENTS の「GitHub・テスト管理」の末尾へ承認済みの選択ルール1段落を追加する。全文や旧版は含まない。適用は自動化されておらず、この作業では実機へ再適用しない。
 
@@ -53,3 +53,9 @@ PYCODE
 - `verified-facts.md`「確かめたこと」: ローカルプレビュー URL を placeholder に変更。`routing.md` は変更なし。
 
 必須の外部 Skill 参照は `github-issue-driven-dev/SKILL.md`、`grilling/SKILL.md`、`requirements-kickoff/SKILL.md` および `requirements-kickoff/references/canvas.md`。E2E の実行・証跡の片付けには `test-case-board/references/e2e-recording.md` も必要。この録画手順は今回の配布元 base には未収録だが、他の依存とともに標準 Skill 置き場で実在を確認した。この登録には外部依存を同梱せず、該当手順の利用前に依存先を用意し、見つからなければ停止する。`routing.md` と `verified-facts.md` は同じディレクトリに含める。manifest の `install: false` により通常の restore では導入されない。
+
+## implementation-showcase の配布
+
+Skill 本体は `implementation-showcase/` に収録し、`managed-skills.json` と `restore-skills.sh` に登録する。共通 AGENTS の追加節は `implementation-showcase.patch` に記録する。配布・installed の変更には別途承認が必要。
+
+配布後は Skill 本体の全ファイルを installed と比較し、共通 AGENTS の該当節と `autonomous-dev/SKILL.md` の追加行を照合する。ハーネス側のリンクは既存の実体と解決先を確認し、勝手に置き換えない。共通 AGENTS のパッチは文脈行を含まないため、作業コピーで `git apply --unidiff-zero --check` を実行し、対象行と適用前後の差分を照合する。

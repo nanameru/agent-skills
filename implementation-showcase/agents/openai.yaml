@@ -1,0 +1,4 @@
+interface:
+  display_name: "実装完了ショーケース"
+  short_description: "動く成果物をT3・Devinの両方から見られるようにし、スクショ・操作記録・説明を添える"
+  default_prompt: "$implementation-showcase を使って、今回の実装の動く成果物を見られるようにし、スクショ・操作録画・説明付きの確認ページを添えてください。"
