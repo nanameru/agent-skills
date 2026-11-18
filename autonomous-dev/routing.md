@@ -1,6 +1,9 @@
 # 振り分け表（どんな仕事にも）
 
 モデルを変えたいときは、この表の1行だけを直す。設定IDは T3 Code の現在の選択肢で確かめてから使う（名前から推測しない）。
+
+【本人】2026-11-18: Fable（claude-fable-5-2）は週間制限のため新規に割り当てない。旧 Fable・中は Claude / claude-opus-5-5・中（effort medium）、旧 Fable・高は Claude / claude-opus-5-5・高（effort high）で代替する（Devin Bot経由。T3 Code の選択肢で claude-opus-5-5 の medium・high を確認済み）。下の【計測】の Fable の数字は当時の記録として残す。
+
 根拠の印: 【本人】本人の指定 / 【手引き】Anthropic のモデル選びの手引き（要約投稿の一致部分）/ 【試行】まだ1件の事例だけ。試して決める。/ 【計測】Slopalytics（Artificial Analysis の数字）2026-11-12 時点。Arena（arena.ai の順位表、同日に確認）の数字を使うときは「Arena」と書く。
 
 ## どんな仕事にも使う決め方（開発以外も、Issue がなくても）
@@ -13,8 +16,8 @@
 | 2 | X の投稿や世間の声が要る | Grok / grok-4.7 | 中（込み入った評判の分析だけ高） | 評判調べ、流行、事例集め |
 | 3 | 量が多く、判断が少ない（読む・探す・集める） | Devin / SWE-2 Flash (swe-2-flash-medium) | medium | 広い検索、長いログや資料の読み込み、一覧づくり、下調べ |
 | 4 | デザイン以外の実装、手順が決まっていて手を動かす量が多い・待ち時間が長い | 実装は Codex / gpt-6.1-terra・high（大きい Issue だけ max）。テストを書くのは Terra・max、走らせる・再実行は Devin / SWE-2 Flash (swe-2-flash-medium)・high。仕様が固まった小さな修正・一括の書き換えは SWE-2 (swe-2-high)・max、実行だけ（ビルド・変換）は SWE-2 Flash・high | 左のとおり | 処理・ロジックの実装、テスト、小さな修正、ビルド、一括の書き換え、変換 |
-| 5 | 見た目や文章の質が問われる | 画面・デザインの実装は Claude / claude-fable-5-2・中。スライド・記事・図は Claude / claude-opus-5-5・中 | 左のとおり | 画面・デザインの実装、スライド、記事、図。実装の進め方決めは Issue の担当（Codex / gpt-6.1-sol・xhigh）。Terra・SWE-2 の差分レビューは Claude / claude-sonnet-5-5・low |
-| 6 | 難しくて間違えると高くつく | Claude / claude-fable-5-2 | 高 | 難所の原因究明、大きな設計（込み入った調査のまとめは下の Opus・高） |
+| 5 | 見た目や文章の質が問われる | 画面・デザインの実装は Claude / claude-opus-5-5・中。スライド・記事・図は Claude / claude-opus-5-5・中 | 左のとおり | 画面・デザインの実装、スライド、記事、図。実装の進め方決めは Issue の担当（Codex / gpt-6.1-sol・xhigh）。Terra・SWE-2 の差分レビューは Claude / claude-sonnet-5-5・low |
+| 6 | 難しくて間違えると高くつく | Claude / claude-opus-5-5 | 高 | 難所の原因究明、大きな設計（込み入った調査のまとめは下の Opus・高） |
 | 7 | 作ったものを別の目で確かめたい | 作った側と別の会社のモデル（Claude 作 → Codex / gpt-6.1-sol・高、Codex 作 → Claude / claude-opus-5-5・中） | 左のとおり | レビュー、事実確認、受け入れ条件との突き合わせ |
 
 - いまのスレッドが、当たった行と同じモデルなら渡さず自分でやる（例: Opus のスレッドでの実装）。
@@ -24,7 +27,7 @@
 - 渡すときは依頼文に、やること・触ってよい範囲・止める条件・返してほしい証拠を書く。
 - 返ってきた結果は自分で確かめてから本人に伝える。安いモデルに最終の判断を任せない。
 - 外に出す操作（投稿、送信、push、公開、削除）は子に任せず、本人に確かめてから自分でやる。
-- 実装の分け方は「書き手の分け方」に従う（担当は Sol・xhigh、画面は Fable・中、それ以外の実装は Terra・high（大は max）、小さな修正・一括作業は SWE-2・max、差分レビューは Sonnet・low）。
+- 実装の分け方は「書き手の分け方」に従う（担当は Sol・xhigh、画面は Opus・中、それ以外の実装は Terra・high（大は max）、小さな修正・一括作業は SWE-2・max、差分レビューは Sonnet・low）。
 - 開発で大きくなったら（複数ファイルで動きが変わる、PR が要る）、本人に伝えて Issue の流れへ切り替える。Issue の流れでは下の「役とハーネス・モデル」の表を使う。
 - SWE-2 を、本人と直接話す開発セッション（リポジトリの管理役・Issue の担当）には使わない。渡すときは必ず「あなたは子です」と書き、範囲・止める条件・返してほしい証拠を付ける。
 - 渡す先が使えないとき: SWE-2 Flash（テスト・ビルド・一次チェック①を走らせる係） → Codex / `shared/glm-5.3-flash`・high（本人の決定 2026-11-13。【計測】τ²-bench Airline（決まりに沿った道具の操作）で GLM 75.6% / $0.009、Opus 75.3% / $0.34、DeepSeek Flash 75.1% / $0.033。思考量の条件は非公開）、SWE-2 Flash（読む・探す係） → Codex / `shared/deepseek-v4.1-flash`・high（検索は DeepSeek 68.9 が GLM 61.9 より上。それも使えなければ Claude / claude-haiku-5-5・高）、SWE-2 → Claude / claude-haiku-5-5・max（本人の決定 2026-11-13。【計測】FrontierCode-AA で Haiku・max 34.9% / $0.46、Sonnet・高 25.7% / $0.76）、実装の Terra（Codex が上限） → Devin / SWE-2・max、Opus → Codex / gpt-6.1-sol・高、Codex の GPT（gpt-6.1-sol・gpt-6.1-terra など）が上限 → 同じ Codex ハーネスの `shared/deepseek-v4.1-flash`（思考量は最大の high）、Grok → 自分でウェブ検索し「X は見ていない」と伝える。
@@ -39,7 +42,7 @@
 | 1（上限を使いたくないとき） | 同上。急がないもの | 同上 | Codex / `shared/deepseek-v4.1-flash` | high | 29 / $0.46 / 13分 |
 | 2 | ふつう。少し考える。文章・見た目に関わらない判断 | 調べて比べる、短い修正、設定の直し、手順の説明、処理や作りの進め方決め | Codex / gpt-6.1-sol | 高 | 50 / $0.59 / 7分 |
 | 3 | 文章・見た目の質が要る | 文章の推敲、デザインの相談、画面や資料の見た目に関わる進め方決め | Claude / claude-opus-5-5 | 中 | 48 / $2.45 / 7分 |
-| 4 | 難しい。間違えると高くつく | 難所の原因究明、大きな設計 | Claude / claude-fable-5-2 | 中（だめなら高） | 56 / $3.80 / 8分 |
+| 4 | 難しい。間違えると高くつく | 難所の原因究明、大きな設計 | Claude / claude-opus-5-5（旧 Fable、2026-11-18 から） | 中（だめなら高） | 56 / $3.80 / 8分（旧 Fable・中の計測） |
 
 - 迷ったら1つ上の段で始める。
 - Codex の GPT が上限のとき: 段1は DeepSeek V4.1 Flash・high か Claude / claude-haiku-5-5・高、段2は Claude / claude-sonnet-5-5・高。
@@ -56,7 +59,7 @@
 | CEO（依頼をリポジトリの管理役へ振り分けるだけ） | Codex / gpt-6.1-sol | xhigh | 本人 | 【本人】2026-11-13 に Sol・xhigh に決定。【計測】WorkflowArena（仕事を分けて渡す）Sol・xhigh 29.5、Opus・中 29.1。AA の総合点 52.5 / $0.76（Opus・中 48.2 / $2.45）。Claude の枠を使わない |
 | リポジトリの管理役（本人と話す・要件・デザインとテストを決める・Issue化・担当を立てる・報告） | Codex / gpt-6.1-sol | xhigh | CEO | 【本人】2026-11-13 に Sol・xhigh に決定。【計測】WorkflowArena（仕事を分けて渡す）Sol・xhigh 29.5、Opus・中 29.1。AA の総合点 52.5 / $0.76（Opus・中 48.2 / $2.45）。Claude の枠を使わない。リポジトリごとに左の一覧に1つ |
 | Issue の担当（管理役の下のサブエージェント。進め方を決める・指示を書く・画面の差分を見る・PR） | Codex / gpt-6.1-sol | xhigh | 管理役 | 【本人】2026-11-13 に Opus・中から変更（自分で書く仕事がなくなったため）。【計測】WorkflowArena Sol・xhigh 29.5、Opus・中 29.1。AA の総合点 52.5 / $0.76（Opus・中 48.2 / $2.45） |
-| 画面・デザインの実装 | Claude / claude-fable-5-2 | 中 | Issue の担当 | 【本人】2026-11-13 に Opus・中 → Sonnet・xhigh → Fable・中と決定。【計測】FrontierCode-AA で Fable・中 41.3% / $2.69、Sonnet・xhigh 35.7% / $2.71（同じ費用で上）。Fable・中の WebDev の点は未計測なので、画面の出来を見て合わなければ戻す。参考: 【計測】Arena WebDev で Sonnet・xhigh 1772（Fable・xhigh 1838、Opus・max 1815。Opus・中は未計測）。費用の目安は FrontierCode-AA で $2.71（Opus・中 $1.71） |
+| 画面・デザインの実装 | Claude / claude-opus-5-5 | 中 | Issue の担当 | 【本人】2026-11-18 に Fable・中から Opus・中へ（Fable の週間制限）。【本人】2026-11-13 に Opus・中 → Sonnet・xhigh → Fable・中と決定。【計測】FrontierCode-AA で Fable・中 41.3% / $2.69、Sonnet・xhigh 35.7% / $2.71（同じ費用で上）。Fable・中の WebDev の点は未計測なので、画面の出来を見て合わなければ戻す。参考: 【計測】Arena WebDev で Sonnet・xhigh 1772（Fable・xhigh 1838、Opus・max 1815。Opus・中は未計測）。費用の目安は FrontierCode-AA で $2.71（Opus・中 $1.71） |
 | Terra・SWE-2 の差分レビュー | Claude / claude-sonnet-5-5 | low | Issue の担当 | 【本人】2026-11-13。【計測】IronBee F2 で Sonnet・low 64.4 / $0.14（Opus 標準 61.9 / $0.32、Opus・xhigh 60.4）。思考量を上げても点は上がらない。レビューだけで、書く仕事は渡さない（コードを書く点は低い）。 |
 | デザイン以外の実装（処理・ロジック・API・データ・設定） | Codex / gpt-6.1-terra | high（大きい Issue だけ max） | Issue の担当 | 【本人】2026-11-13 に SWE-2 から移し、同日 Codex の枠を節約するため小・中は high に決定。【計測】FrontierCode-AA で Terra・high 37.5% / $0.39（max の約3分の1）。【計測】FrontierCode-AA で Terra・max 42.3% / $1.29（Opus・max 46.4% / $13.46、Opus・中 33.1% / $1.71）。SWE-2 は第三者の測定なし。Codex が上限なら SWE-2（swe-2-high）・max |
 | 仕様が固まった小さな修正・機械的な一括作業（Issue の担当の子として） | Devin / SWE-2 (swe-2-high) | max | Issue の担当 | 【本人】無料枠を使い、ほかの負荷を下げる。2026-11-13 に思考量を max に決定 |
@@ -69,26 +72,26 @@
 | 一次チェック①：テスト・lint を走らせて出力を集める | Devin / SWE-2 Flash (swe-2-flash-medium) | high | 管理役 | 走らせるだけ。合否は決めさせない。【本人】2026-11-13 に Terra・max から SWE-2 Flash へ（無料） |
 | 一次チェック②：差分と受け入れ条件の突き合わせ（合否を出す） | Codex / gpt-6.1-terra（控えの Sol が作ったものは Claude / claude-sonnet-5-5・高） | 高 | 管理役 | 【計測】Terra・高はコード 39 / $0.41 / 6分。Sonnet・高（33 / $1.33）より上で安い。小はここで終える |
 | 独立した検証（中・大だけ）：Claude（Sonnet・Opus）が作ったもの | Codex / gpt-6.1-sol を1本 | 中は高、大は xhigh | 管理役 | 【計測】Terra・中（38）は作る側の Opus・中（48）より弱い。Sol・高（50）なら上回る。xhigh でも $0.83 と安いので大だけ上げる（コード 42.6 → 44.7） |
-| 独立した検証（中・大だけ）：Codex（Terra・Sol）が作ったもの | 中は Claude / claude-sonnet-5-5・low、大は Claude / claude-fable-5-2・中 | 左のとおり | 管理役 | 作る側と別の会社にする。【本人】2026-11-13 に中を Opus・中から Sonnet・low へ（【計測】IronBee F2 で Sonnet・low 64.4 / $0.14、Opus 標準 61.9 / $0.32。テストを走らせて判定する力は未計測なので、見落としが続けば戻す）。差分レビューと同じ Sonnet・low になるので、検証役は別のセッションで立て、レビューの結果は渡さない。【本人】2026-11-13 に大を Opus・高から Fable・中へ（【計測】FrontierCode-AA で Fable・中 41.3% / $2.69、Opus・高 35.9% / $2.49。費用はほぼ同じで上）。【計測】Sonnet・中はコードの点が低く（18.5）検証に向かない |
+| 独立した検証（中・大だけ）：Codex（Terra・Sol）が作ったもの | 中は Claude / claude-sonnet-5-5・low、大は Claude / claude-opus-5-5・中（2026-11-18 に Fable・中から） | 左のとおり | 管理役 | 作る側と別の会社にする。【本人】2026-11-13 に中を Opus・中から Sonnet・low へ（【計測】IronBee F2 で Sonnet・low 64.4 / $0.14、Opus 標準 61.9 / $0.32。テストを走らせて判定する力は未計測なので、見落としが続けば戻す）。差分レビューと同じ Sonnet・low になるので、検証役は別のセッションで立て、レビューの結果は渡さない。【本人】2026-11-13 に大を Opus・高から Fable・中へ（【計測】FrontierCode-AA で Fable・中 41.3% / $2.69、Opus・高 35.9% / $2.49。費用はほぼ同じで上）。【計測】Sonnet・中はコードの点が低く（18.5）検証に向かない |
 
 ## SWE-2 に寄せる決まり（負荷を下げる）
 
 - 考える量が少なく、手を動かす量が多い仕事は SWE-2 に渡す: ビルド（Flash・high）、探索、一括の書き換え、仕様が固まった小さな修正、片付け。
-- CEO・管理役・Issue の担当は Codex / gpt-6.1-sol・xhigh。Claude の枠で動くのは、画面の実装（Fable・中）と差分レビュー・中の検証（Sonnet・low）、スライド・記事・図（Opus・中）、Codex が上限のときの控え（Opus）。Fable に残すのは難所（高）と画面（中）だけ。
+- CEO・管理役・Issue の担当は Codex / gpt-6.1-sol・xhigh。Claude の枠で動くのは、画面の実装（Opus・中）と差分レビュー・中の検証（Sonnet・low）、スライド・記事・図（Opus・中）、Codex が上限のときの控え（Opus）。Fable には新規に割り当てない（難所は Opus・高、画面は Opus・中。2026-11-18）。
 - SWE-2 の「できました」は、コマンドの出力や差分など証拠つきで受け取る。合否の最終判断は担当か検証役がする。
-- 作ったモデルに自分の差分を検証させない。Terra・SWE-2 の差分は Sonnet・low、Fable・中の画面は担当の Sol がレビューする。
+- 作ったモデルに自分の差分を検証させない。Terra・SWE-2 の差分は Sonnet・low、Opus・中の画面は担当の Sol がレビューする。
 - 無料でなくなった・使えなくなったら、この表の「使えなければ」の側へ戻す（探索と片付けは DeepSeek V4.1 Flash・high、小さな修正は Haiku・max）。
 
 ## 思考量の決まり（【計測】2026-11-12）
 
 思考量は必ず依頼に書いて渡す。書かないと既定になり、Codex の Sol・Terra は既定が low。
 
-選び方の順番（本人の決定 2026-11-13）: **値段 → 速さ → 性能**。性能の差が少しなら、安いほう・速いほうを取ってよい。性能も値段も同じくらいなら、**強いモデルを低い思考量で**使うほうを選ぶ（弱いモデルを思考量で押し上げない。例: Opus・xhigh より Fable・中）。
+選び方の順番（本人の決定 2026-11-13）: **値段 → 速さ → 性能**。性能の差が少しなら、安いほう・速いほうを取ってよい。性能も値段も同じくらいなら、**強いモデルを低い思考量で**使うほうを選ぶ（弱いモデルを思考量で押し上げない。例: Sonnet・高より Opus・中を検討する）。
 
 | モデル | ふだん | 上げてよい上限 | 使わない設定 | 理由（総合の点 / 1タスクの API 換算の費用） |
 |---|---|---|---|---|
-| Claude / claude-opus-5-5 | 中（調査のまとめは高） | 高 | 低 | 低は 35 まで落ちる（中 48、高 52）。xhigh（57 / $6.05）より Fable・中（56 / $3.80）のほうが安くて速い |
-| Claude / claude-fable-5-2 | 難所は高 | 高 | xhigh・max | コードの点は 高 53.3・xhigh 53.2・max 53.1 で変わらず、費用だけ 2〜4 倍 |
+| Claude / claude-opus-5-5 | 中（調査のまとめは高） | 高 | 低 | 低は 35 まで落ちる（中 48、高 52）。Opus・中を基本にし、必要なら高へ。参考の過去計測: Opus・xhigh 57 / $6.05、Fable・中 56 / $3.80 |
+| Claude / claude-fable-5-2 | 新規に割り当てない（2026-11-18。難所は Opus・高） | 高 | xhigh・max | コードの点は 高 53.3・xhigh 53.2・max 53.1 で変わらず、費用だけ 2〜4 倍 |
 | Claude / claude-sonnet-5-5 | 差分レビュー・中の検証は low | 高 | 中 | 中はコードの点が 18.5 で Haiku・高（22.6）より下。高で 33。画面は Fable・中に移した（2026-11-13）。調査のまとめは Opus・高に移した（2026-11-13）。レビューは low（F2 64.4）。low に書く仕事は渡さない |
 | Claude / claude-haiku-5-5 | 高（SWE-2 の代わりは max） | max | 低・中 | 低 9.9 → 高 22.6 と倍以上違う。SWE-2 の代わりは max（FrontierCode-AA 34.9% / $0.46） |
 | Codex / gpt-6.1-sol | 高 | xhigh（CEO・管理役・大の検証） | 低 | 高で 50 / $0.59。Opus・中より上 |
@@ -102,12 +105,12 @@
 ## 書き手の分け方（本人の指定 2026-11-12、2026-11-13 に改定）
 
 - 担当は Codex / gpt-6.1-sol・xhigh。自分ではコードを書かず、進め方を決め、短い指示を書いて渡し、レビューの結果で合否を決め、PR を出す。
-- デザイン（画面の見た目・動き・レイアウト・文言）は Claude / claude-fable-5-2・中 が書く。
+- デザイン（画面の見た目・動き・レイアウト・文言）は Claude / claude-opus-5-5・中 が書く。
 - それ以外の実装は Codex / gpt-6.1-terra・high が書く（大きい Issue だけ max）。テストは Terra・max が書き、SWE-2 Flash・high が走らせる。仕様が固まった小さな修正・機械的な一括作業は Devin / SWE-2・max。担当が先に短い指示を書いて渡す: 変えるファイル、やること、受け入れ条件、やってはいけないこと。
-- 1つの Issue に両方あるときは分ける。画面は Fable・中、裏の処理は Terra。つなぎ目（データの形・関数の名前）は担当が先に決める。
-- Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low が指示と突き合わせてレビューする（別の会社）。Fable・中の画面の差分は担当の Sol が見る。合否は担当が決める。
-- 管理役・担当は判断だけをする（本人の決定 2026-11-13。Sol・xhigh が画面を直接直し、途中で2件目まで広がったため）。判断とは、要件・振り分け・指示・合否・報告を決めること。コードは小さい直しも書かない。画面の小さい直しは同じ Issue の Fable・中のスレッドへ（同じ文脈を使える。そのスレッドが終わっている・ない・会話が長すぎて読み直しが高いときは、新しい Fable・中の子を立てる）。画面以外の小さい直しのうち、直し方が決まっているものは SWE-2・max へ、原因や直し方がまだ決まっていないものは Terra・high へ。検証用の fixture・確認用の台本は Terra・max へ。どれも短い指示で渡す。管理役が担当を兼ねるときも同じ。直している途中で別の不具合が見つかったら、それも同じように渡す。
-- レビューで2回不合格なら、担当は自分で書かず、難所として Claude / claude-fable-5-2・高 へ渡す。その旨を Issue に1行残す。
+- 1つの Issue に両方あるときは分ける。画面は Opus・中、裏の処理は Terra。つなぎ目（データの形・関数の名前）は担当が先に決める。
+- Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low が指示と突き合わせてレビューする（別の会社）。Opus・中の画面の差分は担当の Sol が見る。合否は担当が決める。
+- 管理役・担当は判断だけをする（本人の決定 2026-11-13。Sol・xhigh が画面を直接直し、途中で2件目まで広がったため）。判断とは、要件・振り分け・指示・合否・報告を決めること。コードは小さい直しも書かない。画面の小さい直しは同じ Issue の Opus・中のスレッドへ（同じ文脈を使える。そのスレッドが終わっている・ない・会話が長すぎて読み直しが高いときは、新しい Opus・中の子を立てる）。画面以外の小さい直しのうち、直し方が決まっているものは SWE-2・max へ、原因や直し方がまだ決まっていないものは Terra・high へ。検証用の fixture・確認用の台本は Terra・max へ。どれも短い指示で渡す。管理役が担当を兼ねるときも同じ。直している途中で別の不具合が見つかったら、それも同じように渡す。
+- レビューで2回不合格なら、担当は自分で書かず、難所として Claude / claude-opus-5-5・高 へ渡す。その旨を Issue に1行残す。
 - Codex が上限なら Terra の分は SWE-2・max に回す。SWE-2 も使えないときは担当が書く。
 
 ## Claude・Codex が上限に当たったとき
@@ -134,9 +137,9 @@
 ## 詰まったとき（この順で）
 
 1. 確かめる手段を足す（テスト、ログ、再現手順）。
-2. 同じモデルのまま思考量を1段上げる（中 → 高）。xhigh・max には上げない。Opus は上げずに 3 へ進む（本人の決定 2026-11-13。【計測】FrontierCode-AA で Fable・中 41.3% / $2.69、Opus・高 35.9% / $2.49）。
-3. それでもだめなら管理役へ。管理役が Claude / claude-fable-5-2・中 を呼ぶ。
-4. まだだめなら Claude / claude-fable-5-2・高。それより上（xhigh・max）には上げない。
+2. 同じモデルのまま思考量を1段上げる（中 → 高）。xhigh・max には上げない。Opus・中の場合は 3 を飛ばして 4 へ進む。Opus・高の場合は上げずに管理役へ結果を返す。
+3. それでもだめなら管理役へ。管理役が Claude / claude-opus-5-5・中 を呼ぶ（2026-11-18 に Fable から）。すでに Opus・中で試した場合は 4 へ進む。
+4. まだだめなら Claude / claude-opus-5-5・高。それより上（xhigh・max）には上げない。
 
 止める目安: 同じ原因で2回失敗、またはテストが3回続けて通らない。
 
@@ -148,7 +151,7 @@
 |---|---|---|---|---|
 | テストを書く | Codex / gpt-6.1-terra・max（TB4.0 55.6%） | Claude / claude-opus-5-5・高（56.6%） | Codex / `shared/glm-5.3-flash`・high（max で 32.8%、high は未計測） | Devin / SWE-2 (swe-2-high) |
 | 検証（Claude が作ったもの） | Codex / gpt-6.1-sol・高（大は xhigh） | Codex / `shared/glm-5.3-flash`・high（別の会社） | Codex / `shared/deepseek-v4.1-flash`・high | — |
-| デザイン | Claude / claude-fable-5-2・中（FrontierCode 41.3%） | Claude / claude-sonnet-5-5・xhigh（WebDev 1772） | Codex / gpt-6-astra・xhigh（WebDev 1764） | — |
+| デザイン | Claude / claude-opus-5-5・中（2026-11-18 に Fable・中から） | Claude / claude-sonnet-5-5・xhigh（WebDev 1772） | Codex / gpt-6-astra・xhigh（WebDev 1764） | — |
 | 差分レビュー | Claude / claude-sonnet-5-5・low（F2 64.4） | Codex / gpt-6.1-sol・高 | Codex / `shared/deepseek-v4.1-flash`・high（F2 56.5） | — |
 | Issue の担当 | Codex / gpt-6.1-sol・xhigh | Claude / claude-opus-5-5・中 | — | — |
 | 管理役・CEO | Codex / gpt-6.1-sol・xhigh | Claude / claude-opus-5-5・中 | — | — |
