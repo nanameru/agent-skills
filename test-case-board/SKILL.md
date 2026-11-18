@@ -15,6 +15,8 @@ The parent owns shared loop rules. This Skill owns YAML test inventory, regressi
 
 ## Browser E2E entry point
 
+For T3 development, implementation, unit tests, build, and PR updates are done in T3; hand required independent verification to Devin Bot. If E2E is needed based on the change and acceptance criteria, hand it to Devin Bot without waiting for a separate instruction each time and do not start it in T3; E2E is not required for every PR. Include the PR URL, full head SHA, verification conditions, and unverified items. Required E2E, including retries, runs on the Bot side using Lite, with one Japanese-annotated recording per run. Use a Devin VM when login is unnecessary (macOS VM for Mac apps); when login is required, use a dedicated MacBook Air or Windows, not the Mac currently in use. Follow [the recording contract](references/e2e-recording.md) for private storage and readback. This T3-specific handoff does not authorize merge, deploy, or additional expense; other users retain their applicable workflows and authorization requirements.
+
 For T3 preview use `test-board e2e --provider t3 --help` and [the T3 receipt contract](references/e2e-t3-preview.md). Use `test-board e2e --help` and [the browser E2E contract](references/e2e-entrypoint.md) for a supported, recorded agent-browser run. The Git board retains case definitions; each private run retains its machine result and evidence. A passing test and a decoded video do not replace visual inspection of the actual operation.
 
 Use this skill to keep test intent outside transient chat. The source of truth is `test-board.yaml` in the repository root. Boards, dashboards, GitHub comments, and run reports are views or mirrors; edit the YAML first.
