@@ -1,0 +1,14 @@
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -28,4 +28,4 @@
+   4. デザイン以外の実装 → Codex / gpt-6.1-terra・high（大きい Issue だけ max）。テストを書く → Terra・max、走らせる・再実行 → Devin / SWE-2 Flash (swe-2-flash-medium)・high。仕様が固まった小さな修正・一括書き換え → Devin / SWE-2 (swe-2-high)・max。ビルド・変換など走らせるだけ → SWE-2 Flash・high（本人の決定 2026-11-13）
+-  5. 見た目や文章の質が問われる → 画面・デザインの実装は Claude / claude-fable-5-2・中、スライド・文章・図は Claude / claude-opus-5-5・中。Terra・SWE-2 の差分レビューは Claude / claude-sonnet-5-5・low。実装の進め方決めは Issue の担当（Codex / gpt-6.1-sol・xhigh）（本人の決定 2026-11-13）
+-  6. 難しくて間違えると高くつく → Claude / claude-fable-5-2・高
++  5. 見た目や文章の質が問われる → 画面・デザインの実装は Claude / claude-opus-5-5・中、スライド・文章・図は Claude / claude-opus-5-5・中。Terra・SWE-2 の差分レビューは Claude / claude-sonnet-5-5・low。実装の進め方決めは Issue の担当（Codex / gpt-6.1-sol・xhigh）（本人の決定 2026-11-13）
++  6. 難しくて間違えると高くつく → Claude / claude-opus-5-5・高
+   7. 別の目で確かめたい → 作った側と別の会社のモデル
+@@ -49,3 +49,3 @@
+
+-- Fable は難所（高）と画面（中）だけ。CEO とリポジトリの管理役は Codex / gpt-6.1-sol・xhigh（本人の決定 2026-11-13）。Issue担当も Codex / gpt-6.1-sol・xhigh。画面は Fable・中、差分レビューは Sonnet・low（本人の決定 2026-11-13）。
++- Fable（claude-fable-5-2）は新規に割り当てない。旧 Fable・中は Opus・中（claude-opus-5-5 / effort medium）、旧 Fable・高は Opus・高（claude-opus-5-5 / effort high）で代替する（本人の指示 2026-11-18、Devin Bot経由。起動中の仕事は止めない）。CEO とリポジトリの管理役は Codex / gpt-6.1-sol・xhigh（本人の決定 2026-11-13）。Issue担当も Codex / gpt-6.1-sol・xhigh。画面は Opus・中、差分レビューは Sonnet・low（本人の決定 2026-11-13）。
+ - 子を待つ間に起こされたら、動作中の子すべての未回答の質問を見に行く（Devin の子は質問で止まっても知らせが来ない）。

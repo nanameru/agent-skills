@@ -50,10 +50,10 @@ description: T3 Code 上の自律開発の進め方。CEO（入口）・リポ�
 ## 書き手の分け方（詳しくは routing.md）
 
 - Issue の担当は Codex / gpt-6.1-sol・xhigh（本人の決定 2026-11-13）。進め方を決め、指示を書いて渡し、合否を決め、PR を出す。
-- デザイン（画面の見た目・動き・レイアウト・文言）は Claude / claude-fable-5-2・中 に渡す。
-- それ以外の実装（処理・ロジック・API・データ・設定）は Codex / gpt-6.1-terra・high（大きい Issue だけ max）、テストを書くのは Terra・max、テストを走らせる・再実行は SWE-2 Flash（swe-2-flash-medium）・high に渡す（本人の決定 2026-11-13。Codex が上限なら SWE-2・max）。仕様が固まった小さな修正・一括の書き換えは Devin の SWE-2（swe-2-high）・max、ビルドなど走らせるだけは SWE-2 Flash・high。担当が先に短い指示（変えるファイル、やること、受け入れ条件、やってはいけないこと）を書いて渡す。Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low がレビューし、Fable・中の画面は担当が見る。合否は担当が決め、2回不合格なら Fable・高 へ渡す（担当は書かない）。
+- デザイン（画面の見た目・動き・レイアウト・文言）は Claude / claude-opus-5-5・中 に渡す。
+- それ以外の実装（処理・ロジック・API・データ・設定）は Codex / gpt-6.1-terra・high（大きい Issue だけ max）、テストを書くのは Terra・max、テストを走らせる・再実行は SWE-2 Flash（swe-2-flash-medium）・high に渡す（本人の決定 2026-11-13。Codex が上限なら SWE-2・max）。仕様が固まった小さな修正・一括の書き換えは Devin の SWE-2（swe-2-high）・max、ビルドなど走らせるだけは SWE-2 Flash・high。担当が先に短い指示（変えるファイル、やること、受け入れ条件、やってはいけないこと）を書いて渡す。Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low がレビューし、Opus・中の画面は担当が見る。合否は担当が決め、2回不合格なら Opus・高 へ渡す（担当は書かない）。
 - 広く探す・長いログを読むのは SWE-2 Flash（swe-2-flash-medium）。X の検索は Grok（grok-4.7）。
-- 独立した検証（中・大だけ）は作る側と別の会社で1本。Claude が作ったもの（画面）は Codex / gpt-6.1-sol・高（大は xhigh）。Codex が作ったもの（Terra・Sol）は、中が Claude / claude-sonnet-5-5・low、大が Claude / claude-fable-5-2・中。上限に当たったときの替え方は routing.md の「Claude・Codex が上限に当たったとき」。
+- 独立した検証（中・大だけ）は作る側と別の会社で1本。Claude が作ったもの（画面）は Codex / gpt-6.1-sol・高（大は xhigh）。Codex が作ったもの（Terra・Sol）は、中が Claude / claude-sonnet-5-5・low、大が Claude / claude-opus-5-5・中。上限に当たったときの替え方は routing.md の「Claude・Codex が上限に当たったとき」。
 - **SWE-2 を、本人と直接話す開発セッションには使わない。** 渡すときは必ず「あなたは子です」と書き、範囲・止める条件・返してほしい証拠を付ける。
 - Antigravity と Gemini は使わない。
 
@@ -114,7 +114,7 @@ description: T3 Code 上の自律開発の進め方。CEO（入口）・リポ�
   - 本人が「全部並列で」と言ったときも、重なりと、土台を先に入れる案を一言伝えてから従う。
   - 並べたあとで、複数の担当に共通する不具合が見つかったら、1人だけに直させて先に入れ、ほかの担当には「触らずに取り込む」と伝える。
 - Issue 1件につき、Sol・xhigh のサブエージェントを1つ。`delegate_task` で `mode:"async"`・`isolation:"worktree"`。
-- 渡す文は「渡し方」の5項目。画面は Fable・中、それ以外の実装は Terra・high（大は max）、テストを書くのは Terra・max、走らせるのは SWE-2 Flash・high、小さな修正・一括作業は SWE-2・max に渡し、Terra・SWE-2 の差分は Sonnet・low にレビューさせることも書く。
+- 渡す文は「渡し方」の5項目。画面は Opus・中、それ以外の実装は Terra・high（大は max）、テストを書くのは Terra・max、走らせるのは SWE-2 Flash・high、小さな修正・一括作業は SWE-2・max に渡し、Terra・SWE-2 の差分は Sonnet・low にレビューさせることも書く。
 - 渡す文に、**自動レビューの区切り**を最初から入れる（あとから伝えない。入れ忘れると、直すたびに新しい指摘が出て終わらない）:
   - PR を出したら、自動レビュー（Devin Review、Amazon Q）の結果を自分で読んで直させるところまでが担当の仕事（直すのは上と同じ振り分けの子）。管理役に頼まれるのを待たない。
   - 直すのは重い指摘だけ（リポジトリの外が変わる、元のファイルが壊れる、secret が読める、受け入れ条件を満たさない）。軽い指摘は理由を返し、「残りの課題」として報告に並べる。
@@ -210,7 +210,7 @@ curl -s -H "$H" "$B/findings?scan_id=<scan_id>"                 # 終わった�
 - 着手前に自分で確かめる: Issue の番号・URL・OPEN、目的・範囲・対象外・受け入れ条件・確かめ方、最新の承認と止まっている理由。分からない承認は推測で埋めず、管理役へ返す。
 - 既存の実装・スキル・公式の機能を先に調べる。新しい依存や自作は、足りないと確かめたものだけ。
 - 最新の main・作業ブランチ・未コミットの差分を確かめ、自分の worktree とブランチで作業する。ブランチと Issue の対応は Issue に書く（T3 がブランチ名を付け替えることがあるため）。
-- 画面は Claude / claude-fable-5-2・中 に、それ以外の実装は Codex / gpt-6.1-terra・high（大は max）に、テストを書くのは Terra・max に、走らせるのは SWE-2 Flash・high に、小さな修正・一括作業は SWE-2・max に、短い指示で渡す。Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low にレビューさせ、画面の差分は自分で見る。合否は自分で決める。自分は判断（要件・振り分け・指示・合否・報告）だけをし、コードは小さい直しも書かない: 画面は同じ Issue の Fable・中のスレッドへ（終わっている・ない・会話が長すぎるときは新しい Fable・中の子へ）、画面以外は直し方が決まっていれば SWE-2・max へ、原因や直し方が決まっていなければ Terra・high へ、検証用の fixture・台本は Terra・max へ渡す（管理役が担当を兼ねるときも同じ。途中で別の不具合が見つかったら、それも渡す）。2回不合格なら Fable・高 へ渡し、その旨を Issue に1行残す。
+- 画面は Claude / claude-opus-5-5・中 に、それ以外の実装は Codex / gpt-6.1-terra・high（大は max）に、テストを書くのは Terra・max に、走らせるのは SWE-2 Flash・high に、小さな修正・一括作業は SWE-2・max に、短い指示で渡す。Terra・SWE-2 の差分は Claude / claude-sonnet-5-5・low にレビューさせ、画面の差分は自分で見る。合否は自分で決める。自分は判断（要件・振り分け・指示・合否・報告）だけをし、コードは小さい直しも書かない: 画面は同じ Issue の Opus・中のスレッドへ（終わっている・ない・会話が長すぎるときは新しい Opus・中の子へ）、画面以外は直し方が決まっていれば SWE-2・max へ、原因や直し方が決まっていなければ Terra・high へ、検証用の fixture・台本は Terra・max へ渡す（管理役が担当を兼ねるときも同じ。途中で別の不具合が見つかったら、それも渡す）。2回不合格なら Opus・高 へ渡し、その旨を Issue に1行残す。
 - テスト: 受け入れ条件に結び付けて、種類（Unit/Integration/E2E/lint・typecheck・build・security）と環境を選ぶ。対象の commit・データの区分（fixture/mock/実データ）・環境・コマンドを固定する。書くのは Terra・max、走らせるのは SWE-2 Flash・high（Codex が上限なら書くのも SWE-2）。どちらも使えなければ自分で走らせ、その旨を Issue に書く。
 - 未実行は「非該当／blocked／未検証」を分けて書く。失敗を skip に変えて成功扱いしない。通すためにテストを弱めない。図や静止画を E2E の証拠にしない。途中でコードを直したら対象の commit を取り直す。iOS の画面操作は Maestro を使う。
 - 節目（着手・PR 作成・完了・詰まったとき）で Issue にコメントし、ボードの段階を更新する。
