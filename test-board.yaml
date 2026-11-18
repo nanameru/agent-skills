@@ -727,3 +727,14 @@ cases:
     test_file: strategic-compact/tests/suggest-compact.test.js
     issues: [60]
     notes: "private一時ディレクトリと合成JSONLを使用し、stdin JSONを実CLIへ渡す。既定閾値で高・低入力、同bucket、Claude、context無効化と既定50回のカウンターを確認。node --test strategic-compact/tests/suggest-compact.test.js は5件成功。SWE-2 Flashが実行、Issue #60コメント https://github.com/nanameru/agent-skills/issues/60#issuecomment-6894626119 を参照。UI・E2E・実圧縮の検証ではない。"
+  - id: TC-060-03
+    title: 圧縮提案の状態をユーザー専用の場所に保存する
+    feature: strategic-compact suggestion hook
+    scenario: 共有一時ディレクトリに状態を作らず、リンクされた状態ファイルの参照先を保全する
+    status: done
+    priority: high
+    type: regression
+    source: [strategic-compact/scripts/hooks/suggest-compact.js]
+    test_file: strategic-compact/tests/suggest-compact.test.js
+    issues: [60]
+    notes: "隔離HOME・一時ディレクトリと合成JSONLを使用。両状態ファイルの保存先とPOSIX権限、リンクの拒否と合成参照先の保全を確認する。Windowsではファイルのハードリンクをテストする。"

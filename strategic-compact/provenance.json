@@ -13,6 +13,7 @@
   "source_modified": true,
   "codex_support": "Reads Codex event_msg token_count last_token_usage and token_usage_record usage input_tokens; cached input is already included.",
   "local_modifications": {
+    "scripts/hooks/suggest-compact.js": "Moved notification state to a private user directory and reject linked state files; retained the original source hash above.",
     "scripts/lib/transcript-context.js": "Added Codex usage parsing and validation of Claude context token fields; retained the original source hash above.",
     "SKILL.md": "Copied installed Skill documentation; clarified Codex input token accounting. The installed documentation source revision was not independently verified."
   },

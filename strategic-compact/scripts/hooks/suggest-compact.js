@@ -24,10 +24,9 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const {
-  getTempDir,
-  writeFile,
   readStdinJson,
   log,
   output
@@ -46,6 +45,57 @@ const CONTEXT_BUCKET_FILE_PREFIX = 'claude-context-bucket-';
 const STATE_FILE_PREFIXES = [COUNTER_FILE_PREFIX, CONTEXT_BUCKET_FILE_PREFIX];
 const DEFAULT_COMPACT_STATE_TTL_DAYS = 14;
 
+function getStateDirectory() {
+  const home = os.homedir();
+  const uid = process.getuid?.();
+  if (uid !== undefined) {
+    const info = fs.statSync(home);
+    if (!info.isDirectory() || info.uid !== uid || (info.mode & 0o022)) {
+      throw Error('unsafe home directory for compact state');
+    }
+  }
+
+  const dir = path.join(home, '.strategic-compact');
+  try {
+    fs.mkdirSync(dir, { mode: 0o700 });
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err;
+  }
+  const info = fs.lstatSync(dir);
+  if (!info.isDirectory() || (uid !== undefined && (info.uid !== uid || (info.mode & 0o077)))) {
+    throw Error('unsafe compact state directory');
+  }
+  return dir;
+}
+
+function withStateFile(file, update) {
+  const { O_CREAT, O_RDWR, O_NOFOLLOW = 0, O_NONBLOCK = 0 } = fs.constants;
+  // Windows has no O_NOFOLLOW. Check the entry in the user-private directory.
+  if (!O_NOFOLLOW) {
+    const existing = fs.lstatSync(file, { throwIfNoEntry: false });
+    if (existing && !existing.isFile()) throw Error('unsafe compact state file');
+  }
+  const fd = fs.openSync(file, O_CREAT | O_RDWR | O_NOFOLLOW | O_NONBLOCK, 0o600);
+  try {
+    const info = fs.fstatSync(fd);
+    const uid = process.getuid?.();
+    if (!info.isFile() || info.nlink !== 1 || (uid !== undefined && info.uid !== uid)) {
+      throw Error('unsafe compact state file');
+    }
+    const buf = Buffer.alloc(64);
+    const bytes = fs.readSync(fd, buf, 0, buf.length, 0);
+    const previous = Number.parseInt(buf.toString('utf8', 0, bytes).trim(), 10);
+    const next = update(previous);
+    if (next !== null) {
+      fs.ftruncateSync(fd, 0);
+      fs.writeSync(fd, String(next), 0);
+    }
+    return next;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 function getCounterRetentionDays() {
   const raw = process.env.COMPACT_STATE_TTL_DAYS;
   if (!raw) return DEFAULT_COMPACT_STATE_TTL_DAYS;
@@ -54,10 +104,10 @@ function getCounterRetentionDays() {
 }
 
 /**
- * Sweep stale per-session state files from the temp dir.
+ * Sweep stale per-session state files from the private state directory.
  *
  * Each session writes `claude-tool-count-<sessionId>` (and, with the context
- * signal, `claude-context-bucket-<sessionId>`) into the OS temp dir; nothing
+ * signal, `claude-context-bucket-<sessionId>`) into this directory; nothing
  * else removes them. Without a sweep these files accumulate one-per-session
  * forever. This helper removes state files whose mtime is older than
  * `retentionDays`, while preserving the active session's files (which are
@@ -66,15 +116,15 @@ function getCounterRetentionDays() {
  * The helper never throws; per the always-exit-0 hook contract any
  * filesystem failure is swallowed and logged to stderr.
  *
- * @param {string} tempDir - The temp directory to sweep.
+ * @param {string} stateDir - The private state directory to sweep.
  * @param {number} retentionDays - Files older than this many days are removed.
  * @param {string[]} currentStateFiles - Absolute paths of the active session's
  *   state files; preserved unconditionally.
  */
-function cleanupOldCounters(tempDir, retentionDays, currentStateFiles) {
+function cleanupOldCounters(stateDir, retentionDays, currentStateFiles) {
   let entries;
   try {
-    entries = fs.readdirSync(tempDir, { withFileTypes: true });
+    entries = fs.readdirSync(stateDir, { withFileTypes: true });
   } catch (err) {
     log(`[StrategicCompact] Skipping counter sweep; readdir failed: ${err.message}`);
     return;
@@ -88,10 +138,10 @@ function cleanupOldCounters(tempDir, retentionDays, currentStateFiles) {
     if (!STATE_FILE_PREFIXES.some(prefix => entry.name.startsWith(prefix))) continue;
     if (currentBasenames.has(entry.name)) continue;
 
-    const fullPath = path.join(tempDir, entry.name);
+    const fullPath = path.join(stateDir, entry.name);
     let stats;
     try {
-      stats = fs.statSync(fullPath);
+      stats = fs.lstatSync(fullPath);
     } catch {
       continue;
     }
@@ -100,7 +150,7 @@ function cleanupOldCounters(tempDir, retentionDays, currentStateFiles) {
     // sits exactly on the cutoff boundary has age == retentionDays, which
     // is not *older than* retentionDays, so preserve it. Use >= so only
     // strictly older files (mtimeMs < cutoffMs) fall through to deletion.
-    if (stats.mtimeMs >= cutoffMs) continue;
+    if (!stats.isFile() || stats.mtimeMs >= cutoffMs) continue;
 
     try {
       fs.rmSync(fullPath, { force: true });
@@ -116,45 +166,12 @@ function cleanupOldCounters(tempDir, retentionDays, currentStateFiles) {
  * between concurrent hook invocations.
  */
 function incrementToolCallCount(counterFile) {
-  let count = 1;
-
   try {
-    const fd = fs.openSync(counterFile, 'a+');
-    try {
-      const buf = Buffer.alloc(64);
-      const bytesRead = fs.readSync(fd, buf, 0, 64, 0);
-      if (bytesRead > 0) {
-        const parsed = parseInt(buf.toString('utf8', 0, bytesRead).trim(), 10);
-        // Clamp to reasonable range — corrupted files could contain huge values
-        // that pass Number.isFinite() (e.g., parseInt('9'.repeat(30)) => 1e+29)
-        count = (Number.isFinite(parsed) && parsed > 0 && parsed <= 1000000)
-          ? parsed + 1
-          : 1;
-      }
-      // Truncate and write new value
-      fs.ftruncateSync(fd, 0);
-      fs.writeSync(fd, String(count), 0);
-    } finally {
-      fs.closeSync(fd);
-    }
-  } catch {
-    // Fallback: just use writeFile if fd operations fail
-    writeFile(counterFile, String(count));
-  }
-
-  return count;
-}
-
-/**
- * Read the last context bucket this session already fired for (-1 when the
- * suggestion has not fired yet or the state file is unreadable/corrupted).
- */
-function readLastContextBucket(bucketFile) {
-  try {
-    const parsed = parseInt(fs.readFileSync(bucketFile, 'utf8').trim(), 10);
-    return Number.isInteger(parsed) && parsed >= 0 && parsed <= 1000000 ? parsed : -1;
-  } catch {
-    return -1;
+    return withStateFile(counterFile, previous =>
+      Number.isInteger(previous) && previous > 0 && previous <= 1000000 ? previous + 1 : 1);
+  } catch (err) {
+    log(`[StrategicCompact] Counter signal skipped: ${err.message}`);
+    return null;
   }
 }
 
@@ -179,10 +196,11 @@ function buildContextSuggestion(transcriptPath, bucketFile, env) {
     const bucket = computeContextBucket(usage.tokens, threshold, interval);
     if (bucket < 0) return null;
 
-    const lastBucket = readLastContextBucket(bucketFile);
-    if (bucket <= lastBucket) return null;
-
-    writeFile(bucketFile, String(bucket));
+    const updated = withStateFile(bucketFile, previous =>
+      Number.isInteger(previous) && previous >= 0 && previous <= 1000000 && bucket <= previous
+        ? null
+        : bucket);
+    if (updated === null) return null;
 
     const approxTokens = `${Math.round(usage.tokens / 1000)}k`;
     // Only quote a percentage when the window size was actually detected.
@@ -216,13 +234,13 @@ async function main() {
   const sessionId = rawSessionId.replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
   const transcriptPath = (input && typeof input.transcript_path === 'string') ? input.transcript_path : '';
 
-  const tempDir = getTempDir();
-  const counterFile = path.join(tempDir, `${COUNTER_FILE_PREFIX}${sessionId}`);
-  const bucketFile = path.join(tempDir, `${CONTEXT_BUCKET_FILE_PREFIX}${sessionId}`);
+  const stateDir = getStateDirectory();
+  const counterFile = path.join(stateDir, `${COUNTER_FILE_PREFIX}${sessionId}`);
+  const bucketFile = path.join(stateDir, `${CONTEXT_BUCKET_FILE_PREFIX}${sessionId}`);
 
   // Sweep stale state files (concern 1 of #2156). Cheap, swallows errors,
   // skips the active session's files. See cleanupOldCounters for details.
-  cleanupOldCounters(tempDir, getCounterRetentionDays(), [counterFile, bucketFile]);
+  cleanupOldCounters(stateDir, getCounterRetentionDays(), [counterFile, bucketFile]);
 
   const rawThreshold = parseInt(process.env.COMPACT_THRESHOLD || '50', 10);
   const threshold = Number.isFinite(rawThreshold) && rawThreshold > 0 && rawThreshold <= 10000

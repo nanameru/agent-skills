@@ -19,6 +19,7 @@ function isolatedHook(t) {
 
   const env = {
     HOME: home,
+    USERPROFILE: home,
     TMPDIR: tmp,
     TMP: tmp,
     TEMP: tmp,
@@ -44,7 +45,7 @@ function isolatedHook(t) {
     return child;
   }
 
-  return { tmp, run };
+  return { tmp, state: path.join(home, '.strategic-compact'), run };
 }
 
 function event(input) {
@@ -82,12 +83,12 @@ function contextFrom(child) {
 
 for (const [name, makeRecord] of [['event_msg / token_count', event], ['token_usage_record', usageRecord]]) {
   test(`${name} produces one context notification per bucket at default thresholds`, t => {
-    const { tmp, run } = isolatedHook(t);
+    const { state, run } = isolatedHook(t);
     const first = run('high', [makeRecord(180000)]);
     const firstMessage = contextFrom(first);
     assert.match(firstMessage, /\[StrategicCompact\] Context ~180k tokens/);
     assert.equal(firstMessage.split('\n').length, 1);
-    assert.equal(fs.readFileSync(path.join(tmp, 'claude-context-bucket-high'), 'utf8'), '0');
+    assert.equal(fs.readFileSync(path.join(state, 'claude-context-bucket-high'), 'utf8'), '0');
 
     const repeated = run('high', [makeRecord(180500)]);
     assert.equal(repeated.stdout.trim(), '');
@@ -97,7 +98,7 @@ for (const [name, makeRecord] of [['event_msg / token_count', event], ['token_us
     const low = run('low', [makeRecord(100000)]);
     assert.equal(low.stdout.trim(), '');
     assert.doesNotMatch(low.stderr, /\[StrategicCompact\] Context/);
-    assert.equal(fs.existsSync(path.join(tmp, 'claude-context-bucket-low')), false);
+    assert.equal(fs.existsSync(path.join(state, 'claude-context-bucket-low')), false);
   });
 }
 
@@ -108,8 +109,9 @@ test('Claude still produces the context notification from its input partitions',
 });
 
 test('the default counter signal is secondary and shares the context payload', t => {
-  const { tmp, run } = isolatedHook(t);
-  fs.writeFileSync(path.join(tmp, 'claude-tool-count-both'), '49');
+  const { state, run } = isolatedHook(t);
+  fs.mkdirSync(state, { mode: 0o700 });
+  fs.writeFileSync(path.join(state, 'claude-tool-count-both'), '49');
   const message = contextFrom(run('both', [event(180000)]));
   assert.match(message, /\[StrategicCompact\] Context ~180k tokens/);
   assert.match(message, /\[StrategicCompact\] 50 tool calls reached/);
@@ -117,10 +119,42 @@ test('the default counter signal is secondary and shares the context payload', t
 });
 
 test('COMPACT_CONTEXT_THRESHOLD=0 disables context while retaining the counter', t => {
-  const { tmp, run } = isolatedHook(t);
-  fs.writeFileSync(path.join(tmp, 'claude-tool-count-disabled'), '49');
+  const { state, run } = isolatedHook(t);
+  fs.mkdirSync(state, { mode: 0o700 });
+  fs.writeFileSync(path.join(state, 'claude-tool-count-disabled'), '49');
   const message = contextFrom(run('disabled', [usageRecord(180000)], { COMPACT_CONTEXT_THRESHOLD: '0' }));
   assert.doesNotMatch(message, /\[StrategicCompact\] Context/);
   assert.match(message, /\[StrategicCompact\] 50 tool calls reached/);
-  assert.equal(fs.existsSync(path.join(tmp, 'claude-context-bucket-disabled')), false);
+  assert.equal(fs.existsSync(path.join(state, 'claude-context-bucket-disabled')), false);
+});
+
+test('notification state is stored in a user-private directory', t => {
+  const { tmp, state, run } = isolatedHook(t);
+  run('private', [event(180000)]);
+
+  assert.deepEqual(fs.readdirSync(tmp), []);
+  assert.equal(fs.readFileSync(path.join(state, 'claude-tool-count-private'), 'utf8'), '1');
+  assert.equal(fs.readFileSync(path.join(state, 'claude-context-bucket-private'), 'utf8'), '0');
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(state).mode & 0o777, 0o700);
+    for (const name of fs.readdirSync(state)) {
+      assert.equal(fs.statSync(path.join(state, name)).mode & 0o777, 0o600);
+    }
+  }
+});
+
+test('both notification state files reject links without writing their targets', t => {
+  const { tmp, state, run } = isolatedHook(t);
+  fs.mkdirSync(state, { mode: 0o700 });
+  const target = path.join(tmp, 'fixture');
+  const original = '0\nfixture contents\n';
+  fs.writeFileSync(target, original);
+  const link = process.platform === 'win32' ? fs.linkSync : fs.symlinkSync;
+  for (const name of ['claude-tool-count-linked', 'claude-context-bucket-linked']) {
+    link(target, path.join(state, name));
+  }
+
+  const result = run('linked', [event(400000)], { COMPACT_THRESHOLD: '1' });
+  assert.equal(result.stdout, '');
+  assert.equal(fs.readFileSync(target, 'utf8'), original);
 });
