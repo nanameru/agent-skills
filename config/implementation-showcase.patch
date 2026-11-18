@@ -2,18 +2,10 @@ diff --git a/implementation-showcase/SKILL.md b/implementation-showcase/SKILL.md
 index cb614f5..3755ad2 100644
 --- a/implementation-showcase/SKILL.md
 +++ b/implementation-showcase/SKILL.md
-@@ -1,6 +1,6 @@
- ---
- name: implementation-showcase
+@@ -3 +3 @@ name: implementation-showcase
 -description: 実装完了後に実画面のスクリーンショット・操作録画・変更説明をまとめた確認ページをローカルサーバーで開く。木村太陽さんのUI実装の完了報告、または「実装結果を見せて」「スクショと録画で確認したい」という依頼に使う。
 +description: 実装完了後に、動く成果物そのもの（起動した画面・Simulator・生成物）をT3 Codeで開き、Devinへの報告にも見方を入れ、スクショ・操作録画・変更説明の確認ページを添える。木村太陽さんの実装の完了報告、または「実装結果を見せて」「スクショと録画で確認したい」という依頼に使う。
- ---
- 
- # 実装完了時の確認ページ
-@@ -19,11 +19,33 @@ description: 実装完了後に実画面のスクリーンショット・操作
- - 対象フォルダだけを loopback に配信する。例: `python3 -m http.server 41833 --bind 127.0.0.1 --directory <成果物ディレクトリ>`。空きポートを選び、既存サーバーを停止しない。作業ツールがプロセスを維持できる方式で起動する。
- - ブラウザでそのURLを開き、画像の表示、動画の読込・再生、説明を実際に確認する。利用可能なら `open_in_codex` で確認ページを見せ、ユーザー向けのタブを残す。最終回答にURLと確認ページのスクショを添える。サーバーは確認できるよう残し、停止方法を成果物に記載する。
- 
+@@ -21,0 +22,22 @@ description: 実装完了後に実画面のスクリーンショット・操作
 +## 動く成果物そのものを見せる（T3 Code・Devin、本人の指定 2026-11-18）
 +
 +本人の要望: 実装したら録画ではなく、その実装の成果物そのものを見せる。T3 CodeとDevinのどちらで見ても状態が分かるようにする。録画・E2E証跡のルールは別に守る（録画は省かない）。
@@ -36,22 +28,14 @@ index cb614f5..3755ad2 100644
 +- Devin自身（このMacのDevin CLIなど）が実装したときは、Devinの画面で使えるブラウザー等で成果物を開けた場合だけ「Devinで表示した」と書く。T3側にも見せる必要があるときは、上の「成果物の見方」を報告に入れ、T3側の表示は親（T3）またはT3の子が行う。
 +- Devin側で見られる場所（PRのプレビュー環境など）を新たに公開・デプロイしない。既にある承認済みの場所だけを案内する。
 +
- ## 適用範囲
- 
- 通常のコーディング依頼をこの手順で締める。質問・調査だけの依頼や、ユーザーが短い回答を求めたときには作らない。UIがない変更では、実コマンドの結果と説明を載せ、画面撮影・録画は対象外と明記する。未実装のデモを実装完了として扱わない。
- 
+@@ -26 +48 @@ description: 実装完了後に実画面のスクリーンショット・操作
 -iOSではこのMacの `xcodebuild`、Simulator起動、画面撮影を行わず、Devin macOSの検証結果・スクショ・録画を受け取って組み込む。録画手段がなければ、その制約を明示して利用可能な証跡を提示する。
 +iOSのビルド・Simulator・画面撮影は、AGENTS.md「iOS / Xcode・Simulator」とリポジトリのAGENTS.md（ローカル実行を禁じるリポジトリはそちらに従い、Devin macOSの結果・スクショ・録画を受け取って組み込む）に従う。録画手段がなければ、その制約を明示して利用可能な証跡を提示する。
- 
- Issue、テスト、コミットなどは作業先の規約に従う。このスキルはマージ・デプロイ・公開の許可を追加しない。
- 
 diff --git a/implementation-showcase/agents/openai.yaml b/implementation-showcase/agents/openai.yaml
 index 07cbcb7..e22be5a 100644
 --- a/implementation-showcase/agents/openai.yaml
 +++ b/implementation-showcase/agents/openai.yaml
-@@ -1,4 +1,4 @@
- interface:
-   display_name: "実装完了ショーケース"
+@@ -3,2 +3,2 @@ interface:
 -  short_description: "実装結果のスクショ・操作記録・説明をローカルページで見せる"
 -  default_prompt: "$implementation-showcase を使って、今回の実装結果をスクショ・操作録画・説明付きのローカル確認ページで見せてください。"
 +  short_description: "動く成果物をT3・Devinの両方から見られるようにし、スクショ・操作記録・説明を添える"
