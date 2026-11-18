@@ -1,5 +1,7 @@
 # Browser Use Cloud E2E
 
+Optional provider: use this when parallelism or managed browser capability is needed. The existing Devin local Chrome + Playwright workflow is in `e2e-devin-local.md`. Browser Use Cloud is not supported by the common agent-browser entry point until its recording session contract and adapter have been demonstrated.
+
 Use this reference when a test-board case needs browser E2E, cloud execution, recording, or parallel runs.
 
 ## Current Official Baseline
