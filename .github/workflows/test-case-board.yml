@@ -58,6 +58,9 @@ jobs:
           node --check test-case-board/tests/e2e-native-cdp-count.test.mjs
           node --check test-case-board/tests/e2e-native-cdp-step.test.mjs
 
+      - name: Check the Issue Goal Loop contract
+        run: python3 tests/test_issue_goal_loop.py
+
       - name: Run test-case-board tests
         run: >-
           node --test --test-reporter=tap

@@ -6,14 +6,14 @@ These are **planned, unverified tests**. The commands below must be run by the d
 
 Local verification is primary; GitHub is used for the Issue/PR and the record of results. On a fixed, clean commit, the designated execution role runs, in order:
 
-1. The local tests named by `project.test_command` in `test-board.yaml`, including the board script tests, fake-CLI regressions, ledger CLI integration tests, timeout fixture regression, and three offline native CDP contract test files.
+1. The local tests named by `project.test_command` in `test-board.yaml`, including the Issue Goal Loop contract, board script tests, fake-CLI regressions, ledger CLI integration tests, timeout fixture regression, and three offline native CDP contract test files.
 2. The real recorded fixture below, only where needed. When the fixture, runtime, and expectations are unchanged, an earlier real E2E is inherited for its own SHA by immutable blob comparison rather than re-run.
 3. Every attempt — success, failure, interruption, or rerun — follows the standard per-execution recording rules: record the actual screen, save the original video and logs under the approved private root, confirm machine readback (decode/duration/checksum), and perform a separate partial visual inspection. Recording or saving gaps are reported as such, never as a pass.
 4. A summary is recorded on the GitHub Issue/PR with the fixed commit, commands, strict exits, environment, and references to the private evidence. Each past result stays under its own SHA.
 
 ## Manual workflow (workflow_dispatch)
 
-`.github/workflows/test-case-board.yml` has `workflow_dispatch` as its only trigger; it does not run on pull requests, pushes, or schedules. On Ubuntu 24.04 with Node 24.22.2, it checks JavaScript syntax and runs the same test files as `project.test_command` with the TAP reporter. It checks out `github.sha`, the fixed last commit of the ref chosen at dispatch, so the job tests that commit even if the branch moves while queued. Job logs record the event name, selected ref, expected SHA, actual checkout SHA, UTC, runner OS, and tool versions; the job fails if the two SHAs differ.
+`.github/workflows/test-case-board.yml` has `workflow_dispatch` as its only trigger; it does not run on pull requests, pushes, or schedules. On Ubuntu 24.04 with Node 24.22.2, it checks JavaScript syntax, runs the Issue Goal Loop contract, and runs the same Node test files as `project.test_command` with the TAP reporter. It checks out `github.sha`, the fixed last commit of the ref chosen at dispatch, so the job tests that commit even if the branch moves while queued. Job logs record the event name, selected ref, expected SHA, actual checkout SHA, UTC, runner OS, and tool versions; the job fails if the two SHAs differ.
 
 `workflow_dispatch` requires the workflow file to exist on the default branch, so whether a manual run can be started while this change is unmerged is unverified and must not be claimed. After the workflow reaches the default branch, run it only when needed by selecting the target ref, then record the selected ref, the actual checkout SHA from the job log, and the strict results. This change starts no run by itself. A workflow definition alone is not evidence of a passing run; consult the job log for its actual result.
 
