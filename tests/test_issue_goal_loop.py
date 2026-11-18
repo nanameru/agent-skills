@@ -18,8 +18,8 @@ require(
         "## Issue Goal Loop",
         "one bounded outer goal loop",
         "Re-evaluate the whole Issue",
-        "**Complete**",
-        "**Blocked**",
+        "**Complete**: every acceptance criterion and required gate passes, evidence is recorded, and at most one Draft PR exists.",
+        "**Blocked**: a hard stop is reached; record the cause, attempts, current state, required human decision, and exact resume point.",
     ],
 )
 require(
