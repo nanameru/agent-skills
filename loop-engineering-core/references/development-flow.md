@@ -84,12 +84,13 @@ The scheduled prompt calls the child Skill and references the parent hard stops.
 
 Each run:
 
-1. reads durable state
-2. selects one ready unit
-3. implements
-4. verifies
-5. opens Draft PR
-6. stops
+1. reads the Issue goal, durable state, and all unmet acceptance criteria
+2. selects the smallest unmet condition that can make progress
+3. runs the required workflow stage
+4. verifies with a separate checker pass
+5. records evidence and re-evaluates the whole Issue
+6. continues the same Issue goal loop until completion or a hard stop
+7. opens at most one Draft PR when complete, or produces a blocked report
 
 It never merges or deploys by default.
 
