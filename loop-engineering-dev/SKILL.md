@@ -21,7 +21,7 @@ Follow the parent requirement gate. If the question set becomes large, use both 
 
 ## Maker/Checker and Verification Record
 
-Keep the Maker and independent Checker separate; a Checker must not approve its own work. Record the Checker verdict as `合格`, `不合格`, or `未検証あり` in the Issue, with a concise PR summary. When a T3 task explicitly assigns the post-PR independent review, defensive checks, and recorded E2E to Devin Bot, the manager delegates implementation, unit verification, and PR creation and hands over the PR URL, full head SHA, verification conditions, and unverified items. Do not duplicate the assigned post-PR checks in T3. Follow the current common instructions for model selection and merge/deploy authorization.
+Keep the Maker and independent Checker separate; a Checker must not approve its own work. Record the Checker verdict as `合格`, `不合格`, or `未検証あり` in the Issue, with a concise PR summary. For T3 work, implementation, unit tests, build, and PR updates remain in T3; hand required independent verification to Devin Bot. When E2E is needed, hand it to Devin Bot without waiting for a separate instruction each time and do not start it in T3. Determine whether E2E is needed from the change and acceptance criteria; do not require it for every PR. Hand over the PR URL, full head SHA, verification conditions, and unverified items. Recording, private evidence storage, and readback remain required for every E2E run. Follow the current common instructions for model selection and merge/deploy authorization.
 
 ## Specialized Building Blocks
 
