@@ -238,6 +238,7 @@ curl -s -H "$H" "$B/findings?scan_id=<scan_id>"                 # 終わった�
 - サブエージェントが自分の worktree でサーバーを裏で立てる。`setsid` か Python の `start_new_session=True` で別セッションとして起動する（`nohup … &` では子のコマンドが終わると止められる）。
 - ポートは Issue ごとに変える（例: 3100 + Issue 番号）。どのセッションからも `<ローカルプレビューURL>` で開ける。Issue が終わったら止める。
 - デザインの Issue が終わったら、変更前と変更後の画面を撮って報告に付ける。
+- 実装を終えたら、動く成果物そのものをT3 Codeで見せ、Devin Botへの[完了報告]に「成果物の見方」を入れる（AGENTS.md「実装した成果物を見せる」、手順は `implementation-showcase`）。録画・E2E証跡のルールはそのまま守る。
 
 ## 片付け
 
